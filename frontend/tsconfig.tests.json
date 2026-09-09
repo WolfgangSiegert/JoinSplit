@@ -1,0 +1,7 @@
+{
+  "extends": "./.nuxt/tsconfig.node.json",
+  "compilerOptions": {
+    "strict": true
+  },
+  "include": ["./playwright.config.ts", "./vitest.config.ts", "./tests/**/*.ts", "./test/**/*.ts"]
+}

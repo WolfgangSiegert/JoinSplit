@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "vue.volar",
+    "bradlc.vscode-tailwindcss",
+    "laravel.vscode-laravel",
+    "ms-playwright.playwright",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+    "eamodio.gitlens",
+    "vitest.explorer"
+  ],
+  "unwantedRecommendations": [
+    "octref.vetur",
+    "shunqian.prettier-plus",
+    "orta.vscode-jest",
+    "andys8.jest-snippets",
+    "kingwl.vscode-vitest-runner",
+    "antfu.unocss"
+  ]
+}
