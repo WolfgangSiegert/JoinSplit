@@ -1,2 +1,89 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+@theme {
+  --color-brand-50: #eef7f2;
+  --color-brand-100: #d8ecdf;
+  --color-brand-600: #176b45;
+  --color-brand-700: #105536;
+  --color-brand-900: #0c3424;
+}
+
+html {
+  background: #f7f8f6;
+  color: #17211b;
+}
+
+body {
+  min-width: 320px;
+}
+
+:focus-visible {
+  outline: 3px solid #176b45;
+  outline-offset: 3px;
+}
+
+.page-shell {
+  min-height: 100dvh;
+  padding: 1.25rem 1rem 3rem;
+}
+
+.page-content {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 34rem;
+}
+
+.card {
+  border: 1px solid #d8ded9;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 1px 2px rgb(12 52 36 / 0.06);
+}
+
+.field-input {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid #87948c;
+  border-radius: 0.625rem;
+  background: white;
+  padding: 0.65rem 0.75rem;
+  color: #17211b;
+}
+
+.field-input[aria-invalid="true"] {
+  border-color: #b42318;
+}
+
+.primary-button,
+.secondary-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  padding: 0.65rem 1rem;
+  font-weight: 650;
+}
+
+.primary-button {
+  background: #176b45;
+  color: white;
+}
+
+.primary-button:hover {
+  background: #105536;
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.secondary-link {
+  color: #105536;
+}
+
+.error-text {
+  color: #b42318;
+}
