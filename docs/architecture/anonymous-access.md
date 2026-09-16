@@ -3,6 +3,8 @@
 ## Status and Purpose
 
 JS-007 ist für den M1 Walking Skeleton freigegeben.
+Der am 2026-09-14 freigegebene [Create-Group-Vertrag](create-group-alignment.md)
+ergänzt den Vorgang um einen optionalen separaten initialen Participant.
 
 M1 benötigt eine anonyme Access Identity, die ohne Netzwerkzugriff entstehen
 kann und später von Laravel verifiziert wird, wenn lokal erstellte Groups
@@ -49,7 +51,7 @@ getrennt. Konzeptionell enthält der Client:
 | State | Fields |
 | --- | --- |
 | Access Identity State | `accessIdentityId`, `credential` |
-| CreateGroup Pending Mutation | `groupId`, `name`, `actorId` |
+| CreateGroup Pending Mutation | `groupId`, `name`, `currency`, `actorId`, `initialParticipant` |
 
 `actorId` referenziert die lokale Access Identity. Es ist kein Zugriffsnachweis
 und keine serverseitig vertrauenswürdige Ownership-Angabe.
@@ -107,41 +109,56 @@ Ein requestseitiges `owner_id` darf niemals Ownership gewähren oder ändern.
 Auch eine öffentliche `actorId` allein autorisiert keinen Zugriff.
 
 Participant und Access Identity bleiben unterschiedliche Konzepte.
-Für den Owner wird kein Participant automatisch erstellt.
+Ownership allein erzeugt keinen Participant. Die sichtbare Create-Group-
+Checkbox kann ausdrücklich einen separaten Participant derselben Group
+anlegen; ihr globaler Default ist true und pro Erstellung überschreibbar.
+Der Participant erhält weder das Credential noch automatisch eigenen Zugriff.
 
 ## First Synchronization and Group Retry
 
-Der Ablauf ist:
+1. Access Identity und Credential bei Bedarf offline im Arbeitsspeicher erzeugen.
+2. Group mit clientseitiger UUID v4, optionalen aktiven initialen Participant
+   mit unabhängiger UUID v4 und eine CreateGroup Pending Mutation gemeinsam
+   lokal übernehmen. Erst danach lokalen Erfolg melden und navigieren.
+3. Bei verfügbarer Verbindung dieselbe Access Identity registrieren/verifizieren.
+4. Den vollständigen unveränderten Erstellungsstand authentifiziert versenden;
+   das Credential stammt aus dem getrennten Identity State.
+5. Laravel validiert und erstellt Group plus optionalen Participant gemeinsam
+   in einer Datenbanktransaktion. Ownership stammt aus dem verifizierten Actor.
 
-1. Access Identity und Credential offline im Arbeitsspeicher erzeugen.
-2. Group lokal mit clientseitiger UUID v4 erstellen und die ausstehende
-   CreateGroup-Mutation ohne Credential halten.
-3. Bei verfügbarer Verbindung die Access Identity registrieren bzw. anhand
-   desselben Credentials verifizieren.
-4. Die Group authentifiziert synchronisieren; die Synchronisationsschicht
-   bezieht das Credential aus dem Identity State.
-5. Laravel validiert die Group-Daten und leitet Ownership aus dem
-   verifizierten Actor ab.
+Der Payload enthält `groupId`, normalisierten `name`, `currency = EUR`, lokale
+`actorId` und `initialParticipant`: null oder `{ participantId, name }`.
+Group und Participant starten aktiv; der initiale Participant steht als erster
+in der stabilen Participant-Reihenfolge. Client-IDs bleiben serverseitig erhalten.
+Beide Namen umfassen nach der im [Vertrag](create-group-alignment.md)
+definierten Trimming-Regel 1–100 Unicode-Codepoints. Bei null wird ein eventuell
+im Formular verbliebener Participant-Name nicht übernommen.
 
-Die clientseitig erzeugte Group-ID wird serverseitig unverändert verwendet.
-Der Name wird getrimmt und muss 1–100 Zeichen umfassen; die Group startet aktiv.
-
-Für Create Group gelten auch nach einer verlorenen Antwort diese Regeln:
+Lokaler Domain-State und Pending Entry dürfen nicht teilweise übernommen werden.
+Bei lokalem Fehler bleiben Eingaben erhalten, ohne Erfolgsnavigation.
+Identity, Domain-State, Settings und Pending Entries bleiben in M1 im
+Arbeitsspeicher; der globale Settings-Default verändert keine bestehende Mutation.
 
 | Server state | Result |
 | --- | --- |
-| Group-ID fehlt | Mit authentifizierter Access Identity als Owner erstellen |
-| Group existiert mit demselben Owner und denselben normalisierten Erstellungsdaten | Bestehende Group erfolgreich zurückgeben |
-| Group existiert mit demselben Owner, aber abweichenden Erstellungsdaten | Konflikt ablehnen, ohne zu überschreiben |
-| Group existiert für einen anderen Owner | Ablehnen, ohne fremde Group-Daten offenzulegen |
+| Group fehlt; vollständiger Payload gültig und IDs frei | Group und optionalen Participant gemeinsam mit verifiziertem Owner erstellen |
+| Group existiert beim selben Owner mit identischem ursprünglichem Erstellungsstand | Erfolg bestätigen, nichts erneut erstellen oder zurücksetzen |
+| Derselbe Owner, abweichende ursprüngliche Erstellungsdaten einschließlich Participant-Auswahl, ID oder Name | Konflikt ohne Überschreibung oder nachträgliche Ergänzung |
+| Anderer Owner | Ablehnen, keine fremden Group-Daten offenlegen |
+| ID-Kollision oder inkonsistenter bestehender Zustand | Ablehnen; keine fremden Participants übernehmen oder stille Reparatur |
 
-Der Client behält für Retries dieselbe Identität, dasselbe Credential, dieselbe
-Group-ID und dieselben Erstellungsdaten. Server-Eindeutigkeit und Behandlung
-konkurrierender Requests müssen doppelte Groups verhindern und die genannten
-Prüfungen erhalten.
+Retries behalten Identity, Credential, Group-ID, optionalen Participant-ID und
+normalisierten Payload bei. Datenbank-Eindeutigkeit und konkurrierende Requests
+müssen doppelte Groups/Participants verhindern. Ein Participant-Insert-Fehler
+rollt auch den Group-Insert zurück; eine separat registrierte Identity darf bleiben.
+Bestätigung erfolgt erst nach Commit. Bei verlorener Antwort wird derselbe
+Vorgang wiederholt; abweichende Daten werden nicht mit neuen IDs automatisch
+erneut erstellt. Ein allgemeines Idempotency-Framework ist für M1 nicht nötig.
 
-Für diesen M1-Create-Group-Slice ist kein allgemeines Idempotency-Framework
-erforderlich.
+Der Vergleich betrifft den ursprünglichen Erstellungsstand. Bevor spätere
+Bearbeitung eingeführt wird, muss dessen Wiedererkennbarkeit erhalten oder eine
+Nachfolgeregel beschlossen werden; aktuelle Anzeigenamen allein genügen dann
+nicht. Details, Zustandsverantwortung und Delivery-Prüfungen stehen im Vertrag.
 
 ## Security Boundaries
 

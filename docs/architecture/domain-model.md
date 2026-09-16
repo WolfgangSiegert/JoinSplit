@@ -639,6 +639,20 @@ Dieses Dokument schreibt noch keine formale DDD-Aggregate-Architektur vor.
 Für die fachliche Konsistenz sind jedoch insbesondere folgende Änderungen als
 zusammenhängend zu behandeln:
 
+### Group Creation with Initial Participant
+
+Die freigegebene Create-Group-Option kann zusammen mit einer Group einen
+separaten aktiven Participant anlegen. Ownership allein erzeugt keinen
+Participant und gewährt diesem keinen eigenen App-Zugriff.
+
+Ist die Option ausgewählt, bilden Group und initialer Participant einen
+zusammenhängenden Erstellvorgang: beide entstehen vollständig oder keiner von
+beiden. Der Participant gehört derselben Group und steht als erster in deren
+stabiler Reihenfolge; später hinzugefügte Participants werden angehängt.
+
+Technische Umsetzung, Payload und Retry-Semantik beschreibt der menschlich
+freigegebene [Create-Group-Vertrag](create-group-alignment.md).
+
 ### Expense Change
 
 Expense und ihre ExpenseShares müssen nach einer Erstellung oder Änderung
