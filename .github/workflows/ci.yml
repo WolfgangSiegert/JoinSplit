@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: joinsplit_test
+          POSTGRES_USER: joinsplit_test
+          POSTGRES_PASSWORD: joinsplit_test_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U joinsplit_test -d joinsplit_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: joinsplit_test
+      DB_USERNAME: joinsplit_test
+      DB_PASSWORD: joinsplit_test_ci_only
+      DB_URL: ""
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+
+      - name: Enable pinned pnpm
+        run: corepack enable && corepack prepare pnpm@8.10.5 --activate
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: pnpm test:unit
+
+      - name: Run strict TypeScript checks
+        working-directory: frontend
+        run: pnpm typecheck
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: pdo_pgsql
+          coverage: none
+          tools: composer:v2
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare Laravel test environment
+        working-directory: backend
+        run: |
+          cp .env.example .env.testing
+          php artisan key:generate --env=testing --ansi
+
+      - name: Run backend tests
+        working-directory: backend
+        run: composer test
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: pnpm exec playwright install chromium --only-shell --with-deps
+
+      - name: Run browser integration tests
+        working-directory: frontend
+        run: pnpm test:e2e
