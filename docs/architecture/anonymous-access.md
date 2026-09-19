@@ -105,6 +105,17 @@ Nach erfolgreicher Verifikation löst Laravel die Access Identity als aktuellen
 Actor auf. Group-Ownership wird ausschließlich aus diesem verifizierten Actor
 abgeleitet.
 
+Authentifizierte API-Requests verwenden folgenden festen Transportvertrag:
+
+```http
+X-Access-Identity-ID: <public Access Identity UUID>
+Authorization: Bearer <credential>
+```
+
+Die Access Identity UUID ist öffentlich; das Bearer-Credential bleibt geheim.
+Das Credential erscheint weder in URLs, Domain-Payloads, Logs oder der UI noch
+als persistierter Klartext.
+
 Ein requestseitiges `owner_id` darf niemals Ownership gewähren oder ändern.
 Auch eine öffentliche `actorId` allein autorisiert keinen Zugriff.
 
