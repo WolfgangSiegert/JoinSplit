@@ -4,6 +4,11 @@ export default defineNuxtConfig({
   telemetry: false,
   modules: ['@pinia/nuxt', '@nuxt/ui'],
   css: ['~/assets/css/main.css'],
+  runtimeConfig: {
+    public: {
+      apiBase: 'http://127.0.0.1:8000',
+    },
+  },
   typescript: {
     strict: true,
     typeCheck: true,

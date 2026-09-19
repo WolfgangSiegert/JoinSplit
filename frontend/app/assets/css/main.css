@@ -56,6 +56,7 @@ body {
 }
 
 .primary-button,
+.secondary-button,
 .secondary-link {
   display: inline-flex;
   min-height: 44px;
@@ -64,6 +65,16 @@ body {
   border-radius: 0.625rem;
   padding: 0.65rem 1rem;
   font-weight: 650;
+}
+
+.secondary-button {
+  border: 1px solid currentColor;
+  background: white;
+  color: #105536;
+}
+
+.secondary-button:hover {
+  background: #eef7f2;
 }
 
 .primary-button {

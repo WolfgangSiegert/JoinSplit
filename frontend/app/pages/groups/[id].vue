@@ -1,11 +1,36 @@
 <script setup lang="ts">
 const route = useRoute()
 const groupsStore = useGroupsStore()
-const { online } = useConnectivity()
 const heading = ref<HTMLHeadingElement | null>(null)
 const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
-const pending = computed(() => groupsStore.hasPendingCreate(groupId.value))
+const { syncState, visibleState, attemptSync } = useCreateGroupSync(groupId)
+
+const syncMessage = computed(() => {
+  if (visibleState.value === 'offline') {
+    return 'Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.'
+  }
+  if (visibleState.value === 'syncing') {
+    return 'Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.'
+  }
+  if (visibleState.value === 'synced') {
+    return 'Synchronisiert. Die Gruppe wurde vom Server bestätigt.'
+  }
+  if (visibleState.value === 'failed') {
+    return syncState.value?.error?.message ?? 'Synchronisierung fehlgeschlagen.'
+  }
+  return 'Synchronisierung ausstehend. Die Gruppe ist lokal nutzbar.'
+})
+
+const canRetry = computed(
+  () => visibleState.value === 'failed' && syncState.value?.error?.retryable === true,
+)
+const syncClass = computed(() => {
+  if (visibleState.value === 'failed') return 'bg-red-50 text-red-950'
+  if (visibleState.value === 'offline') return 'bg-gray-100 text-gray-800'
+  if (visibleState.value === 'synced') return 'bg-brand-50 text-brand-900'
+  return 'bg-amber-50 text-amber-950'
+})
 
 onMounted(async () => {
   if (route.query.created === '1' && group.value) {
@@ -29,15 +54,26 @@ onMounted(async () => {
       </header>
 
       <div class="mt-6 space-y-3">
-        <p v-if="route.query.created === '1'" class="rounded-lg bg-brand-50 p-3 text-brand-900" role="status">
+        <p v-if="route.query.created === '1'" class="rounded-lg bg-brand-50 p-3 text-brand-900">
           Gruppe lokal erstellt.
         </p>
-        <p v-if="pending" class="rounded-lg bg-amber-50 p-3 text-amber-950" role="status">
-          Synchronisierung ausstehend. Die Gruppe ist lokal nutzbar.
-        </p>
-        <p v-if="!online" class="rounded-lg bg-gray-100 p-3 text-gray-800" role="status">
-          Offline. Lokale Änderungen bleiben in dieser Sitzung nutzbar.
-        </p>
+        <div
+          class="rounded-lg p-3"
+          :class="syncClass"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <p>{{ syncMessage }}</p>
+          <button
+            v-if="canRetry"
+            type="button"
+            class="secondary-button mt-3"
+            @click="attemptSync"
+          >
+            Synchronisierung erneut versuchen
+          </button>
+        </div>
       </div>
 
       <section class="card mt-7 px-5 py-8 text-center" aria-labelledby="empty-expenses">

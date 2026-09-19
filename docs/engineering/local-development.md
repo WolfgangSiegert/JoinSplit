@@ -191,3 +191,26 @@ no uncaught page errors and zero axe violations for WCAG 2 A/AA, 2.1 A/AA and
 There is no CI, nested Git repository, workspace manager or publishing setup.
 Generated dependencies, output, test reports and local environments are ignored.
 No files were staged or committed during the bootstrap.
+
+## Create Group integration — JS-013
+
+The Nuxt client sends pending CreateGroup operations to Laravel's canonical
+`POST /api/groups` endpoint. The public Nuxt runtime setting `apiBase` defaults
+to `http://127.0.0.1:8000`, matching `composer dev`. Override it with
+`NUXT_PUBLIC_API_BASE` when Laravel uses another origin; do not put credentials
+in this setting.
+
+`pnpm test:e2e` exercises the production Nuxt build together with a Laravel
+test server on `http://127.0.0.1:8001`. Before that server starts, Playwright
+explicitly binds Laravel to `APP_ENV=testing`, the `joinsplit_test` database and
+the `joinsplit_test` role. A guard verifies those effective Laravel configuration
+values before `migrate:fresh` may run. The browser suite must never be redirected
+to `joinsplit_dev`.
+
+Pest is independently protected by the forced database values in `phpunit.xml`
+and the checks in the backend base TestCase. Those PHPUnit safeguards do not
+configure Playwright's standalone Artisan processes.
+
+The browser integration covers a real successful Nuxt → Laravel → PostgreSQL
+creation, an idempotent retry returning HTTP 200, offline local creation, and a
+failed request followed by a successful retry of the same immutable operation.
