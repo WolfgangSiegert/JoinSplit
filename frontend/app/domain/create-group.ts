@@ -24,7 +24,7 @@ export interface Participant {
   id: string
   groupId: string
   name: string
-  status: 'active'
+  status: 'active' | 'inactive'
   order: number
 }
 

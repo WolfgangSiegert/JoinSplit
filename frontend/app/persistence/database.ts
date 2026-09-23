@@ -1,60 +1,47 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
-import type { PendingCreateGroupMutation } from '../stores/groups'
+import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingDeleteParticipant } from '../domain/pending-mutation'
 
 export const DATABASE_NAME = 'joinsplit'
-export const DATABASE_VERSION = 1
-
+export const DATABASE_VERSION = 2
 const ACCESS_IDENTITY_KEY = 'current'
 const SETTINGS_KEY = 'preferences'
 
-export interface DurableAccessIdentity {
-  readonly id: string
-  readonly credential: string
-}
-
-export interface DurableSettings {
-  readonly addSelfAsParticipantByDefault: boolean
-}
-
-interface AccessIdentityRecord extends DurableAccessIdentity {
-  readonly key: typeof ACCESS_IDENTITY_KEY
-}
-
-interface SettingsRecord extends DurableSettings {
-  readonly key: typeof SETTINGS_KEY
-}
-
-interface PendingMutationRecord extends PendingCreateGroupMutation {
-  readonly groupId: string
-}
-
+export interface DurableAccessIdentity { readonly id: string; readonly credential: string }
+export interface DurableSettings { readonly addSelfAsParticipantByDefault: boolean }
+interface AccessIdentityRecord extends DurableAccessIdentity { readonly key: typeof ACCESS_IDENTITY_KEY }
+interface SettingsRecord extends DurableSettings { readonly key: typeof SETTINGS_KEY }
 interface JoinSplitDatabase extends DBSchema {
   accessIdentity: { key: string; value: AccessIdentityRecord }
   groups: { key: string; value: Group }
   participants: { key: string; value: Participant }
-  pendingMutations: { key: string; value: PendingMutationRecord }
+  pendingMutations: { key: string; value: PendingMutation }
   settings: { key: string; value: SettingsRecord }
 }
 
-function hasExactKeys(value: object, keys: readonly string[]): boolean {
-  const actual = Object.keys(value)
-  return actual.length === keys.length && actual.every(key => keys.includes(key))
+interface LegacyCreateGroupRecord {
+  readonly groupId: string
+  readonly kind: 'CreateGroup'
+  readonly payload: PendingCreateGroup['payload']
+  readonly status: 'pending'
 }
 
-function toRuntimeMutation(record: PendingMutationRecord): PendingCreateGroupMutation {
-  const initialParticipant = record.payload.initialParticipant
-    ? Object.freeze({ ...record.payload.initialParticipant })
-    : null
-  const payload = Object.freeze({ ...record.payload, initialParticipant })
-  return Object.freeze({ kind: 'CreateGroup', payload, status: 'pending' })
+export function migrateLegacyCreateGroupRecords(
+  records: readonly LegacyCreateGroupRecord[],
+  generateId: () => string = () => crypto.randomUUID(),
+): PendingCreateGroup[] {
+  return [...records].sort((a, b) => a.groupId.localeCompare(b.groupId)).map((record, createdOrder) => Object.freeze({
+    id: generateId(), type: 'CreateGroup' as const, groupId: record.groupId, createdOrder,
+    payload: Object.freeze({ ...record.payload, initialParticipant: record.payload.initialParticipant
+      ? Object.freeze({ ...record.payload.initialParticipant }) : null }),
+  }))
 }
 
 export interface DurableState {
   readonly accessIdentity: DurableAccessIdentity | null
   readonly groups: Group[]
   readonly participants: Participant[]
-  readonly pendingMutations: PendingCreateGroupMutation[]
+  readonly pendingMutations: PendingMutation[]
   readonly settings: DurableSettings | null
 }
 
@@ -62,100 +49,84 @@ let databasePromise: Promise<IDBPDatabase<JoinSplitDatabase>> | undefined
 
 function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
   databasePromise ??= openDB<JoinSplitDatabase>(DATABASE_NAME, DATABASE_VERSION, {
-    upgrade(db, oldVersion) {
+    upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         db.createObjectStore('accessIdentity', { keyPath: 'key' })
         db.createObjectStore('groups', { keyPath: 'id' })
         db.createObjectStore('participants', { keyPath: 'id' })
-        db.createObjectStore('pendingMutations', { keyPath: 'groupId' })
+        db.createObjectStore('pendingMutations', { keyPath: 'id' })
         db.createObjectStore('settings', { keyPath: 'key' })
+      } else if (oldVersion === 1) {
+        const request = transaction.objectStore('pendingMutations').getAll()
+        request.then(records => {
+          try {
+            const mutations = migrateLegacyCreateGroupRecords(records as unknown as LegacyCreateGroupRecord[])
+            db.deleteObjectStore('pendingMutations')
+            const upgraded = db.createObjectStore('pendingMutations', { keyPath: 'id' })
+            for (const mutation of mutations) upgraded.add(mutation)
+          } catch (error) {
+            transaction.abort()
+            throw error
+          }
+        })
       }
     },
   })
-
   return databasePromise
 }
 
 export async function loadDurableState(): Promise<DurableState> {
   const db = await database()
-  const transaction = db.transaction(
-    ['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings'],
-    'readonly',
-  )
-  const [identityRecords, groups, participants, pendingRecords, settingsRecords] =
-    await Promise.all([
-      transaction.objectStore('accessIdentity').getAll(),
-      transaction.objectStore('groups').getAll(),
-      transaction.objectStore('participants').getAll(),
-      transaction.objectStore('pendingMutations').getAll(),
-      transaction.objectStore('settings').getAll(),
-      transaction.done,
-    ])
-
-  if (identityRecords.length > 1 || settingsRecords.length > 1
-    || (identityRecords[0] && identityRecords[0].key !== ACCESS_IDENTITY_KEY)
-    || (settingsRecords[0] && settingsRecords[0].key !== SETTINGS_KEY)
-    || (identityRecords[0]
-      && !hasExactKeys(identityRecords[0], ['key', 'id', 'credential']))
-    || (settingsRecords[0]
-      && !hasExactKeys(settingsRecords[0], ['key', 'addSelfAsParticipantByDefault']))
-    || pendingRecords.some(record =>
-      !hasExactKeys(record, ['groupId', 'kind', 'payload', 'status'])
-      || record.groupId !== record.payload?.groupId)) {
-    throw new Error('Invalid persistence record structure')
-  }
-
-  const identityRecord = identityRecords[0]
-  const settingsRecord = settingsRecords[0]
-
+  const tx = db.transaction(['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings'], 'readonly')
+  const [identities, groups, participants, pendingMutations, settingsRecords] = await Promise.all([
+    tx.objectStore('accessIdentity').getAll(), tx.objectStore('groups').getAll(),
+    tx.objectStore('participants').getAll(), tx.objectStore('pendingMutations').getAll(),
+    tx.objectStore('settings').getAll(), tx.done,
+  ])
+  if (identities.length > 1 || settingsRecords.length > 1) throw new Error('Invalid persistence singleton records')
+  const identity = identities[0]
+  const settings = settingsRecords[0]
   return {
-    accessIdentity: identityRecord
-      ? { id: identityRecord.id, credential: identityRecord.credential }
-      : null,
-    groups,
-    participants,
-    pendingMutations: pendingRecords.map(toRuntimeMutation),
-    settings: settingsRecord
-      ? { addSelfAsParticipantByDefault: settingsRecord.addSelfAsParticipantByDefault }
-      : null,
+    accessIdentity: identity ? { id: identity.id, credential: identity.credential } : null,
+    groups, participants, pendingMutations,
+    settings: settings ? { addSelfAsParticipantByDefault: settings.addSelfAsParticipantByDefault } : null,
   }
 }
 
 export async function persistAccessIdentity(identity: DurableAccessIdentity): Promise<void> {
-  const db = await database()
-  await db.put('accessIdentity', { key: ACCESS_IDENTITY_KEY, ...identity })
+  const db = await database(); await db.put('accessIdentity', { key: ACCESS_IDENTITY_KEY, ...identity })
 }
 
-export async function persistGroupCreation(creation: PreparedGroupCreation): Promise<void> {
-  const db = await database()
-  const transaction = db.transaction(
-    ['groups', 'participants', 'pendingMutations'],
-    'readwrite',
-  )
-
-  await Promise.all([
-    transaction.objectStore('groups').add(creation.group),
-    creation.participant
-      ? transaction.objectStore('participants').add(creation.participant)
-      : Promise.resolve(),
-    transaction.objectStore('pendingMutations').add({
-      groupId: creation.group.id,
-      kind: 'CreateGroup',
-      payload: creation.payload,
-      status: 'pending',
-    }),
-  ])
-  await transaction.done
+export async function persistGroupCreation(creation: PreparedGroupCreation, mutation: PendingCreateGroup): Promise<void> {
+  const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('groups').add(creation.group), creation.participant
+    ? tx.objectStore('participants').add(creation.participant) : Promise.resolve(), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
 }
 
-export async function removePendingCreateGroup(groupId: string): Promise<void> {
-  const db = await database()
-  const transaction = db.transaction('pendingMutations', 'readwrite')
-  await transaction.store.delete(groupId)
-  await transaction.done
+export async function persistParticipantAdd(group: Group, participant: Participant, mutation: PendingAddParticipant): Promise<void> {
+  const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('groups').put(group), tx.objectStore('participants').add(participant), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
+}
+
+export async function persistParticipantUpdate(participant: Participant, mutation: PendingRenameParticipant | PendingDeactivateParticipant): Promise<void> {
+  const db = await database(); const tx = db.transaction(['participants', 'pendingMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('participants').put(participant), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
+}
+
+export async function persistParticipantDelete(group: Group, participantId: string, mutation: PendingDeleteParticipant): Promise<void> {
+  const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('groups').put(group), tx.objectStore('participants').delete(participantId), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
+}
+
+export async function removePendingMutation(mutationId: string): Promise<void> {
+  const db = await database(); const tx = db.transaction('pendingMutations', 'readwrite')
+  await tx.store.delete(mutationId); await tx.done
 }
 
 export async function persistSettings(settings: DurableSettings): Promise<void> {
-  const db = await database()
-  await db.put('settings', { key: SETTINGS_KEY, ...settings })
+  const db = await database(); await db.put('settings', { key: SETTINGS_KEY, ...settings })
 }

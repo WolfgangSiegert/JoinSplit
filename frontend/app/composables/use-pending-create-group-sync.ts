@@ -1,4 +1,6 @@
+import { sortPendingMutations } from '../domain/pending-mutation'
 import { synchronizeCreateGroup } from '../services/create-group-sync'
+import { synchronizeParticipantMutation } from '../services/participant-sync'
 
 export function usePendingCreateGroupSync() {
   const config = useRuntimeConfig()
@@ -12,24 +14,23 @@ export function usePendingCreateGroupSync() {
     if (running || lifecycleStore.state !== 'ready' || !online.value) return
     running = true
     try {
-      const groupIds = groupsStore.pendingCreateGroups.map(mutation => mutation.payload.groupId)
-      for (const groupId of groupIds) {
-        await synchronizeCreateGroup({
-          groupId,
-          apiBase: config.public.apiBase,
-          identity: identityStore,
-          groupsStore,
-          online: online.value,
-        })
+      const blockedGroups = new Set<string>()
+      while (online.value) {
+        const mutation = sortPendingMutations(groupsStore.pendingMutations)
+          .find(item => !blockedGroups.has(item.groupId))
+        if (!mutation) break
+        const result = mutation.type === 'CreateGroup'
+          ? await synchronizeCreateGroup({ groupId: mutation.groupId, apiBase: config.public.apiBase,
+              identity: identityStore, groupsStore, online: online.value })
+          : await synchronizeParticipantMutation({ mutationId: mutation.id, apiBase: config.public.apiBase,
+              identity: identityStore, groupsStore, online: online.value })
+        if (result.outcome !== 'synced') blockedGroups.add(mutation.groupId)
       }
-    } finally {
-      running = false
-    }
+    } finally { running = false }
   }
 
-  watch([() => lifecycleStore.state, online], ([state, isOnline]) => {
+  watch([() => lifecycleStore.state, online, () => groupsStore.pendingMutations.length], ([state, isOnline]) => {
     if (state === 'ready' && isOnline) void synchronizePending()
   })
-
   return { synchronizePending }
 }

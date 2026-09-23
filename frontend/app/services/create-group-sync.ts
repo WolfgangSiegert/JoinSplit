@@ -4,7 +4,7 @@ import {
   type CreateGroupSyncError,
   type PendingCreateGroupMutation,
 } from '../stores/groups'
-import { removePendingCreateGroup } from '../persistence/database'
+import { removePendingMutation } from '../persistence/database'
 
 interface AccessIdentityForSync {
   readonly accessIdentityId: string | null
@@ -18,7 +18,7 @@ interface CreateGroupSyncOptions {
   readonly groupsStore: ReturnType<typeof useGroupsStore>
   readonly online: boolean
   readonly fetcher?: typeof fetch
-  readonly acknowledge?: (groupId: string) => Promise<void>
+  readonly acknowledge?: (mutationId: string) => Promise<void>
 }
 
 type CreateGroupSyncResult =
@@ -164,12 +164,12 @@ export async function synchronizeCreateGroup(
 
   const pendingBeforeStart = options.groupsStore.findPendingCreate(options.groupId)
   if (!pendingBeforeStart) return { outcome: 'not-pending' }
-  if (options.groupsStore.createGroupSync[options.groupId]?.state === 'syncing') {
+  if (options.groupsStore.mutationSync[pendingBeforeStart.id]?.state === 'syncing') {
     return { outcome: 'busy' }
   }
 
-  const mutation = options.groupsStore.beginCreateGroupSync(options.groupId)
-  if (!mutation) return { outcome: 'busy' }
+  const mutation = options.groupsStore.beginMutationSync(pendingBeforeStart.id)
+  if (!mutation || mutation.type !== 'CreateGroup') return { outcome: 'busy' }
 
   const { accessIdentityId, credential } = options.identity
   if (!accessIdentityId || !credential || mutation.payload.actorId !== accessIdentityId) {
@@ -179,7 +179,7 @@ export async function synchronizeCreateGroup(
       false,
     )
     if (result.outcome === 'failed') {
-      options.groupsStore.failCreateGroupSync(options.groupId, result.error)
+      options.groupsStore.failMutationSync(mutation.id, result.error)
     }
     return result
   }
@@ -193,8 +193,8 @@ export async function synchronizeCreateGroup(
 
   if (result.outcome === 'synced') {
     try {
-      await (options.acknowledge ?? removePendingCreateGroup)(options.groupId)
-      options.groupsStore.confirmCreateGroupSync(options.groupId)
+      await (options.acknowledge ?? removePendingMutation)(mutation.id)
+      options.groupsStore.confirmMutationSync(mutation.id)
     } catch {
       const persistenceFailure = failure(
         'persistence',
@@ -202,12 +202,12 @@ export async function synchronizeCreateGroup(
         true,
       )
       if (persistenceFailure.outcome === 'failed') {
-        options.groupsStore.failCreateGroupSync(options.groupId, persistenceFailure.error)
+        options.groupsStore.failMutationSync(mutation.id, persistenceFailure.error)
       }
       return persistenceFailure
     }
   } else if (result.outcome === 'failed') {
-    options.groupsStore.failCreateGroupSync(options.groupId, result.error)
+    options.groupsStore.failMutationSync(mutation.id, result.error)
   }
 
   return result

@@ -6,6 +6,7 @@ import { useGroupsStore, type PendingCreateGroupMutation } from '../../app/store
 import { useSettingsStore } from '../../app/stores/settings'
 import { validateDurableState } from '../../app/persistence/validation'
 import type { DurableState } from '../../app/persistence/database'
+import type { PendingMutation } from '../../app/domain/pending-mutation'
 
 const GROUP_ID = '11111111-1111-4111-8111-111111111111'
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222'
@@ -14,8 +15,10 @@ const ACTOR_ID = '33333333-3333-4333-8333-333333333333'
 const CREDENTIAL = '0123456789abcdef'.repeat(4)
 
 const pendingMutation: PendingCreateGroupMutation = {
-  kind: 'CreateGroup',
-  status: 'pending',
+  id: '55555555-5555-4555-8555-555555555555',
+  type: 'CreateGroup',
+  groupId: GROUP_ID,
+  createdOrder: 0,
   payload: {
     groupId: GROUP_ID,
     name: 'Wochenende',
@@ -67,6 +70,25 @@ describe('durable state validation and bootstrap', () => {
     expect(useGroupsStore().createGroupSync[GROUP_ID]).toEqual({ state: 'pending', error: null })
     expect(useSettingsStore().addSelfAsParticipantByDefault).toBe(false)
     expect(persistIdentity).not.toHaveBeenCalled()
+  })
+
+  test('reconstructs and freezes every known mutation level after rehydration', async () => {
+    await useApplicationLifecycleStore().initialize({
+      load: vi.fn(async () => durableState()),
+      persistIdentity: vi.fn(async () => {}),
+    })
+
+    const mutation = useGroupsStore().pendingMutations[0]!
+    expect(Object.isFrozen(mutation)).toBe(true)
+    expect(Object.isFrozen(mutation.payload)).toBe(true)
+    expect(mutation.type).toBe('CreateGroup')
+    if (mutation.type !== 'CreateGroup' || !mutation.payload.initialParticipant) return
+    expect(Object.isFrozen(mutation.payload.initialParticipant)).toBe(true)
+    expect(Reflect.set(mutation, 'createdOrder', 99)).toBe(false)
+    expect(Reflect.set(mutation.payload, 'name', 'Manipuliert')).toBe(false)
+    expect(Reflect.set(mutation.payload.initialParticipant, 'name', 'Manipuliert')).toBe(false)
+    expect(mutation.payload.name).toBe('Wochenende')
+    expect(mutation.payload.initialParticipant.name).toBe('Wolfgang')
   })
 
   test('persists one new identity before making a fresh installation ready', async () => {
@@ -131,7 +153,7 @@ describe('durable state validation and bootstrap', () => {
     )
   })
 
-  test('rejects Participant order that disagrees with the Group participantIds order', () => {
+  test('accepts a stable Participant order with historical gaps', () => {
     const value = durableState({
       participants: [{
         ...durableState().participants[0]!,
@@ -140,9 +162,7 @@ describe('durable state validation and bootstrap', () => {
       pendingMutations: [],
     })
 
-    expect(() => validateDurableState(value)).toThrow(
-      'Persisted group participant ordering is inconsistent',
-    )
+    expect(validateDurableState(value)).toBe(value)
   })
 
   test('accepts a valid stable Participant order', () => {
@@ -164,6 +184,48 @@ describe('durable state validation and bootstrap', () => {
       pendingMutations: [],
     })
 
+    expect(validateDurableState(value)).toBe(value)
+  })
+
+  test('rejects a pending RenameParticipant whose expected name differs from local state', () => {
+    const rename: PendingMutation = {
+      id: '66666666-6666-4666-8666-666666666666', type: 'RenameParticipant', groupId: GROUP_ID, createdOrder: 1,
+      payload: { participantId: PARTICIPANT_ID, name: 'Alice', active: true, order: 0 },
+    }
+    expect(() => validateDurableState(durableState({ pendingMutations: [rename] })))
+      .toThrow('Persisted RenameParticipant local state mismatch')
+  })
+
+  test('rejects a pending DeactivateParticipant while local state is still active', () => {
+    const deactivate: PendingMutation = {
+      id: '66666666-6666-4666-8666-666666666666', type: 'DeactivateParticipant', groupId: GROUP_ID, createdOrder: 1,
+      payload: { participantId: PARTICIPANT_ID, name: 'Wolfgang', active: false, order: 0 },
+    }
+    expect(() => validateDurableState(durableState({ pendingMutations: [deactivate] })))
+      .toThrow('Persisted DeactivateParticipant local state mismatch')
+  })
+
+  test('accepts an AddParticipant followed by RenameParticipant when local state matches the rename', () => {
+    const chain: PendingMutation[] = [{
+      id: '66666666-6666-4666-8666-666666666666', type: 'AddParticipant', groupId: GROUP_ID, createdOrder: 0,
+      payload: { participantId: PARTICIPANT_ID, name: 'Alice', order: 0 },
+    }, {
+      id: '77777777-7777-4777-8777-777777777777', type: 'RenameParticipant', groupId: GROUP_ID, createdOrder: 1,
+      payload: { participantId: PARTICIPANT_ID, name: 'Wolfgang', active: true, order: 0 },
+    }]
+    const value = durableState({ pendingMutations: chain })
+    expect(validateDurableState(value)).toBe(value)
+  })
+
+  test('accepts a pending DeleteParticipant with the Participant already absent locally', () => {
+    const deletion: PendingMutation = {
+      id: '66666666-6666-4666-8666-666666666666', type: 'DeleteParticipant', groupId: GROUP_ID, createdOrder: 0,
+      payload: { participantId: PARTICIPANT_ID },
+    }
+    const value = durableState({
+      groups: [{ ...durableState().groups[0]!, participantIds: [] }],
+      participants: [], pendingMutations: [deletion],
+    })
     expect(validateDurableState(value)).toBe(value)
   })
 })

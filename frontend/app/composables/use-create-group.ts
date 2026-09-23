@@ -7,6 +7,7 @@ import {
 import { useAccessIdentityStore } from '../stores/access-identity'
 import { useGroupsStore } from '../stores/groups'
 import { persistGroupCreation } from '../persistence/database'
+import { prepareCreateGroupMutation } from '../domain/pending-mutation'
 
 interface CreateGroupDependencies {
   persistCreation: typeof persistGroupCreation
@@ -37,8 +38,9 @@ export function useCreateGroup(dependencies: CreateGroupDependencies = {
     }
 
     const creation = prepared.value
-    await dependencies.persistCreation(creation)
-    groupsStore.commitCreation(creation)
+    const mutation = prepareCreateGroupMutation(creation.payload, groupsStore.pendingMutations)
+    await dependencies.persistCreation(creation, mutation)
+    groupsStore.commitCreation(creation, mutation)
 
     return { ok: true, groupId: creation.group.id }
   }

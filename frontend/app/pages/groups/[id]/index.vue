@@ -80,6 +80,10 @@ onMounted(async () => {
         <h2 id="empty-expenses" class="text-xl font-semibold">Noch keine Ausgaben</h2>
         <p class="mt-2 text-gray-600">Erfasste Ausgaben erscheinen später hier.</p>
       </section>
+
+      <NuxtLink :to="`/groups/${group.id}/participants`" class="secondary-button mt-5 w-full">
+        Teilnehmer verwalten
+      </NuxtLink>
     </div>
 
     <div v-else class="page-content">

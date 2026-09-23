@@ -24,7 +24,7 @@ async function openCreateGroup(page: Page): Promise<void> {
 
 async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 1)
+    const request = indexedDB.open('joinsplit', 2)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -62,7 +62,7 @@ async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
 
 async function durableInitialParticipantDefault(page: Page): Promise<boolean | null> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 1)
+    const request = indexedDB.open('joinsplit', 2)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -387,7 +387,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await page.goto('/')
   await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toBeVisible()
   await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 1)
+    const request = indexedDB.open('joinsplit', 2)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -412,7 +412,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten nicht verfügbar' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toHaveCount(0)
   const malformedStillExists = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 1)
+    const request = indexedDB.open('joinsplit', 2)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -427,5 +427,170 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
     return Boolean(record)
   })
   expect(malformedStillExists).toBe(true)
+  await expectNoAxeViolations(page)
+})
+
+test('v1 pending CreateGroup data upgrades atomically to the v2 FIFO mutation shape', async ({ page }) => {
+  await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
+  await page.goto('/')
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const deletion = indexedDB.deleteDatabase('joinsplit')
+      deletion.onsuccess = () => resolve(); deletion.onerror = () => reject(deletion.error)
+    })
+    const request = indexedDB.open('joinsplit', 1)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onupgradeneeded = () => {
+        const database = request.result
+        database.createObjectStore('accessIdentity', { keyPath: 'key' })
+        database.createObjectStore('groups', { keyPath: 'id' })
+        database.createObjectStore('participants', { keyPath: 'id' })
+        database.createObjectStore('pendingMutations', { keyPath: 'groupId' })
+        database.createObjectStore('settings', { keyPath: 'key' })
+      }
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+    })
+    const actorId = '11111111-1111-4111-8111-111111111111'
+    const groupId = '22222222-2222-4222-8222-222222222222'
+    const tx = db.transaction(['accessIdentity', 'groups', 'pendingMutations'], 'readwrite')
+    tx.objectStore('accessIdentity').add({ key: 'current', id: actorId, credential: '01'.repeat(32) })
+    tx.objectStore('groups').add({ id: groupId, name: 'Migration', currency: 'EUR', ownerAccessIdentityId: actorId, status: 'active', participantIds: [] })
+    tx.objectStore('pendingMutations').add({ groupId, kind: 'CreateGroup', status: 'pending', payload: { groupId, name: 'Migration', currency: 'EUR', actorId, initialParticipant: null } })
+    await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) })
+    db.close()
+  })
+  await page.unroute('**/_nuxt/**')
+  await page.route('**/api/groups', route => route.abort('connectionrefused'))
+  await page.reload()
+  await expect(page.getByRole('link', { name: /Migration/ })).toBeVisible()
+  const upgraded = await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 2)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
+    const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
+    const version = db.version; db.close(); return { version, records }
+  })
+  expect(upgraded.version).toBe(2)
+  expect(upgraded.records).toHaveLength(1)
+  expect(upgraded.records[0]).toMatchObject({ type: 'CreateGroup', createdOrder: 0, groupId: '22222222-2222-4222-8222-222222222222' })
+  expect(upgraded.records[0]?.id).toMatch(/^[0-9a-f-]{36}$/)
+})
+
+test('Participant persistence failures are visibly and safely reported', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Persistenz-Test')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await page.evaluate(() => {
+    const originalAdd = IDBObjectStore.prototype.add
+    IDBObjectStore.prototype.add = function (...args) {
+      if (this.name === 'participants') throw new DOMException('Forced participant failure', 'QuotaExceededError')
+      return Reflect.apply(originalAdd, this, args)
+    }
+  })
+
+  await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
+  await page.getByRole('button', { name: 'Hinzufügen' }).click()
+  await expect(page.getByRole('alert')).toHaveText('Der Teilnehmer konnte nicht lokal gespeichert werden.')
+  await expect(page.getByText('Bob', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Forced participant failure')).toHaveCount(0)
+  await expectNoAxeViolations(page)
+})
+
+test('Participant management is durable, FIFO synchronized, accessible, and keeps stable order', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Teilnehmer-Test')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await expect(page).toHaveURL(/\/participants$/)
+  await expect(page.getByRole('heading', { name: 'Teilnehmer', exact: true })).toBeVisible()
+  await expect(page.getByText('Alice', { exact: true })).toBeVisible()
+  await expectNoAxeViolations(page)
+
+  const methods: string[] = []
+  page.on('request', request => { if (request.url().includes('/participants')) methods.push(request.method()) })
+  let releasePost!: () => void
+  const postGate = new Promise<void>(resolve => { releasePost = resolve })
+  let observePost!: () => void
+  const postObserved = new Promise<void>(resolve => { observePost = resolve })
+  let postReleased = false
+  await page.route('**/api/groups/*/participants*', async route => {
+    if (route.request().method() === 'POST' && !postReleased) {
+      observePost()
+      await postGate
+    }
+    await route.continue()
+  })
+  await page.getByLabel('Teilnehmer hinzufügen').fill(' Bob ')
+  await page.getByRole('button', { name: 'Hinzufügen' }).click()
+  await postObserved
+  await expect(page.getByText('Bob', { exact: true })).toBeVisible()
+  await expectNoAxeViolations(page)
+  await page.getByRole('button', { name: 'Bob umbenennen' }).click()
+  const renameInput = page.getByLabel('Neuer Name')
+  await renameInput.fill('   ')
+  await page.getByRole('button', { name: 'Speichern' }).click()
+  await expect(renameInput).toHaveAttribute('aria-describedby', /rename-.+-error/)
+  const renameErrorId = await renameInput.getAttribute('aria-describedby')
+  await expect(page.locator(`#${renameErrorId}`)).toHaveText('Name ist erforderlich.')
+  await expectNoAxeViolations(page)
+  await page.getByLabel('Neuer Name').fill('Bobby')
+  await page.getByRole('button', { name: 'Speichern' }).click()
+  await expect(page.getByText('Bobby', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Bobby umbenennen' })).toBeFocused()
+  await expectNoAxeViolations(page)
+  await expect.poll(async () => page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 2)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
+    const records = await new Promise<unknown[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
+    db.close(); return records.length
+  })).toBe(2)
+  expect(methods).toEqual(['POST'])
+
+  const addResponse = page.waitForResponse(response => response.url().endsWith('/participants') && response.request().method() === 'POST' && response.status() === 201)
+  const renameResponse = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
+  postReleased = true
+  releasePost()
+  await addResponse
+  await renameResponse
+  expect(methods).toEqual(['POST', 'PATCH'])
+  await page.unroute('**/api/groups/*/participants*')
+
+  const addCarol = page.waitForResponse(response => response.url().endsWith('/participants') && response.request().method() === 'POST' && response.status() === 201)
+  await page.getByLabel('Teilnehmer hinzufügen').fill('Carol')
+  await page.getByRole('button', { name: 'Hinzufügen' }).click()
+  const carolResponse = await addCarol
+  expect(carolResponse.request().postDataJSON().order).toBe(2)
+
+  const deactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
+  await page.getByRole('button', { name: 'Carol deaktivieren' }).click()
+  await deactivate
+  await expect(page.getByText('Inaktiv')).toBeVisible()
+  await expectNoAxeViolations(page)
+  await page.reload()
+  await expect(page.getByText('Inaktiv')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Bobby löschen' }).click()
+  await expect(page.getByRole('dialog')).toContainText('Teilnehmer „Bobby“ wirklich löschen?')
+  await expectNoAxeViolations(page)
+  const deletion = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'DELETE' && response.status() === 204)
+  await page.getByRole('button', { name: 'Endgültig löschen' }).click()
+  await deletion
+  await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
+  const orders = await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 2)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const result = db.transaction('participants').objectStore('participants').getAll()
+    const records = await new Promise<Array<{ name: string; order: number }>>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
+    db.close(); return Object.fromEntries(records.map(item => [item.name, item.order]))
+  })
+  expect(orders).toMatchObject({ Alice: 0, Carol: 2 })
   await expectNoAxeViolations(page)
 })

@@ -50,8 +50,8 @@ IndexedDB ist kein zweiter Server und kein Server-State-Cache.
 Name:
 joinsplit
 
-Initial schema version:
-1
+Aktuelle Schema-Version:
+2
 
 Object stores:
 
@@ -103,6 +103,15 @@ Persistieren.
 ### Pending Mutations
 
 Persistieren.
+
+Ab Schema v2 verwendet die Queue eine explizite diskriminierte Union für
+CreateGroup, AddParticipant, RenameParticipant, DeactivateParticipant und
+DeleteParticipant. Jeder Eintrag besitzt eine unabhängige lokale UUID und eine
+ganzzahlige `createdOrder`. Neue Werte werden als Maximum der vorhandenen Werte
+plus eins vergeben; Lücken bleiben zulässig. Die Synchronisation verarbeitet
+die Einträge nach `createdOrder` und blockiert spätere Mutationen derselben Group,
+solange ein früherer Eintrag nicht bestätigt ist. Mutationen werden nicht
+zusammengefasst.
 
 Die persistierte Mutation bleibt die kanonische Retry-Eingabe.
 
@@ -217,14 +226,19 @@ v1
 - pendingMutations
 - settings
 
-später beispielsweise:
-v2
+in einer späteren Schema-Version, deren Nummer noch nicht festgelegt ist, beispielsweise:
 - expenses
 - expenseShares
 
 Kein separates Migrationsframework einführen.
 
 Upgrade-Code bleibt explizit und sequenziell.
+
+Der Upgrade-Pfad v1 → v2 ersetzt den bisherigen `groupId`-Schlüssel der
+CreateGroup-Outbox atomar durch die lokale Mutations-ID. Vorhandene
+CreateGroup-Einträge werden deterministisch nach ihrem bisherigen Schlüssel
+geordnet, erhalten fortlaufende `createdOrder`-Werte und behalten sämtliche
+Domain-IDs sowie ihren unveränderten Payload.
 
 ## Sync after rehydration
 

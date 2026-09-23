@@ -73,6 +73,27 @@ body {
   color: #105536;
 }
 
+.danger-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  background: #b42318;
+  padding: 0.65rem 1rem;
+  color: white;
+  font-weight: 650;
+}
+
+.delete-dialog {
+  width: min(30rem, calc(100% - 2rem));
+  border: 1px solid #d8ded9;
+}
+
+.delete-dialog::backdrop {
+  background: rgb(12 52 36 / 0.48);
+}
+
 .secondary-button:hover {
   background: #eef7f2;
 }

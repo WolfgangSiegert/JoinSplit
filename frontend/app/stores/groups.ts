@@ -1,138 +1,153 @@
 import { defineStore } from 'pinia'
-import type {
-  CreateGroupPayload,
-  Group,
-  Participant,
-  PreparedGroupCreation,
-} from '../domain/create-group'
+import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
+import { prepareCreateGroupMutation, type PendingCreateGroup, type PendingMutation } from '../domain/pending-mutation'
 
-export interface PendingCreateGroupMutation {
-  readonly kind: 'CreateGroup'
-  readonly payload: Readonly<CreateGroupPayload>
-  readonly status: 'pending'
-}
+export type MutationSyncErrorKind =
+  | 'network' | 'unauthorized' | 'conflict' | 'validation' | 'server'
+  | 'unexpected' | 'reconciliation' | 'identity' | 'persistence'
 
-export type CreateGroupSyncErrorKind =
-  | 'network'
-  | 'unauthorized'
-  | 'conflict'
-  | 'validation'
-  | 'server'
-  | 'unexpected'
-  | 'reconciliation'
-  | 'identity'
-  | 'persistence'
-
-export interface CreateGroupSyncError {
-  readonly kind: CreateGroupSyncErrorKind
+export interface MutationSyncError {
+  readonly kind: MutationSyncErrorKind
   readonly message: string
   readonly retryable: boolean
 }
 
-export type CreateGroupSyncState =
+export type MutationSyncState =
   | { readonly state: 'pending'; readonly error: null }
   | { readonly state: 'syncing'; readonly error: null }
-  | { readonly state: 'synced'; readonly error: null }
-  | { readonly state: 'failed'; readonly error: Readonly<CreateGroupSyncError> }
+  | { readonly state: 'failed'; readonly error: Readonly<MutationSyncError> }
 
 interface GroupsState {
   groups: Group[]
   participants: Participant[]
-  pendingCreateGroups: PendingCreateGroupMutation[]
-  createGroupSync: Record<string, CreateGroupSyncState>
+  pendingMutations: PendingMutation[]
+  mutationSync: Record<string, MutationSyncState>
+  syncedGroups: Record<string, true>
 }
 
 interface HydratedGroupsState {
   readonly groups: Group[]
   readonly participants: Participant[]
-  readonly pendingMutations: PendingCreateGroupMutation[]
+  readonly pendingMutations: PendingMutation[]
 }
 
 export const useGroupsStore = defineStore('groups', {
   state: (): GroupsState => ({
-    groups: [],
-    participants: [],
-    pendingCreateGroups: [],
-    createGroupSync: {},
+    groups: [], participants: [], pendingMutations: [], mutationSync: {}, syncedGroups: {},
   }),
+
+  getters: {
+    pendingCreateGroups: state => state.pendingMutations.filter(
+      (mutation): mutation is PendingCreateGroup => mutation.type === 'CreateGroup',
+    ),
+    createGroupSync: state => Object.fromEntries(state.groups.map(group => {
+      const mutations = state.pendingMutations.filter(item => item.groupId === group.id)
+        .sort((left, right) => left.createdOrder - right.createdOrder)
+      const failed = mutations.find(item => state.mutationSync[item.id]?.state === 'failed')
+      const syncing = mutations.find(item => state.mutationSync[item.id]?.state === 'syncing')
+      const current = failed ? state.mutationSync[failed.id] : syncing ? state.mutationSync[syncing.id]
+        : mutations.length ? { state: 'pending' as const, error: null } : state.syncedGroups[group.id]
+          ? { state: 'synced' as const, error: null } : undefined
+      return [group.id, current]
+    })),
+  },
 
   actions: {
     hydrate(state: HydratedGroupsState): void {
       this.$patch({
         groups: state.groups,
         participants: state.participants,
-        pendingCreateGroups: state.pendingMutations,
-        createGroupSync: Object.fromEntries(
-          state.pendingMutations.map(mutation => [
-            mutation.payload.groupId,
-            { state: 'pending' as const, error: null },
-          ]),
-        ),
+        pendingMutations: state.pendingMutations,
+        mutationSync: Object.fromEntries(state.pendingMutations.map(mutation => [
+          mutation.id, { state: 'pending' as const, error: null },
+        ])),
+        syncedGroups: {},
       })
     },
 
-    commitCreation(creation: PreparedGroupCreation): void {
-      if (this.groups.some(group => group.id === creation.group.id)) {
-        return
-      }
+    commitCreation(
+      creation: PreparedGroupCreation,
+      mutation?: PendingCreateGroup,
+    ): void {
+      if (this.groups.some(group => group.id === creation.group.id)) return
+      mutation ??= prepareCreateGroupMutation(creation.payload, this.pendingMutations)
+      this.groups.push(creation.group)
+      if (creation.participant) this.participants.push(creation.participant)
+      this.queueMutation(mutation)
+    },
 
-      const pendingMutation = Object.freeze({
-        kind: 'CreateGroup' as const,
-        payload: creation.payload,
-        status: 'pending' as const,
-      })
+    commitParticipantAdd(group: Group, participant: Participant, mutation: PendingMutation): void {
+      this.groups = this.groups.map(item => item.id === group.id ? group : item)
+      this.participants.push(participant)
+      this.queueMutation(mutation)
+    },
 
-      this.$patch({
-        groups: [...this.groups, creation.group],
-        participants: creation.participant
-          ? [...this.participants, creation.participant]
-          : this.participants,
-        pendingCreateGroups: [...this.pendingCreateGroups, pendingMutation],
-        createGroupSync: {
-          ...this.createGroupSync,
-          [creation.group.id]: { state: 'pending', error: null },
-        },
-      })
+    commitParticipantUpdate(participant: Participant, mutation: PendingMutation): void {
+      this.participants = this.participants.map(item => item.id === participant.id ? participant : item)
+      this.queueMutation(mutation)
+    },
+
+    commitParticipantDelete(group: Group, participantId: string, mutation: PendingMutation): void {
+      this.groups = this.groups.map(item => item.id === group.id ? group : item)
+      this.participants = this.participants.filter(item => item.id !== participantId)
+      this.queueMutation(mutation)
+    },
+
+    queueMutation(mutation: PendingMutation): void {
+      this.pendingMutations.push(mutation)
+      this.mutationSync[mutation.id] = { state: 'pending', error: null }
     },
 
     findGroup(groupId: string): Group | undefined {
       return this.groups.find(group => group.id === groupId)
     },
 
+    participantsForGroup(groupId: string): Participant[] {
+      return this.participants.filter(participant => participant.groupId === groupId)
+        .sort((left, right) => left.order - right.order)
+    },
+
+    findPendingCreate(groupId: string): PendingCreateGroup | undefined {
+      return this.pendingCreateGroups.find(mutation => mutation.groupId === groupId)
+    },
+
     hasPendingCreate(groupId: string): boolean {
-      return this.pendingCreateGroups.some(mutation => mutation.payload.groupId === groupId)
+      return Boolean(this.findPendingCreate(groupId))
     },
 
-    findPendingCreate(groupId: string): PendingCreateGroupMutation | undefined {
-      return this.pendingCreateGroups.find(mutation => mutation.payload.groupId === groupId)
-    },
-
-    beginCreateGroupSync(groupId: string): PendingCreateGroupMutation | null {
-      const mutation = this.findPendingCreate(groupId)
-      if (!mutation || this.createGroupSync[groupId]?.state === 'syncing') {
-        return null
-      }
-
-      this.createGroupSync[groupId] = { state: 'syncing', error: null }
+    beginMutationSync(mutationId: string): PendingMutation | null {
+      const mutation = this.pendingMutations.find(item => item.id === mutationId)
+      if (!mutation || this.mutationSync[mutationId]?.state === 'syncing') return null
+      this.mutationSync[mutationId] = { state: 'syncing', error: null }
       return mutation
     },
 
-    failCreateGroupSync(groupId: string, error: CreateGroupSyncError): void {
-      if (!this.hasPendingCreate(groupId)) return
-
-      this.createGroupSync[groupId] = {
-        state: 'failed',
-        error: Object.freeze({ ...error }),
-      }
+    failMutationSync(mutationId: string, error: MutationSyncError): void {
+      if (!this.pendingMutations.some(item => item.id === mutationId)) return
+      this.mutationSync[mutationId] = { state: 'failed', error: Object.freeze({ ...error }) }
     },
 
-    confirmCreateGroupSync(groupId: string): void {
-      if (!this.hasPendingCreate(groupId)) return
+    confirmMutationSync(mutationId: string): void {
+      const mutation = this.pendingMutations.find(item => item.id === mutationId)
+      if (!mutation) return
+      this.pendingMutations = this.pendingMutations.filter(item => item.id !== mutationId)
+      delete this.mutationSync[mutationId]
+      if (mutation.type === 'CreateGroup') this.syncedGroups[mutation.groupId] = true
+    },
 
-      this.pendingCreateGroups = this.pendingCreateGroups.filter(
-        mutation => mutation.payload.groupId !== groupId,
-      )
-      this.createGroupSync[groupId] = { state: 'synced', error: null }
+    groupSyncState(groupId: string): MutationSyncState | { state: 'synced'; error: null } | undefined {
+      const mutations = this.pendingMutations
+        .filter(mutation => mutation.groupId === groupId)
+        .sort((left, right) => left.createdOrder - right.createdOrder)
+      const failed = mutations.find(mutation => this.mutationSync[mutation.id]?.state === 'failed')
+      if (failed) return this.mutationSync[failed.id]
+      const syncing = mutations.find(mutation => this.mutationSync[mutation.id]?.state === 'syncing')
+      if (syncing) return this.mutationSync[syncing.id]
+      if (mutations.length) return { state: 'pending', error: null }
+      if (this.syncedGroups[groupId]) return { state: 'synced', error: null }
     },
   },
 })
+
+export type PendingCreateGroupMutation = PendingCreateGroup
+export type CreateGroupSyncError = MutationSyncError
