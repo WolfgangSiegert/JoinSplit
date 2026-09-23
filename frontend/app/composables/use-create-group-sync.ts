@@ -1,5 +1,6 @@
 import { synchronizeCreateGroup } from '../services/create-group-sync'
 import { synchronizeParticipantMutation } from '../services/participant-sync'
+import { synchronizeExpenseMutation } from '../services/expense-sync'
 
 export function useCreateGroupSync(groupId: Ref<string>) {
   const config = useRuntimeConfig()
@@ -22,8 +23,11 @@ export function useCreateGroupSync(groupId: Ref<string>) {
       const result = mutation.type === 'CreateGroup'
         ? await synchronizeCreateGroup({ groupId: groupId.value, apiBase: config.public.apiBase,
             identity: identityStore, groupsStore, online: online.value })
-        : await synchronizeParticipantMutation({ mutationId: mutation.id, apiBase: config.public.apiBase,
-            identity: identityStore, groupsStore, online: online.value })
+        : mutation.type === 'CreateExpense' || mutation.type === 'UpdateExpense' || mutation.type === 'DeleteExpense'
+          ? await synchronizeExpenseMutation({ mutationId: mutation.id, apiBase: config.public.apiBase,
+              identity: identityStore, groupsStore, online: online.value })
+          : await synchronizeParticipantMutation({ mutationId: mutation.id, apiBase: config.public.apiBase,
+              identity: identityStore, groupsStore, online: online.value })
       if (result.outcome !== 'synced') return
     }
   }

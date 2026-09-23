@@ -16,7 +16,8 @@ export interface Group {
   name: string
   currency: typeof GROUP_CURRENCY
   ownerAccessIdentityId: string
-  status: 'active'
+  status: 'active' | 'archived'
+  hasFinancialHistory: boolean
   participantIds: readonly string[]
 }
 
@@ -123,6 +124,7 @@ export function prepareGroupCreation(
         currency: GROUP_CURRENCY,
         ownerAccessIdentityId: actorId,
         status: 'active',
+        hasFinancialHistory: false,
         participantIds: participantId ? [participantId] : [],
       },
       participant: participantId

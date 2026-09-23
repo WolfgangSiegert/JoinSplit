@@ -52,6 +52,7 @@ export function prepareParticipantAdd(
   pendingMutations: readonly PendingMutation[],
   name: string,
   generateId: () => string = () => crypto.randomUUID(),
+  createdOrder: number = nextCreatedOrder(pendingMutations),
 ): { ok: true; value: PreparedParticipantAdd } | { ok: false; errors: ParticipantNameErrors } {
   const validation = validateParticipantName(name)
   if (validation.errors.name) return { ok: false, errors: validation.errors }
@@ -70,7 +71,7 @@ export function prepareParticipantAdd(
     id: mutationId,
     type: 'AddParticipant',
     groupId: group.id,
-    createdOrder: nextCreatedOrder(pendingMutations),
+    createdOrder,
     payload: { participantId, name: validation.normalizedName, order },
   })
 
@@ -89,6 +90,7 @@ export function prepareParticipantRename(
   pendingMutations: readonly PendingMutation[],
   name: string,
   generateId: () => string = () => crypto.randomUUID(),
+  createdOrder: number = nextCreatedOrder(pendingMutations),
 ): { ok: true; value: PreparedParticipantUpdate<PendingRenameParticipant> }
   | { ok: false; errors: ParticipantNameErrors } {
   const validation = validateParticipantName(name)
@@ -99,7 +101,7 @@ export function prepareParticipantRename(
       participant: { ...participant, name: validation.normalizedName },
       mutation: freezePendingMutation({
         id: generateId(), type: 'RenameParticipant', groupId: participant.groupId,
-        createdOrder: nextCreatedOrder(pendingMutations),
+        createdOrder,
         payload: {
           participantId: participant.id,
           name: validation.normalizedName,
@@ -115,12 +117,13 @@ export function prepareParticipantDeactivate(
   participant: Participant,
   pendingMutations: readonly PendingMutation[],
   generateId: () => string = () => crypto.randomUUID(),
+  createdOrder: number = nextCreatedOrder(pendingMutations),
 ): PreparedParticipantUpdate<PendingDeactivateParticipant> {
   return {
     participant: { ...participant, status: 'inactive' },
     mutation: freezePendingMutation({
       id: generateId(), type: 'DeactivateParticipant', groupId: participant.groupId,
-      createdOrder: nextCreatedOrder(pendingMutations),
+        createdOrder,
       payload: { participantId: participant.id, name: participant.name, active: false, order: participant.order },
     }),
   }
@@ -135,12 +138,13 @@ export function prepareParticipantDelete(
   participant: Participant,
   pendingMutations: readonly PendingMutation[],
   generateId: () => string = () => crypto.randomUUID(),
+  createdOrder: number = nextCreatedOrder(pendingMutations),
 ): PreparedParticipantDelete {
   return {
     group: { ...group, participantIds: group.participantIds.filter(id => id !== participant.id) },
     mutation: freezePendingMutation({
       id: generateId(), type: 'DeleteParticipant', groupId: group.id,
-      createdOrder: nextCreatedOrder(pendingMutations), payload: { participantId: participant.id },
+      createdOrder, payload: { participantId: participant.id },
     }),
   }
 }

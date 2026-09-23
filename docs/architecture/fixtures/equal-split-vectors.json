@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "participantOrder": ["A", "B", "C", "D"],
+  "vectors": [
+    {
+      "name": "even-four-way",
+      "amountMinor": 12000,
+      "selectedParticipantIds": ["A", "B", "C", "D"],
+      "expectedShares": [
+        { "participantId": "A", "amountMinor": 3000 },
+        { "participantId": "B", "amountMinor": 3000 },
+        { "participantId": "C", "amountMinor": 3000 },
+        { "participantId": "D", "amountMinor": 3000 }
+      ]
+    },
+    {
+      "name": "one-remainder-cent",
+      "amountMinor": 1000,
+      "selectedParticipantIds": ["A", "B", "C"],
+      "expectedShares": [
+        { "participantId": "A", "amountMinor": 334 },
+        { "participantId": "B", "amountMinor": 333 },
+        { "participantId": "C", "amountMinor": 333 }
+      ]
+    },
+    {
+      "name": "two-remainder-cents",
+      "amountMinor": 1001,
+      "selectedParticipantIds": ["A", "B", "C"],
+      "expectedShares": [
+        { "participantId": "A", "amountMinor": 334 },
+        { "participantId": "B", "amountMinor": 334 },
+        { "participantId": "C", "amountMinor": 333 }
+      ]
+    },
+    {
+      "name": "one-cent-three-way",
+      "amountMinor": 1,
+      "selectedParticipantIds": ["A", "B", "C"],
+      "expectedShares": [
+        { "participantId": "A", "amountMinor": 1 },
+        { "participantId": "B", "amountMinor": 0 },
+        { "participantId": "C", "amountMinor": 0 }
+      ]
+    },
+    {
+      "name": "two-cents-three-way",
+      "amountMinor": 2,
+      "selectedParticipantIds": ["A", "B", "C"],
+      "expectedShares": [
+        { "participantId": "A", "amountMinor": 1 },
+        { "participantId": "B", "amountMinor": 1 },
+        { "participantId": "C", "amountMinor": 0 }
+      ]
+    },
+    {
+      "name": "request-order-is-irrelevant",
+      "amountMinor": 5,
+      "selectedParticipantIds": ["C", "A"],
+      "expectedShares": [
+        { "participantId": "A", "amountMinor": 3 },
+        { "participantId": "C", "amountMinor": 2 }
+      ]
+    },
+    {
+      "name": "single-participant",
+      "amountMinor": 999,
+      "selectedParticipantIds": ["C"],
+      "expectedShares": [
+        { "participantId": "C", "amountMinor": 999 }
+      ]
+    }
+  ]
+}

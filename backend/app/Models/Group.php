@@ -15,7 +15,10 @@ class Group extends Model
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'has_financial_history' => 'boolean',
+        ];
     }
 
     public function owner(): BelongsTo
@@ -26,5 +29,10 @@ class Group extends Model
     public function participants(): HasMany
     {
         return $this->hasMany(Participant::class)->orderBy('position');
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
     }
 }

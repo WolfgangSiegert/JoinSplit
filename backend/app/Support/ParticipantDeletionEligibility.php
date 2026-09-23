@@ -13,7 +13,7 @@ class ParticipantDeletionEligibility
 
     private function hasFinancialReferences(Participant $participant): bool
     {
-        // JS-016 has no financial models. This boundary is where their references are added later.
-        return false;
+        return $participant->paidExpenses()->exists()
+            || $participant->expenseShares()->exists();
     }
 }

@@ -24,7 +24,7 @@ async function openCreateGroup(page: Page): Promise<void> {
 
 async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 2)
+    const request = indexedDB.open('joinsplit', 3)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -62,7 +62,7 @@ async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
 
 async function durableInitialParticipantDefault(page: Page): Promise<boolean | null> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 2)
+    const request = indexedDB.open('joinsplit', 3)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -387,7 +387,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await page.goto('/')
   await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toBeVisible()
   await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 2)
+    const request = indexedDB.open('joinsplit', 3)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -412,7 +412,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten nicht verfügbar' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toHaveCount(0)
   const malformedStillExists = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 2)
+    const request = indexedDB.open('joinsplit', 3)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -430,7 +430,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await expectNoAxeViolations(page)
 })
 
-test('v1 pending CreateGroup data upgrades atomically to the v2 FIFO mutation shape', async ({ page }) => {
+test('v1 pending CreateGroup data upgrades atomically through v3', async ({ page }) => {
   await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -464,16 +464,179 @@ test('v1 pending CreateGroup data upgrades atomically to the v2 FIFO mutation sh
   await page.reload()
   await expect(page.getByRole('link', { name: /Migration/ })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 2)
+    const request = indexedDB.open('joinsplit', 3)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
     const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
     const version = db.version; db.close(); return { version, records }
   })
-  expect(upgraded.version).toBe(2)
+  expect(upgraded.version).toBe(3)
   expect(upgraded.records).toHaveLength(1)
   expect(upgraded.records[0]).toMatchObject({ type: 'CreateGroup', createdOrder: 0, groupId: '22222222-2222-4222-8222-222222222222' })
   expect(upgraded.records[0]?.id).toMatch(/^[0-9a-f-]{36}$/)
+})
+
+test('a fresh database is created directly at schema v3', async ({ page }) => {
+  await page.goto('/')
+  const schema = await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 3)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+    })
+    const result = { version: db.version, stores: [...db.objectStoreNames] }
+    db.close()
+    return result
+  })
+  expect(schema.version).toBe(3)
+  expect(schema.stores).toEqual(expect.arrayContaining(['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares']))
+})
+
+test('v2 durable state upgrades to v3 without losing existing records', async ({ page }) => {
+  await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
+  await page.goto('/')
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const deletion = indexedDB.deleteDatabase('joinsplit')
+      deletion.onsuccess = () => resolve(); deletion.onerror = () => reject(deletion.error)
+    })
+    const request = indexedDB.open('joinsplit', 2)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onupgradeneeded = () => {
+        const database = request.result
+        database.createObjectStore('accessIdentity', { keyPath: 'key' })
+        database.createObjectStore('groups', { keyPath: 'id' })
+        database.createObjectStore('participants', { keyPath: 'id' })
+        database.createObjectStore('pendingMutations', { keyPath: 'id' })
+        database.createObjectStore('settings', { keyPath: 'key' })
+      }
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+    })
+    const tx = db.transaction('accessIdentity', 'readwrite')
+    tx.objectStore('accessIdentity').add({ key: 'current', id: '11111111-1111-4111-8111-111111111111', credential: '01'.repeat(32) })
+    await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) })
+    db.close()
+  })
+  await page.unroute('**/_nuxt/**')
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  const upgraded = await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 3)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
+    const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
+    const result = { version: db.version, stores: [...db.objectStoreNames], identityId: identity.id }
+    db.close(); return result
+  })
+  expect(upgraded).toMatchObject({ version: 3, identityId: '11111111-1111-4111-8111-111111111111' })
+  expect(upgraded.stores).toEqual(expect.arrayContaining(['expenses', 'expenseShares']))
+})
+
+test('Expense shares reload in stable Participant order despite opposing UUID order and archived Participants stay read-only', async ({ page }) => {
+  const groupId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  const expenseId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  const stableFirst = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+  const stableSecond = '00000000-0000-4000-8000-000000000001'
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await page.evaluate(async ({ groupId, expenseId, stableFirst, stableSecond }) => {
+    const request = indexedDB.open('joinsplit', 3)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
+    const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
+    const tx = db.transaction(['groups', 'participants', 'expenses', 'expenseShares', 'pendingMutations'], 'readwrite')
+    tx.objectStore('groups').clear(); tx.objectStore('participants').clear(); tx.objectStore('expenses').clear(); tx.objectStore('expenseShares').clear(); tx.objectStore('pendingMutations').clear()
+    tx.objectStore('groups').put({ id: groupId, name: 'Archiv', currency: 'EUR', ownerAccessIdentityId: identity.id, status: 'archived', hasFinancialHistory: true, participantIds: [stableFirst, stableSecond] })
+    tx.objectStore('participants').put({ id: stableFirst, groupId, name: 'Zuerst', status: 'inactive', order: 0 })
+    tx.objectStore('participants').put({ id: stableSecond, groupId, name: 'Danach', status: 'active', order: 1 })
+    tx.objectStore('expenses').put({ id: expenseId, groupId, description: 'Persistiert', amountMinor: 5, incurredOn: '2026-09-24', payerParticipantId: stableSecond, creatorAccessIdentityId: identity.id, splitMethod: 'equal' })
+    tx.objectStore('expenseShares').put({ expenseId, participantId: stableSecond, amountMinor: 2 })
+    tx.objectStore('expenseShares').put({ expenseId, participantId: stableFirst, amountMinor: 3 })
+    await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) })
+    db.close()
+  }, { groupId, expenseId, stableFirst, stableSecond })
+  await page.goto(`/groups/${groupId}/expenses/${expenseId}`)
+  await page.reload()
+  const shares = page.locator('section[aria-labelledby="shares-title"] li')
+  await expect(shares).toHaveCount(2)
+  await expect(shares.nth(0)).toContainText('Zuerst')
+  await expect(shares.nth(0)).toContainText('0,03')
+  await expect(shares.nth(1)).toContainText('Danach')
+  await page.goto(`/groups/${groupId}/participants`)
+  await expect(page.getByText('Diese archivierte Gruppe ist schreibgeschützt. Teilnehmer können nur angesehen werden.')).toBeVisible()
+  await expect(page.getByLabel('Teilnehmer hinzufügen')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /umbenennen|deaktivieren|löschen/i })).toHaveCount(0)
+  await expectNoAxeViolations(page)
+})
+
+test('Expense create, Equal Split preview, edit, reload, and confirmed delete are accessible', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Ausgaben-Test')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  const addBob = page.waitForResponse(response => response.url().endsWith('/participants') && response.request().method() === 'POST' && response.status() === 201)
+  await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
+  await page.getByRole('button', { name: 'Hinzufügen' }).click()
+  await addBob
+  await page.getByRole('link', { name: '← Gruppe' }).click()
+  await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await page.getByLabel('Beschreibung').fill('Abendessen')
+  await page.getByLabel('Betrag in Euro').fill('10,01')
+  await page.getByLabel('Bezahlt von').selectOption({ label: 'Alice' })
+  await expect(page.getByRole('heading', { name: 'Vorschau der Aufteilung' })).toBeVisible()
+  await expect(page.getByText('5,01 €')).toBeVisible()
+  await expect(page.getByText('5,00 €')).toBeVisible()
+  const splitFieldset = page.getByRole('group', { name: 'Gleichmäßig aufteilen' })
+  const aliceShare = page.getByRole('checkbox', { name: 'Alice' })
+  await aliceShare.uncheck()
+  await page.getByRole('checkbox', { name: 'Bob' }).uncheck()
+  await page.getByRole('button', { name: 'Ausgabe speichern' }).click()
+  await expect(splitFieldset).toHaveAttribute('aria-invalid', 'true')
+  await expect(splitFieldset).toHaveAttribute('aria-describedby', 'shares-help shares-error')
+  await expect(page.getByRole('alert')).toHaveText('Mindestens eine Person für die Aufteilung auswählen.')
+  await expect(aliceShare).toBeFocused()
+  await expectNoAxeViolations(page)
+  await aliceShare.check()
+  await page.getByRole('checkbox', { name: 'Bob' }).check()
+  await expectNoAxeViolations(page)
+  const create = page.waitForResponse(response => response.url().endsWith('/expenses') && response.request().method() === 'POST' && response.status() === 201)
+  await page.getByRole('button', { name: 'Ausgabe speichern' }).click()
+  await create
+  await expect(page.getByRole('heading', { level: 1, name: 'Abendessen' })).toBeVisible()
+  const expenseUrl = page.url()
+  await page.reload()
+  await expect(page.getByText('10,01 €')).toBeVisible()
+  await page.getByRole('link', { name: /Ausgaben/ }).click()
+  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  const deactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
+  await page.getByRole('button', { name: 'Bob deaktivieren' }).click()
+  await deactivate
+  await page.goto(expenseUrl)
+  await page.getByRole('button', { name: 'Bearbeiten' }).click()
+  const historicalBob = page.getByRole('checkbox', { name: 'Bob (inaktiv)' })
+  await expect(historicalBob).toBeChecked()
+  await expect(historicalBob).toBeEnabled()
+  await historicalBob.uncheck()
+  await page.getByLabel('Betrag in Euro').fill('10,02')
+  const update = page.waitForResponse(response => response.url().includes('/expenses/') && response.request().method() === 'PUT' && response.status() === 200)
+  await page.getByRole('button', { name: 'Änderungen speichern' }).click()
+  await update
+  await expect(page.getByRole('definition').filter({ hasText: '10,02 €' })).toBeVisible()
+  await page.getByRole('button', { name: 'Bearbeiten' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Bob (inaktiv)' })).not.toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Bob (inaktiv)' })).toBeDisabled()
+  await page.reload()
+  await page.getByRole('button', { name: 'Ausgabe löschen' }).click()
+  await expect(page.getByRole('dialog')).toContainText('Ausgabe „Abendessen“ endgültig löschen?')
+  await expectNoAxeViolations(page)
+  const deletion = page.waitForResponse(response => response.url().includes('/expenses/') && response.request().method() === 'DELETE' && response.status() === 204)
+  await page.getByRole('button', { name: 'Endgültig löschen' }).click()
+  await deletion
+  await expect(page.getByText('Noch keine Ausgaben')).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Noch keine Ausgaben')).toBeVisible()
+  await expectNoAxeViolations(page)
 })
 
 test('Participant persistence failures are visibly and safely reported', async ({ page }) => {
@@ -544,7 +707,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await expect(page.getByRole('button', { name: 'Bobby umbenennen' })).toBeFocused()
   await expectNoAxeViolations(page)
   await expect.poll(async () => page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 2)
+    const request = indexedDB.open('joinsplit', 3)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
     const records = await new Promise<unknown[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
@@ -585,7 +748,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.reload()
   await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
   const orders = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 2)
+    const request = indexedDB.open('joinsplit', 3)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('participants').objectStore('participants').getAll()
     const records = await new Promise<Array<{ name: string; order: number }>>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })

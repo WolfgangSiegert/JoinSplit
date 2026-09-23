@@ -10,7 +10,7 @@ const ALICE_ID = '33333333-3333-4333-8333-333333333333'
 const CAROL_ID = '44444444-4444-4444-8444-444444444444'
 const DAVE_ID = '55555555-5555-4555-8555-555555555555'
 const MUTATION_ID = '66666666-6666-4666-8666-666666666666'
-const group: Group = { id: GROUP_ID, name: 'Reise', currency: 'EUR', ownerAccessIdentityId: ACTOR_ID, status: 'active', participantIds: [ALICE_ID, CAROL_ID] }
+const group: Group = { id: GROUP_ID, name: 'Reise', currency: 'EUR', ownerAccessIdentityId: ACTOR_ID, status: 'active', hasFinancialHistory: false, participantIds: [ALICE_ID, CAROL_ID] }
 const alice: Participant = { id: ALICE_ID, groupId: GROUP_ID, name: 'Alice', status: 'active', order: 0 }
 const carol: Participant = { id: CAROL_ID, groupId: GROUP_ID, name: 'Carol', status: 'active', order: 2 }
 
@@ -65,6 +65,6 @@ describe('Participant local workflow', () => {
   test('allows a durable delete mutation to reference an absent local Participant', async () => {
     const mutation: PendingMutation = { id: MUTATION_ID, type: 'DeleteParticipant', groupId: GROUP_ID, createdOrder: 0, payload: { participantId: ALICE_ID } }
     const { validateDurableState } = await import('../../app/persistence/validation')
-    expect(() => validateDurableState({ accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32) }, groups: [{ ...group, participantIds: [CAROL_ID] }], participants: [carol], pendingMutations: [mutation], settings: null })).not.toThrow()
+    expect(() => validateDurableState({ accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32) }, groups: [{ ...group, participantIds: [CAROL_ID] }], participants: [carol], pendingMutations: [mutation], expenses: [], settings: null })).not.toThrow()
   })
 })

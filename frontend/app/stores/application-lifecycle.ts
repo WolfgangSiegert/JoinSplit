@@ -39,6 +39,7 @@ export const useApplicationLifecycleStore = defineStore('applicationLifecycle', 
       useGroupsStore().hydrate({
         groups: durableState.groups,
         participants: durableState.participants,
+        expenses: durableState.expenses,
         pendingMutations: durableState.pendingMutations.map(restorePendingMutation),
       })
       useSettingsStore().hydrate(durableState.settings)

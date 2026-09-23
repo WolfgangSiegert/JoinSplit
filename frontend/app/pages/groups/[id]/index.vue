@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { formatAmountMinor } from '../../../domain/expense'
 const route = useRoute()
 const groupsStore = useGroupsStore()
 const heading = ref<HTMLHeadingElement | null>(null)
 const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
+const expenses = computed(() => groupsStore.expensesForGroup(groupId.value))
+const participantNames = computed(() => new Map(groupsStore.participantsForGroup(groupId.value).map(item => [item.id, item.name])))
 const { syncState, visibleState, attemptSync } = useCreateGroupSync(groupId)
 
 const syncMessage = computed(() => {
@@ -76,10 +79,14 @@ onMounted(async () => {
         </div>
       </div>
 
-      <section class="card mt-7 px-5 py-8 text-center" aria-labelledby="empty-expenses">
+      <p v-if="route.query.deleted === '1'" class="mt-6 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Ausgabe lokal gelöscht.</p>
+      <section v-if="!expenses.length" class="card mt-7 px-5 py-8 text-center" aria-labelledby="empty-expenses">
         <h2 id="empty-expenses" class="text-xl font-semibold">Noch keine Ausgaben</h2>
         <p class="mt-2 text-gray-600">Erfasste Ausgaben erscheinen später hier.</p>
       </section>
+      <section v-else class="mt-7" aria-labelledby="expenses-title"><h2 id="expenses-title" class="text-xl font-semibold">Ausgaben</h2><ul class="mt-3 space-y-3"><li v-for="expense in expenses" :key="expense.id"><NuxtLink :to="`/groups/${group.id}/expenses/${expense.id}`" class="card block p-4"><span class="flex justify-between gap-4"><strong>{{ expense.description }}</strong><span>{{ formatAmountMinor(expense.amountMinor) }}</span></span><span class="mt-1 block text-sm text-gray-600">{{ expense.incurredOn }} · bezahlt von {{ participantNames.get(expense.payerParticipantId) }}</span></NuxtLink></li></ul></section>
+
+      <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button mt-5 w-full">Ausgabe erfassen</NuxtLink>
 
       <NuxtLink :to="`/groups/${group.id}/participants`" class="secondary-button mt-5 w-full">
         Teilnehmer verwalten

@@ -37,6 +37,7 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
       currency: 'EUR',
       ownerAccessIdentityId: ACTOR_ID,
       status: 'active',
+      hasFinancialHistory: false,
       participantIds: [PARTICIPANT_ID],
     }],
     participants: [{
@@ -47,6 +48,7 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
       order: 0,
     }],
     pendingMutations: [pendingMutation],
+    expenses: [],
     settings: { addSelfAsParticipantByDefault: false },
     ...overrides,
   }

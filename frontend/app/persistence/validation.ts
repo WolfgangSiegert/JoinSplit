@@ -2,10 +2,12 @@ import type { Group, Participant } from '../domain/create-group'
 import type { PendingMutation } from '../domain/pending-mutation'
 import type { DurableState } from './database'
 import { normalizeName } from '../domain/create-group'
+import type { Expense } from '../domain/expense'
+import { isCalendarDate } from '../domain/expense'
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const CREDENTIAL = /^[0-9a-f]{64}$/u
-const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant'])
+const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense'])
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function keys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const actual = Object.keys(value); return actual.length === expected.length && actual.every(key => expected.includes(key))
@@ -15,9 +17,9 @@ function name(value: unknown): value is string { return typeof value === 'string
 function integer(value: unknown): value is number { return Number.isSafeInteger(value) && (value as number) >= 0 }
 
 function group(value: unknown): value is Group {
-  return record(value) && keys(value, ['id', 'name', 'currency', 'ownerAccessIdentityId', 'status', 'participantIds'])
+  return record(value) && keys(value, ['id', 'name', 'currency', 'ownerAccessIdentityId', 'status', 'participantIds', 'hasFinancialHistory'])
     && uuid(value.id) && name(value.name) && value.currency === 'EUR' && uuid(value.ownerAccessIdentityId)
-    && value.status === 'active' && Array.isArray(value.participantIds) && value.participantIds.every(uuid)
+    && (value.status === 'active' || value.status === 'archived') && typeof value.hasFinancialHistory === 'boolean' && Array.isArray(value.participantIds) && value.participantIds.every(uuid)
     && new Set(value.participantIds).size === value.participantIds.length
 }
 
@@ -32,6 +34,9 @@ function mutation(value: unknown): value is PendingMutation {
     || !uuid(value.id) || typeof value.type !== 'string' || !TYPES.has(value.type)
     || !uuid(value.groupId) || !integer(value.createdOrder) || !record(value.payload)) return false
   const payload = value.payload
+  if (value.type === 'CreateExpense' || value.type === 'UpdateExpense' || value.type === 'DeleteExpense') {
+    return keys(payload, ['expense']) && expense(payload.expense) && payload.expense.groupId === value.groupId
+  }
   if (value.type === 'CreateGroup') {
     if (!keys(payload, ['groupId', 'name', 'currency', 'actorId', 'initialParticipant'])
       || payload.groupId !== value.groupId || !name(payload.name) || payload.currency !== 'EUR' || !uuid(payload.actorId)) return false
@@ -47,16 +52,26 @@ function mutation(value: unknown): value is PendingMutation {
   return keys(payload, ['participantId']) && uuid(payload.participantId)
 }
 
+function expense(value: unknown): value is Expense {
+  if (!record(value) || !keys(value, ['id', 'groupId', 'description', 'amountMinor', 'incurredOn', 'payerParticipantId', 'creatorAccessIdentityId', 'splitMethod', 'shares'])
+    || !uuid(value.id) || !uuid(value.groupId) || !uuid(value.payerParticipantId) || !uuid(value.creatorAccessIdentityId)
+    || typeof value.description !== 'string' || normalizeName(value.description) !== value.description || Array.from(value.description).length < 1 || Array.from(value.description).length > 200
+    || !Number.isSafeInteger(value.amountMinor) || (value.amountMinor as number) <= 0 || !isCalendarDate(value.incurredOn as string) || value.splitMethod !== 'equal' || !Array.isArray(value.shares) || !value.shares.length) return false
+  return value.shares.every(share => record(share) && keys(share, ['participantId', 'amountMinor']) && uuid(share.participantId) && integer(share.amountMinor))
+}
+
 export function validateDurableState(value: DurableState): DurableState {
   const identity = value.accessIdentity
   if (identity !== null && (!uuid(identity.id) || !CREDENTIAL.test(identity.credential))) throw new Error('Invalid persisted access identity')
   if (!value.groups.every(group) || !value.participants.every(participant) || !value.pendingMutations.every(mutation)
+    || !value.expenses.every(expense)
     || (value.settings !== null && typeof value.settings.addSelfAsParticipantByDefault !== 'boolean')) throw new Error('Invalid persisted state shape')
 
   const groupIds = new Set(value.groups.map(item => item.id)); const participantIds = new Set(value.participants.map(item => item.id))
+  const expenseIds = new Set(value.expenses.map(item => item.id))
   const mutationIds = new Set(value.pendingMutations.map(item => item.id)); const createdOrders = new Set(value.pendingMutations.map(item => item.createdOrder))
   if (groupIds.size !== value.groups.length || participantIds.size !== value.participants.length
-    || mutationIds.size !== value.pendingMutations.length || createdOrders.size !== value.pendingMutations.length) throw new Error('Duplicate persisted identifiers or queue order')
+    || expenseIds.size !== value.expenses.length || mutationIds.size !== value.pendingMutations.length || createdOrders.size !== value.pendingMutations.length) throw new Error('Duplicate persisted identifiers or queue order')
   if ([...groupIds].some(id => participantIds.has(id))) throw new Error('Persisted group and participant identifiers collide')
   if (!identity && (value.groups.length || value.participants.length || value.pendingMutations.length)) throw new Error('Persisted domain state has no access identity')
 
@@ -67,6 +82,18 @@ export function validateDurableState(value: DurableState): DurableState {
       || ordered.map(item => item.id).join('|') !== currentGroup.participantIds.join('|')) throw new Error('Persisted group participant ordering is inconsistent')
   }
   if (value.participants.some(item => !groupIds.has(item.groupId))) throw new Error('Persisted participant has no group')
+  for (const currentExpense of value.expenses) {
+    const currentGroup = value.groups.find(item => item.id === currentExpense.groupId)
+    if (!currentGroup || !identity || currentExpense.creatorAccessIdentityId !== identity.id) throw new Error('Persisted Expense ownership mismatch')
+    const groupParticipants = value.participants.filter(item => item.groupId === currentExpense.groupId).sort((a, b) => a.order - b.order)
+    const participantOrder = new Map(groupParticipants.map((item, index) => [item.id, index]))
+    if (!participantOrder.has(currentExpense.payerParticipantId) || currentExpense.shares.some(share => !participantOrder.has(share.participantId))) throw new Error('Persisted Expense Participant mismatch')
+    if (new Set(currentExpense.shares.map(share => share.participantId)).size !== currentExpense.shares.length) throw new Error('Duplicate persisted ExpenseShare identity')
+    const order = currentExpense.shares.map(share => participantOrder.get(share.participantId)!)
+    if (order.some((value, index) => index > 0 && value <= order[index - 1]!)) throw new Error('Persisted ExpenseShare order mismatch')
+    if (currentExpense.shares.reduce((sum, share) => sum + share.amountMinor, 0) !== currentExpense.amountMinor) throw new Error('Persisted ExpenseShare sum mismatch')
+    if (!currentGroup.hasFinancialHistory) throw new Error('Persisted Group financial history mismatch')
+  }
 
   const orderedMutations = [...value.pendingMutations].sort((a, b) => a.createdOrder - b.createdOrder)
   const latestParticipantMutation = new Map<string, PendingMutation>()
@@ -81,13 +108,25 @@ export function validateDurableState(value: DurableState): DurableState {
       }
       continue
     }
+    if (current.type === 'CreateExpense' || current.type === 'UpdateExpense' || current.type === 'DeleteExpense') {
+      const local = value.expenses.find(item => item.id === current.payload.expense.id)
+      if (current.type === 'DeleteExpense') {
+        if (local) throw new Error('Persisted DeleteExpense local state mismatch')
+      } else {
+        const newer = orderedMutations.some(item => item.createdOrder > current.createdOrder && (item.type === 'CreateExpense' || item.type === 'UpdateExpense' || item.type === 'DeleteExpense') && item.payload.expense.id === current.payload.expense.id)
+        if (!newer && JSON.stringify(local) !== JSON.stringify(current.payload.expense)) throw new Error(`Persisted ${current.type} local state mismatch`)
+      }
+      continue
+    }
     const participantId = current.payload.participantId
     const localParticipant = value.participants.find(item => item.id === participantId)
     if (localParticipant && localParticipant.groupId !== current.groupId) throw new Error('Persisted Participant mutation group mismatch')
     latestParticipantMutation.set(participantId, current)
   }
 
-  for (const [participantId, latest] of latestParticipantMutation) {
+  for (const [participantId, latestMutation] of latestParticipantMutation) {
+    if (latestMutation.type === 'CreateExpense' || latestMutation.type === 'UpdateExpense' || latestMutation.type === 'DeleteExpense') continue
+    const latest = latestMutation
     const local = value.participants.find(item => item.id === participantId)
     if (latest.type === 'DeleteParticipant') {
       if (local) throw new Error('Persisted DeleteParticipant local state mismatch')

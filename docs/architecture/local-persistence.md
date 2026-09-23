@@ -51,7 +51,7 @@ Name:
 joinsplit
 
 Aktuelle Schema-Version:
-2
+3
 
 Object stores:
 
@@ -60,9 +60,8 @@ Object stores:
 - participants
 - pendingMutations
 - settings
-
-Spätere Domainobjekte werden nur bei konkretem Bedarf über explizite
-Schema-Upgrades ergänzt.
+- expenses
+- expenseShares
 
 ## Persisted state
 
@@ -104,14 +103,16 @@ Persistieren.
 
 Persistieren.
 
-Ab Schema v2 verwendet die Queue eine explizite diskriminierte Union für
-CreateGroup, AddParticipant, RenameParticipant, DeactivateParticipant und
-DeleteParticipant. Jeder Eintrag besitzt eine unabhängige lokale UUID und eine
+Ab Schema v2 verwendet die Queue eine explizite diskriminierte Union. Schema v3
+umfasst CreateGroup, AddParticipant, RenameParticipant,
+DeactivateParticipant, DeleteParticipant, CreateExpense, UpdateExpense und
+DeleteExpense. Jeder Eintrag besitzt eine unabhängige lokale UUID und eine
 ganzzahlige `createdOrder`. Neue Werte werden als Maximum der vorhandenen Werte
 plus eins vergeben; Lücken bleiben zulässig. Die Synchronisation verarbeitet
 die Einträge nach `createdOrder` und blockiert spätere Mutationen derselben Group,
 solange ein früherer Eintrag nicht bestätigt ist. Mutationen werden nicht
-zusammengefasst.
+zusammengefasst. Expense-Mutationen enthalten den vollständigen unveränderlichen
+Expense-Snapshot einschließlich Shares; DeleteExpense enthält ihn als Tombstone.
 
 Die persistierte Mutation bleibt die kanonische Retry-Eingabe.
 
@@ -170,6 +171,18 @@ Stores in einer gemeinsamen Transaktion geschrieben.
 
 Keine generische Unit-of-Work-Abstraktion einführen.
 
+Lokale Schreibvorgänge werden pro Group über alle Participant- und
+Expense-Composables serialisiert. Die nächste globale `createdOrder` wird beim
+Aufruf synchron reserviert; Lücken nach Validierungs- oder Persistenzfehlern
+sind zulässig. Der jeweils aktuelle Pinia-Zustand wird erst innerhalb der
+gruppenbezogenen Schreibkette gelesen; anschließend folgen Vorbereitung,
+atomare IndexedDB-Transaktion und Pinia-Commit. Damit können zwei gleichzeitig
+gestartete Vorgänge weder dieselbe `createdOrder` noch denselben
+Participant-`order` aus einem veralteten Snapshot ableiten. Fehler werden an den
+Aufrufer propagiert, halten spätere Vorgänge derselben Group aber nicht dauerhaft
+auf. Schreibvorgänge verschiedener Groups reservieren nur ihre Reihenfolge
+gemeinsam; ihre Persistenz verwendet unabhängige Ketten.
+
 ## Rehydration
 
 Beim Clientstart:
@@ -180,10 +193,11 @@ Beim Clientstart:
 4. Groups laden
 5. Participants laden
 6. Pending Mutations laden
-7. Settings laden
-8. Pinia hydratisieren
-9. App-Lifecycle auf `ready` setzen
-10. vorhandene Pending Mutations über die bestehende Sync-Logik fortsetzen
+7. Expenses und Expense Shares laden und zusammenführen
+8. Settings laden
+9. Pinia hydratisieren
+10. App-Lifecycle auf `ready` setzen
+11. vorhandene Pending Mutations über die bestehende Sync-Logik fortsetzen
 
 App-Lifecycle-State:
 
@@ -219,16 +233,10 @@ Schema-Upgrades erfolgen ausschließlich über den IndexedDB-Upgrade-Pfad.
 
 Beispiel:
 
-v1
-- accessIdentity
-- groups
-- participants
-- pendingMutations
-- settings
-
-in einer späteren Schema-Version, deren Nummer noch nicht festgelegt ist, beispielsweise:
-- expenses
-- expenseShares
+v1 enthält accessIdentity, groups, participants, pendingMutations und settings.
+v2 migriert die Pending-Mutation-Queue auf unabhängige Mutations-IDs und
+`createdOrder`. v3 ergänzt expenses und expenseShares und ergänzt bei bestehenden
+Groups den irreversiblen Ausgangswert `hasFinancialHistory: false`.
 
 Kein separates Migrationsframework einführen.
 
@@ -239,6 +247,13 @@ CreateGroup-Outbox atomar durch die lokale Mutations-ID. Vorhandene
 CreateGroup-Einträge werden deterministisch nach ihrem bisherigen Schlüssel
 geordnet, erhalten fortlaufende `createdOrder`-Werte und behalten sämtliche
 Domain-IDs sowie ihren unveränderten Payload.
+
+Der anschließende Upgrade-Schritt v2 → v3 legt `expenses` mit Schlüssel `id`
+und `expenseShares` mit zusammengesetztem Schlüssel
+`[expenseId, participantId]` an. Bestehende Records aller älteren Stores bleiben
+erhalten. Ein direkter Start von v1 durchläuft beide Schritte in derselben
+IndexedDB-Upgrade-Transaktion; eine neue Datenbank wird unmittelbar als v3
+angelegt.
 
 ## Sync after rehydration
 

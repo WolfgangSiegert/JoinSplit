@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
 import { prepareCreateGroupMutation, type PendingCreateGroup, type PendingMutation } from '../domain/pending-mutation'
+import type { Expense } from '../domain/expense'
 
 export type MutationSyncErrorKind =
   | 'network' | 'unauthorized' | 'conflict' | 'validation' | 'server'
@@ -20,6 +21,7 @@ export type MutationSyncState =
 interface GroupsState {
   groups: Group[]
   participants: Participant[]
+  expenses: Expense[]
   pendingMutations: PendingMutation[]
   mutationSync: Record<string, MutationSyncState>
   syncedGroups: Record<string, true>
@@ -29,11 +31,12 @@ interface HydratedGroupsState {
   readonly groups: Group[]
   readonly participants: Participant[]
   readonly pendingMutations: PendingMutation[]
+  readonly expenses?: Expense[]
 }
 
 export const useGroupsStore = defineStore('groups', {
   state: (): GroupsState => ({
-    groups: [], participants: [], pendingMutations: [], mutationSync: {}, syncedGroups: {},
+    groups: [], participants: [], expenses: [], pendingMutations: [], mutationSync: {}, syncedGroups: {},
   }),
 
   getters: {
@@ -57,6 +60,7 @@ export const useGroupsStore = defineStore('groups', {
       this.$patch({
         groups: state.groups,
         participants: state.participants,
+        expenses: state.expenses ?? [],
         pendingMutations: state.pendingMutations,
         mutationSync: Object.fromEntries(state.pendingMutations.map(mutation => [
           mutation.id, { state: 'pending' as const, error: null },
@@ -93,6 +97,22 @@ export const useGroupsStore = defineStore('groups', {
       this.queueMutation(mutation)
     },
 
+    commitExpenseSave(group: Group, expense: Expense, mutation: PendingMutation): void {
+      this.groups = this.groups.map(item => item.id === group.id ? group : item)
+      this.expenses = [...this.expenses.filter(item => item.id !== expense.id), expense]
+      this.queueMutation(mutation)
+    },
+
+    commitExpenseDelete(expenseId: string, mutation: PendingMutation): void {
+      this.expenses = this.expenses.filter(item => item.id !== expenseId)
+      this.queueMutation(mutation)
+    },
+
+    expensesForGroup(groupId: string): Expense[] {
+      return this.expenses.filter(expense => expense.groupId === groupId)
+        .sort((left, right) => right.incurredOn.localeCompare(left.incurredOn))
+    },
+
     queueMutation(mutation: PendingMutation): void {
       this.pendingMutations.push(mutation)
       this.mutationSync[mutation.id] = { state: 'pending', error: null }
@@ -118,6 +138,10 @@ export const useGroupsStore = defineStore('groups', {
     beginMutationSync(mutationId: string): PendingMutation | null {
       const mutation = this.pendingMutations.find(item => item.id === mutationId)
       if (!mutation || this.mutationSync[mutationId]?.state === 'syncing') return null
+      const groupHead = this.pendingMutations
+        .filter(item => item.groupId === mutation.groupId)
+        .sort((left, right) => left.createdOrder - right.createdOrder)[0]
+      if (groupHead?.id !== mutation.id) return null
       this.mutationSync[mutationId] = { state: 'syncing', error: null }
       return mutation
     },

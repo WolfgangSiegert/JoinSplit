@@ -1,6 +1,7 @@
 import { sortPendingMutations } from '../domain/pending-mutation'
 import { synchronizeCreateGroup } from '../services/create-group-sync'
 import { synchronizeParticipantMutation } from '../services/participant-sync'
+import { synchronizeExpenseMutation } from '../services/expense-sync'
 
 export function usePendingCreateGroupSync() {
   const config = useRuntimeConfig()
@@ -22,7 +23,10 @@ export function usePendingCreateGroupSync() {
         const result = mutation.type === 'CreateGroup'
           ? await synchronizeCreateGroup({ groupId: mutation.groupId, apiBase: config.public.apiBase,
               identity: identityStore, groupsStore, online: online.value })
-          : await synchronizeParticipantMutation({ mutationId: mutation.id, apiBase: config.public.apiBase,
+          : mutation.type === 'CreateExpense' || mutation.type === 'UpdateExpense' || mutation.type === 'DeleteExpense'
+            ? await synchronizeExpenseMutation({ mutationId: mutation.id, apiBase: config.public.apiBase,
+              identity: identityStore, groupsStore, online: online.value })
+            : await synchronizeParticipantMutation({ mutationId: mutation.id, apiBase: config.public.apiBase,
               identity: identityStore, groupsStore, online: online.value })
         if (result.outcome !== 'synced') blockedGroups.add(mutation.groupId)
       }

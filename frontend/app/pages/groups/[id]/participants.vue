@@ -80,7 +80,11 @@ async function confirmDelete() {
         <h1 class="mt-2 text-3xl font-semibold text-brand-900">Teilnehmer</h1>
       </header>
 
-      <form class="card mt-6 p-5" @submit.prevent="submitAdd">
+      <p v-if="group.status === 'archived'" class="card mt-6 p-4">
+        Diese archivierte Gruppe ist schreibgeschützt. Teilnehmer können nur angesehen werden.
+      </p>
+
+      <form v-if="group.status === 'active'" class="card mt-6 p-5" @submit.prevent="submitAdd">
         <label for="participant-name" class="font-semibold">Teilnehmer hinzufügen</label>
         <input id="participant-name" ref="addInput" v-model="addName" class="field-input mt-2" :aria-invalid="Boolean(addError)" :aria-describedby="addError ? 'add-error' : undefined">
         <p v-if="addError" id="add-error" class="error-text mt-2">{{ addError }}</p>
@@ -99,13 +103,13 @@ async function confirmDelete() {
           <div class="flex items-start justify-between gap-3">
             <div><p class="font-semibold">{{ participant.name }}</p><p class="text-sm text-gray-600">{{ participant.status === 'active' ? 'Aktiv' : 'Inaktiv' }}</p></div>
           </div>
-          <form v-if="editingId === participant.id" class="mt-3" @submit.prevent="submitRename(participant.id)">
+          <form v-if="group.status === 'active' && editingId === participant.id" class="mt-3" @submit.prevent="submitRename(participant.id)">
             <label :for="`rename-${participant.id}`" class="font-semibold">Neuer Name</label>
             <input :id="`rename-${participant.id}`" v-model="editName" class="field-input mt-2" :aria-invalid="Boolean(editError)" :aria-describedby="editError ? `rename-${participant.id}-error` : undefined">
             <p v-if="editError" :id="`rename-${participant.id}-error`" class="error-text mt-2">{{ editError }}</p>
             <div class="mt-3 flex gap-2"><button class="primary-button" type="submit">Speichern</button><button class="secondary-button" type="button" @click="editingId = null">Abbrechen</button></div>
           </form>
-          <div v-else class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div v-else-if="group.status === 'active'" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <button :ref="(element) => { if (element) renameTriggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="secondary-button" :aria-label="`${participant.name} umbenennen`" @click="startRename(participant.id, participant.name)">Umbenennen</button>
             <button v-if="participant.status === 'active'" type="button" class="secondary-button" :aria-label="`${participant.name} deaktivieren`" @click="submitDeactivate(participant.id, participant.name)">Deaktivieren</button>
             <button :ref="(element) => { if (element) triggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="danger-button" :aria-label="`${participant.name} löschen`" @click="askDelete(participant.id, $event.currentTarget as HTMLButtonElement)">Löschen</button>
