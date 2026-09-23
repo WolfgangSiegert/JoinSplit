@@ -1,6 +1,14 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
+interface BrowserDurableSnapshot {
+  identityId: string | null
+  credentialIsIsolated: boolean
+  groups: Array<{ id: string; participantIds: string[] }>
+  participants: Array<{ id: string; groupId: string }>
+  pendingGroupIds: string[]
+}
+
 async function expectNoAxeViolations(page: Page): Promise<void> {
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -9,17 +17,90 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
   expect(accessibility.violations).toEqual([])
 }
 
-test.beforeEach(async ({ page }) => {
+async function openCreateGroup(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+}
+
+async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
+  return page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 1)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const transaction = db.transaction(
+      ['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings'],
+      'readonly',
+    )
+    const getAll = <T>(storeName: string) => new Promise<T[]>((resolve, reject) => {
+      const result = transaction.objectStore(storeName).getAll()
+      result.onsuccess = () => resolve(result.result as T[])
+      result.onerror = () => reject(result.error)
+    })
+    const [identities, groups, participants, pending, settings] = await Promise.all([
+      getAll<{ id: string; credential: string }>('accessIdentity'),
+      getAll<{ id: string; participantIds: string[] }>('groups'),
+      getAll<{ id: string; groupId: string }>('participants'),
+      getAll<{ groupId: string }>('pendingMutations'),
+      getAll<unknown>('settings'),
+    ])
+    db.close()
+    const nonIdentityState = JSON.stringify({ groups, participants, pending, settings })
+    return {
+      identityId: identities[0]?.id ?? null,
+      credentialIsIsolated: identities[0]
+        ? !nonIdentityState.includes(identities[0].credential)
+          && !nonIdentityState.includes('credential')
+        : false,
+      groups,
+      participants,
+      pendingGroupIds: pending.map(record => record.groupId),
+    }
+  })
+}
+
+async function durableInitialParticipantDefault(page: Page): Promise<boolean | null> {
+  return page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 1)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const result = db.transaction('settings').objectStore('settings').get('preferences')
+    const record = await new Promise<{ addSelfAsParticipantByDefault?: unknown } | undefined>(
+      (resolve, reject) => {
+        result.onsuccess = () => resolve(result.result)
+        result.onerror = () => reject(result.error)
+      },
+    )
+    db.close()
+    return typeof record?.addSelfAsParticipantByDefault === 'boolean'
+      ? record.addSelfAsParticipantByDefault
+      : null
+  })
+}
+
+test('the ready Group List is accessible', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expectNoAxeViolations(page)
 })
 
-test('the in-memory global setting controls the next form default', async ({ page }) => {
+test('the durable global setting controls the next form default after reload', async ({ page }) => {
+  await openCreateGroup(page)
   await page.getByRole('link', { name: 'Gruppen' }).click()
   await page.getByRole('link', { name: 'Einstellungen' }).click()
-  await page
-    .getByRole('checkbox', { name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen' })
-    .uncheck()
+  const setting = page.getByRole('checkbox', {
+    name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
+  })
+  await setting.uncheck()
+  await expect(setting).not.toBeChecked()
+  await expect.poll(() => durableInitialParticipantDefault(page)).toBe(false)
+  await page.reload()
+  await expect(
+    page.getByRole('checkbox', { name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen' }),
+  ).not.toBeChecked()
   await page.getByRole('link', { name: 'Gruppen' }).click()
   await page.getByRole('link', { name: 'Neue Gruppe' }).click()
 
@@ -27,7 +108,35 @@ test('the in-memory global setting controls the next form default', async ({ pag
   await expect(page.getByLabel('Mein Name in dieser Gruppe')).toHaveCount(0)
 })
 
+test('a failed durable settings write restores the visible and effective value', async ({ page }) => {
+  await page.goto('/settings')
+  const setting = page.getByRole('checkbox', {
+    name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
+  })
+  await expect(setting).toBeChecked()
+  await page.evaluate(() => {
+    const originalPut = IDBObjectStore.prototype.put
+    IDBObjectStore.prototype.put = function (...args) {
+      if (this.name === 'settings') {
+        throw new DOMException('Forced settings persistence failure', 'QuotaExceededError')
+      }
+      return Reflect.apply(originalPut, this, args)
+    }
+  })
+
+  await setting.click()
+  await expect(page.getByRole('alert')).toHaveText(
+    'Die Einstellung konnte nicht lokal gespeichert werden.',
+  )
+  await expect(setting).toBeChecked()
+
+  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).toBeChecked()
+})
+
 test('Create Group is reachable with the approved default and dependent field', async ({ page }) => {
+  await openCreateGroup(page)
   await expect(page.getByRole('heading', { level: 1, name: 'Gruppe erstellen' })).toBeVisible()
   const checkbox = page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })
   await expect(checkbox).toBeChecked()
@@ -40,6 +149,7 @@ test('Create Group is reachable with the approved default and dependent field', 
 })
 
 test('validation preserves input, associates errors, and focuses the first invalid field', async ({ page }) => {
+  await openCreateGroup(page)
   await page.getByLabel('Gruppenname').fill('   ')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Wolfgang')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
@@ -58,6 +168,7 @@ test('validation preserves input, associates errors, and focuses the first inval
 })
 
 test('local creation navigates immediately, then the real API confirms the same group idempotently', async ({ page }) => {
+  await openCreateGroup(page)
   let releaseRequest!: () => void
   const requestGate = new Promise<void>(resolve => { releaseRequest = resolve })
   let capturedRequest: { body: string; headers: Record<string, string> } | undefined
@@ -91,7 +202,36 @@ test('local creation navigates immediately, then the real API confirms the same 
   expect(serverResponse.status()).toBe(201)
   await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
   expect(JSON.parse(capturedRequest!.body).groupId).toBe(groupId)
+  const snapshotBeforeReload = await durableSnapshot(page)
+  const participantId = snapshotBeforeReload.participants[0]?.id
+  expect(snapshotBeforeReload.groups[0]?.id).toBe(groupId)
+  expect(participantId).toBeTruthy()
+  expect(snapshotBeforeReload.pendingGroupIds).toEqual([])
+  expect(snapshotBeforeReload.credentialIsIsolated).toBe(true)
+
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: 'Wochenendtrip' })).toBeVisible()
+  const snapshotAfterReload = await durableSnapshot(page)
+  expect(snapshotAfterReload.groups[0]?.id).toBe(groupId)
+  expect(snapshotAfterReload.participants[0]?.id).toBe(participantId)
+  expect(snapshotAfterReload.identityId).toBe(capturedRequest!.headers['x-access-identity-id'])
   await expectNoAxeViolations(page)
+
+  let laterIdentityId = ''
+  await page.route('**/api/groups', async route => {
+    laterIdentityId = (await route.request().allHeaders())['x-access-identity-id'] ?? ''
+    await route.continue()
+  })
+  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
+  await page.getByLabel('Gruppenname').fill('Zweite Gruppe')
+  const laterResponse = page.waitForResponse(
+    response => response.url().endsWith('/api/groups') && response.status() === 201,
+  )
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await laterResponse
+  expect(laterIdentityId).toBe(snapshotBeforeReload.identityId)
 
   const retryResponse = await page.request.post('http://127.0.0.1:8001/api/groups', {
     headers: {
@@ -110,6 +250,7 @@ test('local creation navigates immediately, then the real API confirms the same 
 })
 
 test('creation without a participant succeeds and offline is distinct from pending', async ({ page, context }) => {
+  await openCreateGroup(page)
   await page.goto('/groups/preload')
   await expect(page.getByRole('heading', { level: 1, name: 'Gruppe nicht gefunden' })).toBeVisible()
   await page.getByRole('link', { name: 'Zur Gruppenliste' }).click()
@@ -135,6 +276,7 @@ test('creation without a participant succeeds and offline is distinct from pendi
 })
 
 test('a failed request keeps the local group and retries the identical operation', async ({ page }) => {
+  await openCreateGroup(page)
   const requestBodies: string[] = []
   const recordRequest = (request: import('@playwright/test').Request) => {
     if (request.url().endsWith('/api/groups') && request.method() === 'POST') {
@@ -167,5 +309,123 @@ test('a failed request keeps the local group and retries the identical operation
   expect(requestBodies[1]).toBe(requestBodies[0])
   const groupId = new URL(page.url()).pathname.split('/').at(-1)
   expect(JSON.parse(requestBodies[1]!).groupId).toBe(groupId)
+  await expectNoAxeViolations(page)
+})
+
+test('network-blocked creation survives reload and resumes the same mutation without duplicates', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.route('**/api/groups', route => route.abort('connectionrefused'))
+  await page.getByLabel('Gruppenname').fill('Offline-Reise')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Wolfgang')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Offline-Reise' })).toBeVisible()
+  await expect(page.getByText(
+    'Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.',
+  )).toBeVisible()
+
+  const beforeReload = await durableSnapshot(page)
+  const groupId = beforeReload.groups[0]!.id
+  const participantId = beforeReload.participants[0]!.id
+  expect(beforeReload.pendingGroupIds).toEqual([groupId])
+
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: 'Offline-Reise' })).toBeVisible()
+  const afterReload = await durableSnapshot(page)
+  expect(afterReload.groups[0]?.id).toBe(groupId)
+  expect(afterReload.participants[0]?.id).toBe(participantId)
+  expect(afterReload.pendingGroupIds).toEqual([groupId])
+  await expect(page.getByRole('button', { name: 'Synchronisierung erneut versuchen' })).toBeVisible()
+
+  const synchronized = page.waitForResponse(
+    response => response.url().endsWith('/api/groups') && response.status() === 201,
+  )
+  await page.unroute('**/api/groups')
+  await page.getByRole('button', { name: 'Synchronisierung erneut versuchen' }).click()
+  const response = await synchronized
+  const requestBody = response.request().postDataJSON()
+  expect(requestBody.groupId).toBe(groupId)
+  expect(requestBody.initialParticipant.participantId).toBe(participantId)
+  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  expect((await durableSnapshot(page)).pendingGroupIds).toEqual([])
+
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: 'Offline-Reise' })).toBeVisible()
+  expect((await durableSnapshot(page)).pendingGroupIds).toEqual([])
+  await page.waitForLoadState('networkidle')
+
+  const retry = await page.request.post('http://127.0.0.1:8001/api/groups', {
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-Access-Identity-ID': response.request().headers()['x-access-identity-id']!,
+      Authorization: response.request().headers().authorization!,
+    },
+    data: requestBody,
+  })
+  expect(retry.status()).toBe(200)
+  const retryBody = await retry.json()
+  expect(retryBody.data.group.id).toBe(groupId)
+  expect(retryBody.data.initialParticipant.id).toBe(participantId)
+  await expectNoAxeViolations(page)
+})
+
+test('the server-rendered hydration state is blocked and accessible', async ({ page }) => {
+  await page.route('**/_nuxt/**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/javascript',
+    body: '',
+  }))
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten werden geladen' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toHaveCount(0)
+  await expect(page.getByText('Noch keine Gruppe')).toHaveCount(0)
+  await expectNoAxeViolations(page)
+})
+
+test('malformed durable data blocks domain UI without deleting the record', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toBeVisible()
+  await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 1)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const transaction = db.transaction('groups', 'readwrite')
+    transaction.objectStore('groups').put({
+      id: '99999999-9999-4999-8999-999999999999',
+      name: '',
+      currency: 'EUR',
+      ownerAccessIdentityId: '99999999-9999-4999-8999-999999999999',
+      status: 'active',
+      participantIds: [],
+    })
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+    db.close()
+  })
+
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten nicht verfügbar' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toHaveCount(0)
+  const malformedStillExists = await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 1)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const result = db.transaction('groups').objectStore('groups')
+      .get('99999999-9999-4999-8999-999999999999')
+    const record = await new Promise<unknown>((resolve, reject) => {
+      result.onsuccess = () => resolve(result.result)
+      result.onerror = () => reject(result.error)
+    })
+    db.close()
+    return Boolean(record)
+  })
+  expect(malformedStillExists).toBe(true)
   await expectNoAxeViolations(page)
 })

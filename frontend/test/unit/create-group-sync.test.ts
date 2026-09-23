@@ -61,6 +61,7 @@ function setup() {
       identity: { accessIdentityId: ACTOR_ID, credential: CREDENTIAL },
       groupsStore,
       online: true,
+      acknowledge: vi.fn(async () => {}),
     },
   }
 }
@@ -237,5 +238,22 @@ describe('Create Group synchronization', () => {
     expect(fetcher).not.toHaveBeenCalled()
     expect(groupsStore.hasPendingCreate(GROUP_ID)).toBe(true)
     expect(groupsStore.createGroupSync[GROUP_ID]?.state).toBe('pending')
+  })
+
+  test('keeps the mutation pending when durable acknowledgment fails', async () => {
+    const { groupsStore, options } = setup()
+
+    const result = await synchronizeCreateGroup({
+      ...options,
+      acknowledge: vi.fn(async () => { throw new Error('write failed') }),
+      fetcher: vi.fn(async () => jsonResponse(201, serverBody())) as typeof fetch,
+    })
+
+    expect(result).toMatchObject({
+      outcome: 'failed',
+      error: { kind: 'persistence', retryable: true },
+    })
+    expect(groupsStore.hasPendingCreate(GROUP_ID)).toBe(true)
+    expect(groupsStore.createGroupSync[GROUP_ID]?.state).toBe('failed')
   })
 })

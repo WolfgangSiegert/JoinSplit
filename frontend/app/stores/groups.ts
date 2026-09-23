@@ -21,6 +21,7 @@ export type CreateGroupSyncErrorKind =
   | 'unexpected'
   | 'reconciliation'
   | 'identity'
+  | 'persistence'
 
 export interface CreateGroupSyncError {
   readonly kind: CreateGroupSyncErrorKind
@@ -41,6 +42,12 @@ interface GroupsState {
   createGroupSync: Record<string, CreateGroupSyncState>
 }
 
+interface HydratedGroupsState {
+  readonly groups: Group[]
+  readonly participants: Participant[]
+  readonly pendingMutations: PendingCreateGroupMutation[]
+}
+
 export const useGroupsStore = defineStore('groups', {
   state: (): GroupsState => ({
     groups: [],
@@ -50,6 +57,20 @@ export const useGroupsStore = defineStore('groups', {
   }),
 
   actions: {
+    hydrate(state: HydratedGroupsState): void {
+      this.$patch({
+        groups: state.groups,
+        participants: state.participants,
+        pendingCreateGroups: state.pendingMutations,
+        createGroupSync: Object.fromEntries(
+          state.pendingMutations.map(mutation => [
+            mutation.payload.groupId,
+            { state: 'pending' as const, error: null },
+          ]),
+        ),
+      })
+    },
+
     commitCreation(creation: PreparedGroupCreation): void {
       if (this.groups.some(group => group.id === creation.group.id)) {
         return

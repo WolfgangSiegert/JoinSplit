@@ -28,10 +28,10 @@ async function submit(): Promise<void> {
   localError.value = ''
   submitting.value = true
 
-  let result: ReturnType<typeof createGroup>
+  let result: Awaited<ReturnType<typeof createGroup>>
 
   try {
-    result = createGroup({
+    result = await createGroup({
       groupName: groupName.value,
       addParticipant: addParticipant.value,
       participantName: participantName.value,

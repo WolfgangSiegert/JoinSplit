@@ -4,6 +4,7 @@ import {
   type CreateGroupSyncError,
   type PendingCreateGroupMutation,
 } from '../stores/groups'
+import { removePendingCreateGroup } from '../persistence/database'
 
 interface AccessIdentityForSync {
   readonly accessIdentityId: string | null
@@ -17,6 +18,7 @@ interface CreateGroupSyncOptions {
   readonly groupsStore: ReturnType<typeof useGroupsStore>
   readonly online: boolean
   readonly fetcher?: typeof fetch
+  readonly acknowledge?: (groupId: string) => Promise<void>
 }
 
 type CreateGroupSyncResult =
@@ -190,7 +192,20 @@ export async function synchronizeCreateGroup(
   )
 
   if (result.outcome === 'synced') {
-    options.groupsStore.confirmCreateGroupSync(options.groupId)
+    try {
+      await (options.acknowledge ?? removePendingCreateGroup)(options.groupId)
+      options.groupsStore.confirmCreateGroupSync(options.groupId)
+    } catch {
+      const persistenceFailure = failure(
+        'persistence',
+        'Die Serverbestätigung konnte lokal nicht gespeichert werden. Die Synchronisierung wird erneut geprüft.',
+        true,
+      )
+      if (persistenceFailure.outcome === 'failed') {
+        options.groupsStore.failCreateGroupSync(options.groupId, persistenceFailure.error)
+      }
+      return persistenceFailure
+    }
   } else if (result.outcome === 'failed') {
     options.groupsStore.failCreateGroupSync(options.groupId, result.error)
   }

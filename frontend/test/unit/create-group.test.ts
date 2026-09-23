@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   GROUP_CURRENCY,
   normalizeName,
@@ -8,6 +8,7 @@ import {
 } from '../../app/domain/create-group'
 import { useCreateGroup } from '../../app/composables/use-create-group'
 import { useGroupsStore } from '../../app/stores/groups'
+import { useAccessIdentityStore } from '../../app/stores/access-identity'
 
 const GROUP_ID = '11111111-1111-4111-8111-111111111111'
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222'
@@ -101,10 +102,10 @@ describe('local Create Group workflow', () => {
     expect(normalizeName(' innen   bleibt ')).toBe('innen   bleibt')
   })
 
-  test('rejects an invalid group name without creating any local state', () => {
+  test('rejects an invalid group name without creating any local state', async () => {
     const store = useGroupsStore()
     const { createGroup } = useCreateGroup()
-    const result = createGroup(draft({ groupName: '\u3000\u00A0' }))
+    const result = await createGroup(draft({ groupName: '\u3000\u00A0' }))
 
     expect(result).toEqual({
       ok: false,
@@ -115,10 +116,10 @@ describe('local Create Group workflow', () => {
     expect(store.pendingCreateGroups).toEqual([])
   })
 
-  test('rejects a missing required participant name without partial state', () => {
+  test('rejects a missing required participant name without partial state', async () => {
     const store = useGroupsStore()
     const { createGroup } = useCreateGroup()
-    const result = createGroup(draft({ participantName: '   ' }))
+    const result = await createGroup(draft({ participantName: '   ' }))
 
     expect(result).toEqual({
       ok: false,
@@ -206,6 +207,34 @@ describe('local Create Group workflow', () => {
 
     expect(store.groups).toHaveLength(1)
     expect(store.participants).toHaveLength(1)
+    expect(store.pendingCreateGroups).toHaveLength(1)
+  })
+
+  test('does not expose partial Pinia state when durable creation fails', async () => {
+    useAccessIdentityStore().hydrate({ id: ACTOR_ID, credential: '0123456789abcdef'.repeat(4) })
+    const store = useGroupsStore()
+    const { createGroup } = useCreateGroup({
+      persistCreation: vi.fn(async () => { throw new Error('transaction failed') }),
+    })
+
+    await expect(createGroup(draft())).rejects.toThrow('transaction failed')
+    expect(store.groups).toEqual([])
+    expect(store.participants).toEqual([])
+    expect(store.pendingCreateGroups).toEqual([])
+  })
+
+  test('updates Pinia only after durable creation completes', async () => {
+    useAccessIdentityStore().hydrate({ id: ACTOR_ID, credential: '0123456789abcdef'.repeat(4) })
+    const store = useGroupsStore()
+    let release!: () => void
+    const persistence = new Promise<void>(resolve => { release = resolve })
+    const { createGroup } = useCreateGroup({ persistCreation: vi.fn(() => persistence) })
+
+    const result = createGroup(draft())
+    expect(store.groups).toEqual([])
+    release()
+    await expect(result).resolves.toMatchObject({ ok: true })
+    expect(store.groups).toHaveLength(1)
     expect(store.pendingCreateGroups).toHaveLength(1)
   })
 })

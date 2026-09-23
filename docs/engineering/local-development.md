@@ -214,3 +214,21 @@ configure Playwright's standalone Artisan processes.
 The browser integration covers a real successful Nuxt → Laravel → PostgreSQL
 creation, an idempotent retry returning HTTP 200, offline local creation, and a
 failed request followed by a successful retry of the same immutable operation.
+
+## Durable browser state — JS-015
+
+The frontend stores the Access Identity, Groups, Participants, pending Create
+Group mutations and the global initial-participant default in the `joinsplit`
+IndexedDB database. Reloading the application rehydrates this state before the
+domain UI becomes available. Connectivity, active synchronization, errors and
+form drafts remain transient.
+
+For isolated development or browser-test troubleshooting, local browser state
+can be cleared manually in the browser developer tools under
+Application → Storage → IndexedDB → `joinsplit` → Delete database. This is a
+developer operation, not an application reset feature. Clearing browser data
+loses unsynchronized local data and the anonymous Access Identity credential.
+
+Multiple open tabs are not coordinated in this milestone. There is no
+BroadcastChannel, cross-tab lock or leader election, so concurrent tabs may
+temporarily show different runtime state.

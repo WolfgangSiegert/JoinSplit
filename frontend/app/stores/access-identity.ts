@@ -6,18 +6,23 @@ function createCredential(): string {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
+export interface AccessIdentity {
+  readonly id: string
+  readonly credential: string
+}
+
+export function generateAccessIdentity(): AccessIdentity {
+  return { id: crypto.randomUUID(), credential: createCredential() }
+}
+
 export const useAccessIdentityStore = defineStore('accessIdentity', () => {
   const accessIdentityId = ref<string | null>(null)
   const credential = ref<string | null>(null)
 
-  function ensureIdentity(): string {
-    if (!accessIdentityId.value) {
-      accessIdentityId.value = crypto.randomUUID()
-      credential.value = createCredential()
-    }
-
-    return accessIdentityId.value
+  function hydrate(identity: AccessIdentity): void {
+    accessIdentityId.value = identity.id
+    credential.value = identity.credential
   }
 
-  return { accessIdentityId, credential, ensureIdentity }
+  return { accessIdentityId, credential, hydrate }
 })
