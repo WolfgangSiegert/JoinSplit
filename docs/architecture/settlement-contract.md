@@ -290,11 +290,26 @@ At minimum, tests cover these queue histories:
 
 ## Runtime Statement Snapshot boundary
 
-A Statement Snapshot is materialized at runtime as immutable text. JS-020 does
-not add a Snapshot store, API resource or history. The generated value includes
-its `generatedAt` instant and a warning when the represented Group has Pending
-Mutations. Once generated, its content does not change with later runtime
-state. Copying or sharing the text has no Domain or sync side effect.
+A Statement Snapshot is materialized in TypeScript at runtime as immutable
+plain text for exactly one Participant. It has no Snapshot store, API resource,
+Pending Mutation or history. The selected Participant may be inactive and the
+Group may be archived.
+
+The text contains the Group and Participant, the balance components, Expenses
+for which that Participant is payer or has a Share, relevant actual
+Settlements, and only the selected Participant's transfers from the currently
+selected device-local Proposal strategy. An unavailable exact Proposal remains
+explicitly unavailable; generation never substitutes the deterministic
+strategy. Equal display names receive stable Participant-order suffixes, and
+user-provided text is normalized to one plain-text line.
+
+The generated value includes its canonical UTC `generatedAt` instant and a
+warning whenever the represented Group has any Pending Mutation. The warning
+describes the local Group state rather than claiming that every displayed line
+is pending. Once generated, the text, warning and Proposal choice do not change
+with later runtime state. Copying or platform-sharing the text has no Domain,
+persistence, access-control or sync side effect. Platform sharing sends text
+only and never creates a Group link.
 
 ## Required cross-runtime scenarios
 

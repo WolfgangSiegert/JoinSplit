@@ -88,6 +88,7 @@ async function changeSettlementStrategy(event: Event): Promise<void> {
       <GroupSyncStatus :group-id="group.id" class="mt-6" />
 
       <NuxtLink :to="`/groups/${group.id}/settlements`" class="secondary-button mt-5 w-full">Erfasste Zahlungen verwalten</NuxtLink>
+      <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button mt-3 w-full">Persönlichen Stand teilen</NuxtLink>
 
       <p v-if="group.status === 'archived'" class="card mt-6 p-4">
         Diese archivierte Gruppe ist schreibgeschützt. Ihre Salden bleiben lesbar.

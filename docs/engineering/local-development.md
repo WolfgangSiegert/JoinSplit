@@ -16,9 +16,10 @@ The completed M2 Core includes:
 - derived Participant balances and balance details,
 - ordered synchronization of local mutations to Laravel/PostgreSQL.
 
-The current M3 implementation additionally includes recorded Settlement CRUD
-and both Settlement Proposal strategies. Statement Snapshots are not
-implemented yet.
+The current M3 implementation additionally includes recorded Settlement CRUD,
+both Settlement Proposal strategies and offline runtime Statement Snapshots.
+Snapshots are plain text generated from current local state; they are not
+persisted and have no backend API.
 
 ## Runtimes
 
