@@ -1,0 +1,107 @@
+{
+  "groupId": "group-1",
+  "vectors": [
+    {
+      "name": "participants without expenses remain visible at zero",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "inactive", "order": 2 }
+      ],
+      "expenses": [],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "0", "shareAmountMinor": "0", "balanceAmountMinor": "0" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "0", "balanceAmountMinor": "0" }
+      ]
+    },
+    {
+      "name": "equal split assigns remainder cents in participant order",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "active", "order": 2 },
+        { "id": "cara", "groupId": "group-1", "name": "Cara", "status": "active", "order": 3 }
+      ],
+      "expenses": [
+        {
+          "id": "expense-1", "groupId": "group-1", "amountMinor": 1001, "payerParticipantId": "alice",
+          "shares": [
+            { "participantId": "alice", "amountMinor": 334 },
+            { "participantId": "bob", "amountMinor": 334 },
+            { "participantId": "cara", "amountMinor": 333 }
+          ]
+        }
+      ],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "1001", "shareAmountMinor": "334", "balanceAmountMinor": "667" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "334", "balanceAmountMinor": "-334" },
+        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "333", "balanceAmountMinor": "-333" }
+      ]
+    },
+    {
+      "name": "payer may be outside the shares",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "active", "order": 2 }
+      ],
+      "expenses": [
+        {
+          "id": "expense-2", "groupId": "group-1", "amountMinor": 1000, "payerParticipantId": "alice",
+          "shares": [{ "participantId": "bob", "amountMinor": 1000 }]
+        }
+      ],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "1000", "shareAmountMinor": "0", "balanceAmountMinor": "1000" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "1000", "balanceAmountMinor": "-1000" }
+      ]
+    },
+    {
+      "name": "multiple expenses include inactive and unreferenced participants",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "inactive", "order": 2 },
+        { "id": "cara", "groupId": "group-1", "name": "Cara", "status": "active", "order": 3 }
+      ],
+      "expenses": [
+        {
+          "id": "expense-3", "groupId": "group-1", "amountMinor": 1200, "payerParticipantId": "bob",
+          "shares": [
+            { "participantId": "alice", "amountMinor": 600 },
+            { "participantId": "bob", "amountMinor": 600 }
+          ]
+        },
+        {
+          "id": "expense-4", "groupId": "group-1", "amountMinor": 400, "payerParticipantId": "alice",
+          "shares": [
+            { "participantId": "alice", "amountMinor": 200 },
+            { "participantId": "bob", "amountMinor": 200 }
+          ]
+        }
+      ],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "400", "shareAmountMinor": "800", "balanceAmountMinor": "-400" },
+        { "participantId": "bob", "paidAmountMinor": "1200", "shareAmountMinor": "800", "balanceAmountMinor": "400" },
+        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "0", "balanceAmountMinor": "0" }
+      ]
+    },
+    {
+      "name": "aggregates remain exact above JavaScript safe integer range",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "active", "order": 2 }
+      ],
+      "expenses": [
+        {
+          "id": "expense-5", "groupId": "group-1", "amountMinor": 9007199254740991, "payerParticipantId": "alice",
+          "shares": [{ "participantId": "bob", "amountMinor": 9007199254740991 }]
+        },
+        {
+          "id": "expense-6", "groupId": "group-1", "amountMinor": 9007199254740991, "payerParticipantId": "alice",
+          "shares": [{ "participantId": "bob", "amountMinor": 9007199254740991 }]
+        }
+      ],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "18014398509481982", "shareAmountMinor": "0", "balanceAmountMinor": "18014398509481982" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "18014398509481982", "balanceAmountMinor": "-18014398509481982" }
+      ]
+    }
+  ]
+}

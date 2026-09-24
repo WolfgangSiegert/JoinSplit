@@ -56,6 +56,8 @@ onMounted(async () => {
         <p class="mt-2 text-gray-600">Währung: {{ group.currency }}</p>
       </header>
 
+      <GroupAreaNavigation :group-id="group.id" />
+
       <div class="mt-6 space-y-3">
         <p v-if="route.query.created === '1'" class="rounded-lg bg-brand-50 p-3 text-brand-900">
           Gruppe lokal erstellt.
@@ -88,9 +90,6 @@ onMounted(async () => {
 
       <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button mt-5 w-full">Ausgabe erfassen</NuxtLink>
 
-      <NuxtLink :to="`/groups/${group.id}/participants`" class="secondary-button mt-5 w-full">
-        Teilnehmer verwalten
-      </NuxtLink>
     </div>
 
     <div v-else class="page-content">

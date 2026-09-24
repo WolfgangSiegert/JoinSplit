@@ -80,6 +80,8 @@ async function confirmDelete() {
         <h1 class="mt-2 text-3xl font-semibold text-brand-900">Teilnehmer</h1>
       </header>
 
+      <GroupAreaNavigation :group-id="group.id" />
+
       <p v-if="group.status === 'archived'" class="card mt-6 p-4">
         Diese archivierte Gruppe ist schreibgeschützt. Teilnehmer können nur angesehen werden.
       </p>
