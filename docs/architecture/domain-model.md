@@ -152,9 +152,9 @@ Diese Reihenfolge dient insbesondere der deterministischen Verteilung von
 Restbeträgen bei Equal Split.
 
 Die fachliche Reihenfolge darf sich nicht allein aus einer zufälligen
-technischen Reihenfolge einer Datenbankabfrage ergeben.
-
-Wie diese Reihenfolge technisch persistiert wird, wird später entschieden.
+technischen Reihenfolge einer Datenbankabfrage ergeben. Sie wird als
+`Participant.order` dauerhaft gespeichert, ist innerhalb der Group eindeutig
+und bleibt über Reload und Synchronisation stabil.
 
 ### Participant Lifecycle
 
@@ -411,7 +411,8 @@ Ein Settlement besitzt fachlich mindestens:
 - ein relevantes Datum,
 - einen Creator.
 
-Eine kurze Notiz kann optional ergänzt werden.
+Der JS-021-Slice enthält keine Settlement-Notiz. Eine spätere Ergänzung ist
+keine Voraussetzung für den MVP-Kernworkflow.
 
 ### Settlement Invariants
 
@@ -427,8 +428,16 @@ Im MVP wird keine Gegenbestätigung benötigt.
 ### Settlement Lifecycle
 
 Der Owner darf Settlements im MVP in einer aktiven Group erfassen, bearbeiten
-und löschen. Für inaktive Participants gelten dabei die Regeln unter
-Participant Lifecycle.
+und löschen. Sind beide Participants aktiv, darf jede tatsächlich erfolgte
+positive Zahlung erfasst werden. Bei falscher Balance-Richtung oder einer
+Überzahlung verlangt die UI zuvor eine ausdrückliche Bestätigung.
+
+Sobald mindestens einer der beiden Participants inaktiv ist, muss das
+Settlement einen bestehenden offenen Saldo in der richtigen Richtung
+verringern und darf den kleineren der beiden offenen Beträge nicht
+überschreiten. Bei einer Bearbeitung wird das bestehende Settlement vor dieser
+Prüfung aus der Balance-Berechnung entfernt. Der vollständige Vertrag steht in
+[`settlement-contract.md`](settlement-contract.md).
 
 Der MVP benötigt:
 
@@ -540,7 +549,14 @@ Die vom Nutzer gewählte Settlement-Strategie verändert ausschließlich den
 Proposal und nicht die zugrunde liegenden Balances oder bestehenden
 Settlements.
 
-Die konkrete algorithmische Umsetzung wird separat definiert.
+Der einfache Modus verwendet einen stabilen Two-Pointer-Greedy-Algorithmus.
+Der Minimum-Transfer-Modus minimiert direkte Debtor-zu-Creditor-Transfers mit
+einer exakten solverfreien Bitmask-/Partition-DP. Er ist bis höchstens zwölf
+Participants mit Saldo ungleich null verfügbar; oberhalb dieser Grenze wird er
+explizit als nicht verfügbar ausgewiesen und nicht still durch Greedy ersetzt.
+Tie-Break und kanonische Ausgabe richten sich nach Sender- und Empfänger-
+`Participant.order`. Der vollständige Algorithmus- und Testvektorvertrag steht
+in [`settlement-proposals.md`](settlement-proposals.md).
 
 ### Settlement Proposal Invariants
 
@@ -561,10 +577,9 @@ einen Participant.
 
 Er ist keine neue finanzielle Transaktion.
 
-Der MVP muss einen Snapshot nicht als eigene Domain-Entität dauerhaft
-persistieren.
-
-Der Snapshot wird aus dem aktuellen Group-Zustand erzeugt.
+Der Snapshot wird zur Laufzeit als unveränderlicher Text aus dem aktuellen
+Group-Zustand materialisiert. Er besitzt keinen Store, keine API und keine
+Historie.
 
 Er enthält mindestens:
 
@@ -575,7 +590,10 @@ Er enthält mindestens:
 - aktuellen Balance,
 - daraus resultierenden Ausgleich, sofern vorhanden.
 
-Der Snapshot repräsentiert den Zustand zum Zeitpunkt seiner Erzeugung.
+Der Snapshot repräsentiert den Zustand zum Zeitpunkt seiner Erzeugung, enthält
+diesen Erstellungszeitpunkt und weist auf enthaltene noch nicht synchronisierte
+Änderungen hin. Spätere Zustandsänderungen verändern bereits erzeugten Text
+nicht.
 
 Das Teilen eines Snapshots:
 
@@ -766,8 +784,7 @@ Dieses Dokument legt bewusst noch nicht fest:
 - Sync-Metadaten,
 - Versionierungsstrategie für Offline-Sync,
 - Konfliktauflösungsalgorithmus für Sync,
-- konkreten Algorithmus für Minimum-Transfer Settlement,
-- externe Optimierungsbibliothek oder Solver,
+- weitere Settlement-Proposal-Strategien,
 - konkrete Währung des MVP,
 - konkrete Statement-Ausgabeform,
 - zusätzliche Split-Methoden.

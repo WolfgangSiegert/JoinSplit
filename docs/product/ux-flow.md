@@ -170,8 +170,9 @@ und ist anfänglich aktiviert. Sie verändert nur die Vorbelegung der sichtbaren
 Create-Group-Checkbox; der Nutzer kann diese bei jeder Group-Erstellung ändern.
 
 Die globale Einstellung zur Settlement-Proposal-Strategie wird ebenfalls in
-diesem App-Kontext angeboten. Die technische Persistenz dieser Einstellungen
-wird separat entschieden.
+diesem App-Kontext angeboten. Sie ist gerätelokal in IndexedDB gespeichert,
+verwendet standardmäßig den einfachen deterministischen Ausgleich und erzeugt
+weder einen API-Aufruf noch eine Pending Mutation.
 
 ### Three Group Areas
 
@@ -218,7 +219,10 @@ Hauptansichten.
 - Eine archivierte Group zeigt weiterhin ihren fachlichen Stand und erlaubt die
   Snapshot-Erzeugung. Fachliche Änderungen erfordern zuvor eine Reaktivierung.
 - Teilzahlungen und vom Proposal abweichende Settlements können manuell erfasst
-  werden.
+  werden. Sind beide Participants aktiv, erfordern falsche Balance-Richtung und
+  Überzahlung eine ausdrückliche Bestätigung. Sobald ein Participant inaktiv
+  ist, darf die Zahlung nur einen offenen Saldo in korrekter Richtung und
+  höchstens bis zu dessen kleinerem offenen Betrag reduzieren.
 - Sind alle Balances null, zeigt die Oberfläche einen verständlichen
   ausgeglichenen Zustand statt leerer oder Null-Euro-Proposals.
 
@@ -265,11 +269,13 @@ Shell.
   Participant bleiben getrennt.
 - Der einfache deterministische Ausgleich ist die Standardstrategie.
 - Die Strategieauswahl befindet sich bei den Proposals. Sie wird als
-  gruppenübergreifende Einstellung des anonymen App Users behandelt; ihre
-  technische Persistenz wird separat entschieden.
+  gruppenübergreifende, gerätelokale Einstellung des anonymen App Users in
+  IndexedDB gespeichert. Sie wird nicht mit dem Server synchronisiert.
 - Statement Snapshots werden zunächst als lesbarer Text erzeugt. Der Text ist
   kopierbar und kann bei Plattformunterstützung über System Sharing geteilt
-  werden.
+  werden. Er enthält den Erstellungszeitpunkt und gegebenenfalls einen Hinweis
+  auf enthaltene ausstehende Änderungen; es gibt keinen Snapshot-Store, keine
+  API und keine Historie.
 - Neue Expenses wählen zunächst alle aktiven Participants aus. Auswahl und
   konkrete Shares bleiben vor dem Speichern sichtbar.
 - Der Payer wird ausdrücklich gewählt und nicht aus dem Owner abgeleitet.
@@ -322,14 +328,12 @@ Konformitätsaussage erfordert eine spätere Prüfung der Implementierung.
 Folgende Punkte werden durch JS-009 nicht entschieden:
 
 - Bearbeitung historischer Expenses mit inzwischen inaktiven Participants,
-- genaue Grenzen für Überzahlungen und Settlements mit inaktiven Participants,
 - dauerhafte anonyme Access Identity und lokale Persistenz im vollständigen
   MVP,
 - Offline-Bereitstellung der App Shell,
 - Versionierung und Konfliktbehandlung beim Sync,
-- dauerhafte Speicherung der gruppenübergreifenden Strategieauswahl und
-  Owner-Participant-Standardeinstellung im vollständigen MVP. Für M1 sind
-  Settings im laufenden App-State freigegeben.
+- serverseitige Speicherung gerätelokaler Einstellungen; sie ist für den MVP
+  nicht vorgesehen.
 
 Die Create-Group-Architektur einschließlich Namensvalidation, optionalem
 Participant, lokalem Erfolg und Retry ist im freigegebenen Vertrag konkretisiert.

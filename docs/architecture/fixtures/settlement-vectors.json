@@ -1,0 +1,425 @@
+{
+  "schemaVersion": 1,
+  "amountEncoding": "canonical base-10 integer strings in minor units; positive Settlement amounts are at most 9223372036854775807",
+  "balanceSemantics": "For create, balances are before the candidate. For update and delete, balances include existingSettlement and implementations reverse it before evaluating the operation.",
+  "createIdempotencySemantics": "request contains the exact create-body keys; comparisonBasis is the complete desired state after deriving groupId from route and creatorAccessIdentityId from verified auth",
+  "validationAndBalanceVectors": [
+    {
+      "name": "active participants may record a partial payment",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-1000" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "1000" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "400" }
+      },
+      "expected": {
+        "decision": "accept",
+        "confirmationReasons": [],
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "-600" },
+          { "participantId": "creditor", "balanceAmountMinor": "600" }
+        ]
+      }
+    },
+    {
+      "name": "active participants may fully settle direct open balances",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-1000" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "1000" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "1000" }
+      },
+      "expected": {
+        "decision": "accept",
+        "confirmationReasons": [],
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "0" },
+          { "participantId": "creditor", "balanceAmountMinor": "0" }
+        ]
+      }
+    },
+    {
+      "name": "active wrong-direction payment requires confirmation",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "1000" },
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-1000" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "creditor", "receiverParticipantId": "debtor", "amountMinor": "200" }
+      },
+      "expected": {
+        "decision": "confirm",
+        "confirmationReasons": ["wrong_direction"],
+        "balancesAfter": [
+          { "participantId": "creditor", "balanceAmountMinor": "1200" },
+          { "participantId": "debtor", "balanceAmountMinor": "-1200" }
+        ]
+      }
+    },
+    {
+      "name": "active overpayment requires confirmation but may cross zero",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-1000" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "1000" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "1200" }
+      },
+      "expected": {
+        "decision": "confirm",
+        "confirmationReasons": ["exceeds_open_amount"],
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "200" },
+          { "participantId": "creditor", "balanceAmountMinor": "-200" }
+        ]
+      }
+    },
+    {
+      "name": "inactive participant may take part in a reducing partial payment",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-1000" },
+        { "participantId": "creditor", "status": "inactive", "balanceAmountMinor": "1000" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "400" }
+      },
+      "expected": {
+        "decision": "accept",
+        "confirmationReasons": [],
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "-600" },
+          { "participantId": "creditor", "balanceAmountMinor": "600" }
+        ]
+      }
+    },
+    {
+      "name": "inactive participant makes wrong-direction payment invalid",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "creditor", "status": "inactive", "balanceAmountMinor": "500" },
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-500" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "creditor", "receiverParticipantId": "debtor", "amountMinor": "100" }
+      },
+      "expected": {
+        "decision": "reject",
+        "rejectionReason": "inactive_participant_payment_must_reduce_open_balance",
+        "httpStatus": 409
+      }
+    },
+    {
+      "name": "inactive participant makes overpayment invalid",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "inactive", "balanceAmountMinor": "-500" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "500" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "501" }
+      },
+      "expected": {
+        "decision": "reject",
+        "rejectionReason": "inactive_participant_payment_exceeds_open_amount",
+        "httpStatus": 409
+      }
+    },
+    {
+      "name": "update excludes the stored settlement before validation",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "inactive", "balanceAmountMinor": "-600" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "600" }
+      ],
+      "existingSettlement": {
+        "senderParticipantId": "debtor",
+        "receiverParticipantId": "creditor",
+        "amountMinor": "400"
+      },
+      "operation": {
+        "type": "update",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "700" }
+      },
+      "expected": {
+        "decision": "accept",
+        "confirmationReasons": [],
+        "balancesBeforeCandidate": [
+          { "participantId": "debtor", "balanceAmountMinor": "-1000" },
+          { "participantId": "creditor", "balanceAmountMinor": "1000" }
+        ],
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "-300" },
+          { "participantId": "creditor", "balanceAmountMinor": "300" }
+        ]
+      }
+    },
+    {
+      "name": "delete restores balances from before the stored settlement",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-600" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "600" }
+      ],
+      "existingSettlement": {
+        "senderParticipantId": "debtor",
+        "receiverParticipantId": "creditor",
+        "amountMinor": "400"
+      },
+      "operation": { "type": "delete" },
+      "expected": {
+        "decision": "accept",
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "-1000" },
+          { "participantId": "creditor", "balanceAmountMinor": "1000" }
+        ]
+      }
+    },
+    {
+      "name": "delete remains valid after a participant becomes inactive",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "inactive", "balanceAmountMinor": "-600" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "600" }
+      ],
+      "existingSettlement": {
+        "senderParticipantId": "debtor",
+        "receiverParticipantId": "creditor",
+        "amountMinor": "400"
+      },
+      "operation": { "type": "delete" },
+      "expected": {
+        "decision": "accept",
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "-1000" },
+          { "participantId": "creditor", "balanceAmountMinor": "1000" }
+        ]
+      }
+    },
+    {
+      "name": "archived group rejects settlement mutation",
+      "groupStatus": "archived",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-1000" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "1000" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "400" }
+      },
+      "expected": { "decision": "reject", "rejectionReason": "group_archived", "httpStatus": 409 }
+    },
+    {
+      "name": "maximum positive signed-64-bit settlement remains exact",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-9223372036854775807" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "9223372036854775807" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "9223372036854775807" }
+      },
+      "expected": {
+        "decision": "accept",
+        "confirmationReasons": [],
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "0" },
+          { "participantId": "creditor", "balanceAmountMinor": "0" }
+        ]
+      }
+    },
+    {
+      "name": "minimum signed-64-bit debtor balance is validated without absolute value",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "inactive", "balanceAmountMinor": "-9223372036854775808" },
+        { "participantId": "creditor-max", "status": "active", "balanceAmountMinor": "9223372036854775807" },
+        { "participantId": "creditor-one", "status": "active", "balanceAmountMinor": "1" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor-max", "amountMinor": "9223372036854775807" }
+      },
+      "expected": {
+        "decision": "accept",
+        "confirmationReasons": [],
+        "balancesAfter": [
+          { "participantId": "debtor", "balanceAmountMinor": "-1" },
+          { "participantId": "creditor-max", "balanceAmountMinor": "0" },
+          { "participantId": "creditor-one", "balanceAmountMinor": "1" }
+        ]
+      }
+    },
+    {
+      "name": "first amount above signed-64-bit maximum is invalid",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-1000" },
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "1000" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "9223372036854775808" }
+      },
+      "expected": { "decision": "reject", "rejectionReason": "amount_out_of_range", "httpStatus": 422 }
+    },
+    {
+      "name": "valid amount that overflows resulting financial state is rejected",
+      "groupStatus": "active",
+      "participants": [
+        { "participantId": "creditor", "status": "active", "balanceAmountMinor": "9223372036854775807" },
+        { "participantId": "debtor", "status": "active", "balanceAmountMinor": "-9223372036854775807" }
+      ],
+      "operation": {
+        "type": "create",
+        "settlement": { "senderParticipantId": "creditor", "receiverParticipantId": "debtor", "amountMinor": "1" }
+      },
+      "expected": { "decision": "reject", "rejectionReason": "financial_state_overflow", "httpStatus": 409 }
+    }
+  ],
+  "createIdempotencyVectors": [
+    {
+      "name": "first create",
+      "existing": null,
+      "route": { "groupId": "22222222-2222-4222-8222-222222222222" },
+      "auth": { "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555" },
+      "request": {
+        "settlementId": "11111111-1111-4111-8111-111111111111",
+        "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+        "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+        "amountMinor": "400",
+        "occurredOn": "2026-09-24"
+      },
+      "expected": {
+        "comparisonBasis": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "groupId": "22222222-2222-4222-8222-222222222222",
+          "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+          "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+          "amountMinor": "400",
+          "occurredOn": "2026-09-24",
+          "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555"
+        },
+        "outcome": "created",
+        "httpStatus": 201
+      }
+    },
+    {
+      "name": "exact create retry",
+      "existing": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "groupId": "22222222-2222-4222-8222-222222222222",
+        "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+        "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+        "amountMinor": "400",
+        "occurredOn": "2026-09-24",
+        "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555"
+      },
+      "route": { "groupId": "22222222-2222-4222-8222-222222222222" },
+      "auth": { "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555" },
+      "request": {
+        "settlementId": "11111111-1111-4111-8111-111111111111",
+        "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+        "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+        "amountMinor": "400",
+        "occurredOn": "2026-09-24"
+      },
+      "expected": {
+        "comparisonBasis": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "groupId": "22222222-2222-4222-8222-222222222222",
+          "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+          "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+          "amountMinor": "400",
+          "occurredOn": "2026-09-24",
+          "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555"
+        },
+        "outcome": "existing",
+        "httpStatus": 200
+      }
+    },
+    {
+      "name": "incompatible create retry",
+      "existing": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "groupId": "22222222-2222-4222-8222-222222222222",
+        "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+        "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+        "amountMinor": "400",
+        "occurredOn": "2026-09-24",
+        "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555"
+      },
+      "route": { "groupId": "22222222-2222-4222-8222-222222222222" },
+      "auth": { "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555" },
+      "request": {
+        "settlementId": "11111111-1111-4111-8111-111111111111",
+        "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+        "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+        "amountMinor": "401",
+        "occurredOn": "2026-09-24"
+      },
+      "expected": {
+        "comparisonBasis": {
+          "id": "11111111-1111-4111-8111-111111111111",
+          "groupId": "22222222-2222-4222-8222-222222222222",
+          "senderParticipantId": "33333333-3333-4333-8333-333333333333",
+          "receiverParticipantId": "44444444-4444-4444-8444-444444444444",
+          "amountMinor": "401",
+          "occurredOn": "2026-09-24",
+          "creatorAccessIdentityId": "55555555-5555-4555-8555-555555555555"
+        },
+        "outcome": "conflict",
+        "httpStatus": 409
+      }
+    }
+  ],
+  "fifoVectors": [
+    {
+      "name": "settlement lifecycle remains ordered",
+      "mutations": [
+        { "type": "CreateSettlement", "createdOrder": 10 },
+        { "type": "UpdateSettlement", "createdOrder": 11 },
+        { "type": "DeleteSettlement", "createdOrder": 12 }
+      ],
+      "expectedTypeOrder": ["CreateSettlement", "UpdateSettlement", "DeleteSettlement"]
+    },
+    {
+      "name": "expense precedes settlement based on its balances",
+      "mutations": [
+        { "type": "CreateExpense", "createdOrder": 20 },
+        { "type": "CreateSettlement", "createdOrder": 21 }
+      ],
+      "expectedTypeOrder": ["CreateExpense", "CreateSettlement"]
+    },
+    {
+      "name": "participant deactivation precedes strict settlement validation",
+      "mutations": [
+        { "type": "DeactivateParticipant", "createdOrder": 30 },
+        { "type": "CreateSettlement", "createdOrder": 31 }
+      ],
+      "expectedTypeOrder": ["DeactivateParticipant", "CreateSettlement"]
+    },
+    {
+      "name": "settlement deletion precedes participant hard deletion",
+      "mutations": [
+        { "type": "DeleteSettlement", "createdOrder": 40 },
+        { "type": "DeleteParticipant", "createdOrder": 41 }
+      ],
+      "expectedTypeOrder": ["DeleteSettlement", "DeleteParticipant"]
+    }
+  ]
+}

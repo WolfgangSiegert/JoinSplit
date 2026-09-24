@@ -157,7 +157,9 @@ erfasste Settlements.
 Beide Strategien müssen für dieselben fachlichen Ausgangsdaten deterministische
 Ergebnisse liefern.
 
-Die konkrete algorithmische Umsetzung wird separat definiert.
+Die konkrete algorithmische Umsetzung ist im
+[`Settlement Proposal Algorithms`-Vertrag](../architecture/settlement-proposals.md)
+definiert.
 
 ### Settlement Recording
 
@@ -171,8 +173,7 @@ Ein Settlement enthält fachlich mindestens:
 - Betrag,
 - relevantes Datum.
 
-Eine kurze Notiz kann vorgesehen werden, sofern sie für den späteren
-Domain-Entwurf sinnvoll bleibt.
+Der JS-021-Slice enthält keine Settlement-Notiz.
 
 Erfasste Settlements beeinflussen unmittelbar:
 
@@ -390,7 +391,7 @@ Dieses Dokument legt bewusst noch nicht fest:
 - genaue Konfliktauflösungsregeln,
 - Service-Worker-Technologie,
 - PWA-Plugin oder Manifest-Konfiguration,
-- konkrete Settlement-Optimierungslogik,
+- weitere Settlement-Proposal-Strategien,
 - konkrete Statement-Ausgabeform,
 - UI- und Navigationsstruktur,
 - Account-Features nach dem MVP,

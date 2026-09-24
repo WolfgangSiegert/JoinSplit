@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 1,
+  "exactNonZeroParticipantLimit": 12,
+  "signedBalanceRange": {
+    "minimum": "-9223372036854775808",
+    "maximum": "9223372036854775807"
+  },
+  "maximumTransferAmountMinor": "9223372036854775807",
+  "vectors": [
+    {
+      "name": "all zero balances need no transfers",
+      "participants": [
+        { "participantId": "alice", "participantOrder": 1, "status": "active", "balanceAmountMinor": "0" },
+        { "participantId": "bob", "participantOrder": 2, "status": "inactive", "balanceAmountMinor": "0" }
+      ],
+      "expected": {
+        "deterministic": { "status": "success", "transfers": [] },
+        "minimumTransfer": { "status": "success", "transfers": [] }
+      }
+    },
+    {
+      "name": "one debtor pays one creditor",
+      "participants": [
+        { "participantId": "alice", "participantOrder": 1, "status": "active", "balanceAmountMinor": "500" },
+        { "participantId": "bob", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-500" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "bob", "receiverParticipantId": "alice", "amountMinor": "500" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "bob", "receiverParticipantId": "alice", "amountMinor": "500" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "proposal tie uses participant order",
+      "participants": [
+        { "participantId": "debtor-a", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-500" },
+        { "participantId": "debtor-b", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-500" },
+        { "participantId": "creditor-a", "participantOrder": 3, "status": "active", "balanceAmountMinor": "500" },
+        { "participantId": "creditor-b", "participantOrder": 4, "status": "active", "balanceAmountMinor": "500" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-a", "amountMinor": "500" },
+            { "senderParticipantId": "debtor-b", "receiverParticipantId": "creditor-b", "amountMinor": "500" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-a", "amountMinor": "500" },
+            { "senderParticipantId": "debtor-b", "receiverParticipantId": "creditor-b", "amountMinor": "500" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "greedy can use more transfers than the exact strategy",
+      "participants": [
+        { "participantId": "debtor-a", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-600" },
+        { "participantId": "debtor-b", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-400" },
+        { "participantId": "creditor-a", "participantOrder": 3, "status": "active", "balanceAmountMinor": "400" },
+        { "participantId": "creditor-b", "participantOrder": 4, "status": "active", "balanceAmountMinor": "600" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-a", "amountMinor": "400" },
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-b", "amountMinor": "200" },
+            { "senderParticipantId": "debtor-b", "receiverParticipantId": "creditor-b", "amountMinor": "400" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-b", "amountMinor": "600" },
+            { "senderParticipantId": "debtor-b", "receiverParticipantId": "creditor-a", "amountMinor": "400" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "one indivisible zero-sum block needs n minus one transfers",
+      "participants": [
+        { "participantId": "debtor-a", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-400" },
+        { "participantId": "debtor-b", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-300" },
+        { "participantId": "creditor-a", "participantOrder": 3, "status": "active", "balanceAmountMinor": "200" },
+        { "participantId": "creditor-b", "participantOrder": 4, "status": "active", "balanceAmountMinor": "500" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-a", "amountMinor": "200" },
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-b", "amountMinor": "200" },
+            { "senderParticipantId": "debtor-b", "receiverParticipantId": "creditor-b", "amountMinor": "300" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-a", "amountMinor": "200" },
+            { "senderParticipantId": "debtor-a", "receiverParticipantId": "creditor-b", "amountMinor": "200" },
+            { "senderParticipantId": "debtor-b", "receiverParticipantId": "creditor-b", "amountMinor": "300" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "inactive creditor remains eligible",
+      "participants": [
+        { "participantId": "debtor", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-700" },
+        { "participantId": "creditor", "participantOrder": 2, "status": "inactive", "balanceAmountMinor": "700" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "700" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "700" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "amounts above the JavaScript safe integer range remain exact",
+      "participants": [
+        { "participantId": "debtor", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-18014398509481982" },
+        { "participantId": "creditor", "participantOrder": 2, "status": "active", "balanceAmountMinor": "18014398509481982" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "18014398509481982" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor", "amountMinor": "18014398509481982" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "signed 64 bit minimum debt is settled without absolute value",
+      "participants": [
+        { "participantId": "debtor", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-9223372036854775808" },
+        { "participantId": "creditor-max", "participantOrder": 2, "status": "active", "balanceAmountMinor": "9223372036854775807" },
+        { "participantId": "creditor-one", "participantOrder": 3, "status": "active", "balanceAmountMinor": "1" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor-max", "amountMinor": "9223372036854775807" },
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor-one", "amountMinor": "1" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor-max", "amountMinor": "9223372036854775807" },
+            { "senderParticipantId": "debtor", "receiverParticipantId": "creditor-one", "amountMinor": "1" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "balance outside signed 64 bit is invalid",
+      "participants": [
+        { "participantId": "debtor", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-9223372036854775808" },
+        { "participantId": "creditor", "participantOrder": 2, "status": "active", "balanceAmountMinor": "9223372036854775808" }
+      ],
+      "expected": {
+        "deterministic": { "status": "invalid", "error": "balance_out_of_supported_range" },
+        "minimumTransfer": { "status": "invalid", "error": "balance_out_of_supported_range" }
+      }
+    },
+    {
+      "name": "unbalanced total is invalid",
+      "participants": [
+        { "participantId": "debtor", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-500" },
+        { "participantId": "creditor", "participantOrder": 2, "status": "active", "balanceAmountMinor": "499" }
+      ],
+      "expected": {
+        "deterministic": { "status": "invalid", "error": "balance_sum_not_zero" },
+        "minimumTransfer": { "status": "invalid", "error": "balance_sum_not_zero" }
+      }
+    },
+    {
+      "name": "duplicate participant order is invalid",
+      "participants": [
+        { "participantId": "debtor", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-500" },
+        { "participantId": "creditor", "participantOrder": 1, "status": "active", "balanceAmountMinor": "500" }
+      ],
+      "expected": {
+        "deterministic": { "status": "invalid", "error": "duplicate_participant_order" },
+        "minimumTransfer": { "status": "invalid", "error": "duplicate_participant_order" }
+      }
+    },
+    {
+      "name": "exact strategy succeeds at twelve non-zero balances",
+      "participants": [
+        { "participantId": "d1", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d2", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d3", "participantOrder": 3, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d4", "participantOrder": 4, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d5", "participantOrder": 5, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d6", "participantOrder": 6, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "c1", "participantOrder": 7, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c2", "participantOrder": 8, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c3", "participantOrder": 9, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c4", "participantOrder": 10, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c5", "participantOrder": 11, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c6", "participantOrder": 12, "status": "active", "balanceAmountMinor": "100" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "d1", "receiverParticipantId": "c1", "amountMinor": "100" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c2", "amountMinor": "100" },
+            { "senderParticipantId": "d3", "receiverParticipantId": "c3", "amountMinor": "100" },
+            { "senderParticipantId": "d4", "receiverParticipantId": "c4", "amountMinor": "100" },
+            { "senderParticipantId": "d5", "receiverParticipantId": "c5", "amountMinor": "100" },
+            { "senderParticipantId": "d6", "receiverParticipantId": "c6", "amountMinor": "100" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "d1", "receiverParticipantId": "c1", "amountMinor": "100" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c2", "amountMinor": "100" },
+            { "senderParticipantId": "d3", "receiverParticipantId": "c3", "amountMinor": "100" },
+            { "senderParticipantId": "d4", "receiverParticipantId": "c4", "amountMinor": "100" },
+            { "senderParticipantId": "d5", "receiverParticipantId": "c5", "amountMinor": "100" },
+            { "senderParticipantId": "d6", "receiverParticipantId": "c6", "amountMinor": "100" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "zero balances do not count toward the exact strategy limit",
+      "participants": [
+        { "participantId": "d1", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d2", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d3", "participantOrder": 3, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d4", "participantOrder": 4, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d5", "participantOrder": 5, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d6", "participantOrder": 6, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "c1", "participantOrder": 7, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c2", "participantOrder": 8, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c3", "participantOrder": 9, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c4", "participantOrder": 10, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c5", "participantOrder": 11, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "c6", "participantOrder": 12, "status": "active", "balanceAmountMinor": "100" },
+        { "participantId": "zero-active", "participantOrder": 13, "status": "active", "balanceAmountMinor": "0" },
+        { "participantId": "zero-inactive", "participantOrder": 14, "status": "inactive", "balanceAmountMinor": "0" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "d1", "receiverParticipantId": "c1", "amountMinor": "100" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c2", "amountMinor": "100" },
+            { "senderParticipantId": "d3", "receiverParticipantId": "c3", "amountMinor": "100" },
+            { "senderParticipantId": "d4", "receiverParticipantId": "c4", "amountMinor": "100" },
+            { "senderParticipantId": "d5", "receiverParticipantId": "c5", "amountMinor": "100" },
+            { "senderParticipantId": "d6", "receiverParticipantId": "c6", "amountMinor": "100" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "d1", "receiverParticipantId": "c1", "amountMinor": "100" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c2", "amountMinor": "100" },
+            { "senderParticipantId": "d3", "receiverParticipantId": "c3", "amountMinor": "100" },
+            { "senderParticipantId": "d4", "receiverParticipantId": "c4", "amountMinor": "100" },
+            { "senderParticipantId": "d5", "receiverParticipantId": "c5", "amountMinor": "100" },
+            { "senderParticipantId": "d6", "receiverParticipantId": "c6", "amountMinor": "100" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "exact strategy is unavailable above twelve non-zero balances",
+      "participants": [
+        { "participantId": "d1", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d2", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d3", "participantOrder": 3, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d4", "participantOrder": 4, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d5", "participantOrder": 5, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "d6", "participantOrder": 6, "status": "active", "balanceAmountMinor": "-100" },
+        { "participantId": "c1", "participantOrder": 7, "status": "active", "balanceAmountMinor": "50" },
+        { "participantId": "c2", "participantOrder": 8, "status": "active", "balanceAmountMinor": "50" },
+        { "participantId": "c3", "participantOrder": 9, "status": "active", "balanceAmountMinor": "50" },
+        { "participantId": "c4", "participantOrder": 10, "status": "active", "balanceAmountMinor": "50" },
+        { "participantId": "c5", "participantOrder": 11, "status": "active", "balanceAmountMinor": "50" },
+        { "participantId": "c6", "participantOrder": 12, "status": "active", "balanceAmountMinor": "50" },
+        { "participantId": "c7", "participantOrder": 13, "status": "active", "balanceAmountMinor": "300" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "d1", "receiverParticipantId": "c1", "amountMinor": "50" },
+            { "senderParticipantId": "d1", "receiverParticipantId": "c2", "amountMinor": "50" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c3", "amountMinor": "50" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c4", "amountMinor": "50" },
+            { "senderParticipantId": "d3", "receiverParticipantId": "c5", "amountMinor": "50" },
+            { "senderParticipantId": "d3", "receiverParticipantId": "c6", "amountMinor": "50" },
+            { "senderParticipantId": "d4", "receiverParticipantId": "c7", "amountMinor": "100" },
+            { "senderParticipantId": "d5", "receiverParticipantId": "c7", "amountMinor": "100" },
+            { "senderParticipantId": "d6", "receiverParticipantId": "c7", "amountMinor": "100" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "unavailable",
+          "reason": "non_zero_participant_limit",
+          "nonZeroParticipantCount": 13,
+          "limit": 12
+        }
+      }
+    }
+  ]
+}

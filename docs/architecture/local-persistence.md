@@ -128,6 +128,11 @@ Insbesondere gehört der globale Default für:
 
 zum dauerhaften Benutzerzustand.
 
+JS-020 legt für das geplante Schema v4 zusätzlich
+`settlementProposalStrategy: 'deterministic' | 'minimum-transfer'` fest. Der
+Initialwert ist `deterministic`. Die Einstellung ist gerätelokal und erzeugt
+weder einen API-Aufruf noch eine Pending Mutation.
+
 ## Non-persisted state
 
 Nicht persistieren:
@@ -194,10 +199,11 @@ Beim Clientstart:
 5. Participants laden
 6. Pending Mutations laden
 7. Expenses und Expense Shares laden und zusammenführen
-8. Settings laden
-9. Pinia hydratisieren
-10. App-Lifecycle auf `ready` setzen
-11. vorhandene Pending Mutations über die bestehende Sync-Logik fortsetzen
+8. ab Schema v4 Settlements laden
+9. Settings laden
+10. Pinia hydratisieren
+11. App-Lifecycle auf `ready` setzen
+12. vorhandene Pending Mutations über die bestehende Sync-Logik fortsetzen
 
 App-Lifecycle-State:
 
@@ -237,6 +243,19 @@ v1 enthält accessIdentity, groups, participants, pendingMutations und settings.
 v2 migriert die Pending-Mutation-Queue auf unabhängige Mutations-IDs und
 `createdOrder`. v3 ergänzt expenses und expenseShares und ergänzt bei bestehenden
 Groups den irreversiblen Ausgangswert `hasFinancialHistory: false`.
+
+Das in JS-020 definierte, aber noch nicht implementierte Schema v4 ergänzt den
+Store `settlements`, die drei vollständigen unveränderlichen Mutationstypen
+`CreateSettlement`, `UpdateSettlement` und `DeleteSettlement` sowie die globale
+Strategieeinstellung. Settlement-Beträge werden in IndexedDB und den
+zugehörigen Pending-Mutation-Snapshots verlustfrei als kanonische
+signed-64-kompatible Dezimalstrings gespeichert. Beim Hydratisieren werden
+Settlement-Store-Datensätze für den Domain-State in TypeScript-`bigint`
+überführt; Settlement-Snapshots in der Pending-Mutation-Queue bleiben dagegen
+als unveränderliche Dezimalstrings die kanonische Retry- und API-Eingabe. Der
+Upgrade-Pfad von v3 bewahrt alle bestehenden Stores und Datensätze. Details
+stehen in
+[`settlement-contract.md`](settlement-contract.md).
 
 Kein separates Migrationsframework einführen.
 
