@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import fixture from '../../../docs/architecture/fixtures/balance-vectors.json'
 import type { Participant } from '../../app/domain/create-group'
 import type { Expense } from '../../app/domain/expense'
+import type { Settlement } from '../../app/domain/settlement'
 import {
   calculateParticipantBalances,
   formatSignedAmountMinor,
@@ -26,20 +27,60 @@ function expensesFor(expenses: (typeof fixture.vectors)[number]['expenses']): Ex
   }))
 }
 
+interface FixtureSettlement {
+  readonly id: string
+  readonly groupId: string
+  readonly senderParticipantId: string
+  readonly receiverParticipantId: string
+  readonly amountMinor: string
+}
+
+function settlementsFor(settlements: readonly FixtureSettlement[] | undefined): Settlement[] {
+  return (settlements ?? []).map(settlement => ({
+    ...settlement,
+    amountMinor: BigInt(settlement.amountMinor),
+    occurredOn: '2026-09-24',
+    creatorAccessIdentityId: 'actor-1',
+  }))
+}
+
 describe('Participant Balance domain', () => {
   test.each(fixture.vectors)('matches shared Balance vector: $name', vector => {
+    const settlements = 'settlements' in vector ? vector.settlements : undefined
     const result = calculateParticipantBalances(
       fixture.groupId,
       participantsFor(vector.participants),
       expensesFor(vector.expenses),
+      settlementsFor(settlements),
     )
 
     expect(result).toEqual(vector.expected.map(expected => ({
       participantId: expected.participantId,
       paidAmountMinor: BigInt(expected.paidAmountMinor),
       shareAmountMinor: BigInt(expected.shareAmountMinor),
-      sentSettlementAmountMinor: 0n,
-      receivedSettlementAmountMinor: 0n,
+      sentSettlementAmountMinor: BigInt(expected.sentSettlementAmountMinor),
+      receivedSettlementAmountMinor: BigInt(expected.receivedSettlementAmountMinor),
+      balanceAmountMinor: BigInt(expected.balanceAmountMinor),
+    })))
+  })
+
+  test('does not mutate Settlements and ignores their input order', () => {
+    const vector = fixture.vectors[5]!
+    if (!('settlements' in vector)) throw new Error('Fixture must contain Settlements.')
+    const participants = participantsFor(vector.participants)
+    const expenses = expensesFor(vector.expenses)
+    const settlements = settlementsFor(vector.settlements).reverse()
+    const settlementSnapshot = structuredClone(settlements)
+
+    const result = calculateParticipantBalances(fixture.groupId, participants, expenses, settlements)
+
+    expect(settlements).toEqual(settlementSnapshot)
+    expect(result).toEqual(vector.expected.map(expected => ({
+      participantId: expected.participantId,
+      paidAmountMinor: BigInt(expected.paidAmountMinor),
+      shareAmountMinor: BigInt(expected.shareAmountMinor),
+      sentSettlementAmountMinor: BigInt(expected.sentSettlementAmountMinor),
+      receivedSettlementAmountMinor: BigInt(expected.receivedSettlementAmountMinor),
       balanceAmountMinor: BigInt(expected.balanceAmountMinor),
     })))
   })
@@ -113,5 +154,43 @@ describe('Participant Balance domain', () => {
     expect(formatSignedAmountMinor(-400n)).toBe('−4,00 €')
     expect(formatSignedAmountMinor(0n)).toBe('0,00 €')
     expect(formatSignedAmountMinor(18014398509481982n)).toBe('+180143985094819,82 €')
+  })
+
+  test.each([
+    ['original order', false],
+    ['reversed order', true],
+  ] as const)('rejects a Settlement subtotal above signed-64 in %s', (_name, reverse) => {
+    const participants: Participant[] = [
+      { id: 'alice', groupId: 'group-1', name: 'Alice', status: 'active', order: 1 },
+      { id: 'bob', groupId: 'group-1', name: 'Bob', status: 'active', order: 2 },
+    ]
+    const settlements = settlementsFor([
+      { id: 'settlement-max', groupId: 'group-1', senderParticipantId: 'alice', receiverParticipantId: 'bob', amountMinor: '9223372036854775807' },
+      { id: 'settlement-one', groupId: 'group-1', senderParticipantId: 'alice', receiverParticipantId: 'bob', amountMinor: '1' },
+    ])
+
+    expect(() => calculateParticipantBalances(
+      'group-1',
+      participants,
+      [],
+      reverse ? settlements.reverse() : settlements,
+    )).toThrow('signed 64-bit range')
+  })
+
+  test('rejects a resulting Balance above signed-64', () => {
+    const participants: Participant[] = [
+      { id: 'alice', groupId: 'group-1', name: 'Alice', status: 'active', order: 1 },
+      { id: 'bob', groupId: 'group-1', name: 'Bob', status: 'active', order: 2 },
+    ]
+    const expenses = expensesFor([{
+      id: 'expense-overflow', groupId: 'group-1', amountMinor: 1, payerParticipantId: 'alice',
+      shares: [{ participantId: 'bob', amountMinor: 1 }],
+    }])
+    const settlements = settlementsFor([{
+      id: 'settlement-max', groupId: 'group-1', senderParticipantId: 'alice', receiverParticipantId: 'bob', amountMinor: '9223372036854775807',
+    }])
+
+    expect(() => calculateParticipantBalances('group-1', participants, expenses, settlements))
+      .toThrow('signed 64-bit range')
   })
 })

@@ -86,7 +86,7 @@ onMounted(async () => {
 
       <header>
         <p class="text-sm font-semibold tracking-wide text-brand-700">Gruppe</p>
-        <h1 ref="heading" tabindex="-1" class="mt-2 text-3xl font-semibold text-brand-900">
+        <h1 ref="heading" tabindex="-1" class="mt-2 break-words text-3xl font-semibold text-brand-900">
           {{ group.name }}
         </h1>
         <p class="mt-2 text-gray-600">Währung: {{ group.currency }}</p>
@@ -109,7 +109,7 @@ onMounted(async () => {
         <h2 id="empty-expenses" class="text-xl font-semibold">Noch keine Ausgaben</h2>
         <p class="mt-2 text-gray-600">Erfasste Ausgaben erscheinen später hier.</p>
       </section>
-      <section v-else class="mt-7" aria-labelledby="expenses-title"><h2 id="expenses-title" class="text-xl font-semibold">Ausgaben</h2><ul class="mt-3 space-y-3"><li v-for="expense in expenses" :key="expense.id"><NuxtLink :to="`/groups/${group.id}/expenses/${expense.id}`" class="card block p-4"><span class="flex justify-between gap-4"><strong>{{ expense.description }}</strong><span>{{ formatAmountMinor(expense.amountMinor) }}</span></span><span class="mt-1 block text-sm text-gray-600">{{ expense.incurredOn }} · bezahlt von {{ participantNames.get(expense.payerParticipantId) }}</span></NuxtLink></li></ul></section>
+      <section v-else class="mt-7 min-w-0" aria-labelledby="expenses-title"><h2 id="expenses-title" class="text-xl font-semibold">Ausgaben</h2><ul class="mt-3 space-y-3"><li v-for="expense in expenses" :key="expense.id" class="min-w-0"><NuxtLink :to="`/groups/${group.id}/expenses/${expense.id}`" class="card block min-w-0 p-4"><span class="flex min-w-0 flex-wrap justify-between gap-4"><strong class="min-w-0 break-words">{{ expense.description }}</strong><span>{{ formatAmountMinor(expense.amountMinor) }}</span></span><span class="mt-1 block break-words text-sm text-gray-600">{{ expense.incurredOn }} · bezahlt von {{ participantNames.get(expense.payerParticipantId) }}</span></NuxtLink></li></ul></section>
 
       <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button mt-5 w-full">Ausgabe erfassen</NuxtLink>
 

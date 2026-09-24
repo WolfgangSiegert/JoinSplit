@@ -9,8 +9,8 @@
       ],
       "expenses": [],
       "expected": [
-        { "participantId": "alice", "paidAmountMinor": "0", "shareAmountMinor": "0", "balanceAmountMinor": "0" },
-        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "0", "balanceAmountMinor": "0" }
+        { "participantId": "alice", "paidAmountMinor": "0", "shareAmountMinor": "0", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "0" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "0", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "0" }
       ]
     },
     {
@@ -31,9 +31,9 @@
         }
       ],
       "expected": [
-        { "participantId": "alice", "paidAmountMinor": "1001", "shareAmountMinor": "334", "balanceAmountMinor": "667" },
-        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "334", "balanceAmountMinor": "-334" },
-        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "333", "balanceAmountMinor": "-333" }
+        { "participantId": "alice", "paidAmountMinor": "1001", "shareAmountMinor": "334", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "667" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "334", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "-334" },
+        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "333", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "-333" }
       ]
     },
     {
@@ -49,8 +49,8 @@
         }
       ],
       "expected": [
-        { "participantId": "alice", "paidAmountMinor": "1000", "shareAmountMinor": "0", "balanceAmountMinor": "1000" },
-        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "1000", "balanceAmountMinor": "-1000" }
+        { "participantId": "alice", "paidAmountMinor": "1000", "shareAmountMinor": "0", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "1000" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "1000", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "-1000" }
       ]
     },
     {
@@ -77,9 +77,9 @@
         }
       ],
       "expected": [
-        { "participantId": "alice", "paidAmountMinor": "400", "shareAmountMinor": "800", "balanceAmountMinor": "-400" },
-        { "participantId": "bob", "paidAmountMinor": "1200", "shareAmountMinor": "800", "balanceAmountMinor": "400" },
-        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "0", "balanceAmountMinor": "0" }
+        { "participantId": "alice", "paidAmountMinor": "400", "shareAmountMinor": "800", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "-400" },
+        { "participantId": "bob", "paidAmountMinor": "1200", "shareAmountMinor": "800", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "400" },
+        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "0", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "0" }
       ]
     },
     {
@@ -99,8 +99,73 @@
         }
       ],
       "expected": [
-        { "participantId": "alice", "paidAmountMinor": "18014398509481982", "shareAmountMinor": "0", "balanceAmountMinor": "18014398509481982" },
-        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "18014398509481982", "balanceAmountMinor": "-18014398509481982" }
+        { "participantId": "alice", "paidAmountMinor": "18014398509481982", "shareAmountMinor": "0", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "18014398509481982" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "18014398509481982", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "-18014398509481982" }
+      ]
+    },
+    {
+      "name": "expense and settlements reduce the outstanding balance independent of settlement order",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "active", "order": 2 },
+        { "id": "cara", "groupId": "group-1", "name": "Cara", "status": "active", "order": 3 }
+      ],
+      "expenses": [
+        {
+          "id": "expense-7", "groupId": "group-1", "amountMinor": 1200, "payerParticipantId": "alice",
+          "shares": [
+            { "participantId": "alice", "amountMinor": 400 },
+            { "participantId": "bob", "amountMinor": 400 },
+            { "participantId": "cara", "amountMinor": 400 }
+          ]
+        }
+      ],
+      "settlements": [
+        { "id": "settlement-1", "groupId": "group-1", "senderParticipantId": "bob", "receiverParticipantId": "alice", "amountMinor": "250" },
+        { "id": "settlement-2", "groupId": "group-1", "senderParticipantId": "cara", "receiverParticipantId": "alice", "amountMinor": "150" },
+        { "id": "settlement-3", "groupId": "group-1", "senderParticipantId": "cara", "receiverParticipantId": "alice", "amountMinor": "100" }
+      ],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "1200", "shareAmountMinor": "400", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "500", "balanceAmountMinor": "300" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "400", "sentSettlementAmountMinor": "250", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "-150" },
+        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "400", "sentSettlementAmountMinor": "250", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "-150" }
+      ]
+    },
+    {
+      "name": "a Settlement at the signed-64 maximum remains exact",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "active", "order": 2 }
+      ],
+      "expenses": [],
+      "settlements": [
+        { "id": "settlement-max", "groupId": "group-1", "senderParticipantId": "alice", "receiverParticipantId": "bob", "amountMinor": "9223372036854775807" }
+      ],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "0", "shareAmountMinor": "0", "sentSettlementAmountMinor": "9223372036854775807", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "9223372036854775807" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "0", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "9223372036854775807", "balanceAmountMinor": "-9223372036854775807" }
+      ]
+    },
+    {
+      "name": "a resulting Balance at the signed-64 minimum remains exact",
+      "participants": [
+        { "id": "alice", "groupId": "group-1", "name": "Alice", "status": "active", "order": 1 },
+        { "id": "bob", "groupId": "group-1", "name": "Bob", "status": "active", "order": 2 },
+        { "id": "cara", "groupId": "group-1", "name": "Cara", "status": "active", "order": 3 }
+      ],
+      "expenses": [
+        {
+          "id": "expense-min", "groupId": "group-1", "amountMinor": 1, "payerParticipantId": "alice",
+          "shares": [{ "participantId": "bob", "amountMinor": 1 }]
+        }
+      ],
+      "settlements": [
+        { "id": "settlement-min", "groupId": "group-1", "senderParticipantId": "cara", "receiverParticipantId": "bob", "amountMinor": "9223372036854775807" }
+      ],
+      "expected": [
+        { "participantId": "alice", "paidAmountMinor": "1", "shareAmountMinor": "0", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "1" },
+        { "participantId": "bob", "paidAmountMinor": "0", "shareAmountMinor": "1", "sentSettlementAmountMinor": "0", "receivedSettlementAmountMinor": "9223372036854775807", "balanceAmountMinor": "-9223372036854775808" },
+        { "participantId": "cara", "paidAmountMinor": "0", "shareAmountMinor": "0", "sentSettlementAmountMinor": "9223372036854775807", "receivedSettlementAmountMinor": "0", "balanceAmountMinor": "9223372036854775807" }
       ]
     }
   ]

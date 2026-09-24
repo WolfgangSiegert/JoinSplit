@@ -11,20 +11,55 @@ it('calculates every shared balance fixture vector exactly', function () {
     $calculator = new BalanceCalculator;
 
     foreach ($fixture['vectors'] as $vector) {
+        $settlements = array_map(static fn (array $settlement): array => [
+            ...$settlement,
+            'amountMinor' => (int) $settlement['amountMinor'],
+        ], $vector['settlements'] ?? []);
         $actual = $calculator->calculate(
             $fixture['groupId'],
             $vector['participants'],
             $vector['expenses'],
+            $settlements,
         );
         $asDecimalStrings = array_map(fn (array $balance): array => [
             'participantId' => $balance['participantId'],
             'paidAmountMinor' => (string) $balance['paidAmountMinor'],
             'shareAmountMinor' => (string) $balance['shareAmountMinor'],
+            'sentSettlementAmountMinor' => (string) $balance['sentSettlementAmountMinor'],
+            'receivedSettlementAmountMinor' => (string) $balance['receivedSettlementAmountMinor'],
             'balanceAmountMinor' => (string) $balance['balanceAmountMinor'],
         ], $actual);
 
         expect($asDecimalStrings)->toBe($vector['expected'], $vector['name']);
     }
+});
+
+it('does not mutate Settlements and ignores their input order', function () {
+    $fixture = json_decode(
+        file_get_contents(__DIR__.'/../../../docs/architecture/fixtures/balance-vectors.json'),
+        true,
+        flags: JSON_THROW_ON_ERROR,
+    );
+    $vector = $fixture['vectors'][5];
+    $settlements = array_reverse(array_map(static fn (array $settlement): array => [
+        ...$settlement,
+        'amountMinor' => (int) $settlement['amountMinor'],
+    ], $vector['settlements']));
+    $originalSettlements = $settlements;
+
+    $actual = (new BalanceCalculator)->calculate(
+        $fixture['groupId'],
+        $vector['participants'],
+        $vector['expenses'],
+        $settlements,
+    );
+    $asDecimalStrings = array_map(static fn (array $balance): array => array_map(
+        static fn (int|string $value): string => (string) $value,
+        $balance,
+    ), $actual);
+
+    expect($asDecimalStrings)->toBe($vector['expected'])
+        ->and($settlements)->toBe($originalSettlements);
 });
 
 it('does not mutate inputs and ignores expense and share input order', function () {
@@ -178,3 +213,24 @@ it('rejects a resulting signed-64 Balance overflow independent of input order', 
 
     (new BalanceCalculator)->calculate('group-1', $participants, $expenses, $settlements);
 })->throws(OverflowException::class);
+
+it('rejects a Settlement subtotal above signed-64 independent of input order', function (bool $reverse) {
+    $participants = [
+        ['id' => 'alice', 'groupId' => 'group-1', 'order' => 1],
+        ['id' => 'bob', 'groupId' => 'group-1', 'order' => 2],
+    ];
+    $settlements = [
+        ['id' => 'settlement-max', 'groupId' => 'group-1', 'senderParticipantId' => 'alice', 'receiverParticipantId' => 'bob', 'amountMinor' => PHP_INT_MAX],
+        ['id' => 'settlement-one', 'groupId' => 'group-1', 'senderParticipantId' => 'alice', 'receiverParticipantId' => 'bob', 'amountMinor' => 1],
+    ];
+
+    (new BalanceCalculator)->calculate(
+        'group-1',
+        $participants,
+        [],
+        $reverse ? array_reverse($settlements) : $settlements,
+    );
+})->with([
+    'original order' => false,
+    'reversed order' => true,
+])->throws(OverflowException::class);

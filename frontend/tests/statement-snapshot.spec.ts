@@ -150,6 +150,7 @@ test('creates a frozen selectable snapshot and copies its exact text without fin
   await participant.selectOption(ALICE_ID)
   const before = await durableCounts(page)
   await page.getByRole('button', { name: 'Vorschau erzeugen' }).click()
+  await expect(page.getByRole('heading', { name: 'Vorschau', exact: true })).toBeFocused()
 
   const preview = page.getByLabel('Textvorschau')
   const frozenText = await preview.inputValue()
@@ -192,6 +193,7 @@ test('shares only title and frozen text, handles cancellation neutrally, and reg
   expect(shared).not.toHaveProperty('url')
 
   await page.getByRole('button', { name: 'Neue Vorschau erzeugen' }).click()
+  await expect(page.getByRole('heading', { name: 'Vorschau erzeugen' })).toBeFocused()
   await page.getByLabel('Teilnehmer').selectOption(BOB_ID)
   await page.getByRole('button', { name: 'Vorschau erzeugen' }).click()
   await expect(page.getByLabel('Textvorschau')).toHaveValue(/Person: Bob \(inaktiv\)/)
@@ -296,4 +298,38 @@ test('distinguishes participants whose names, status, and balance are identical'
   await expect(participant).toHaveValue(SAM_TWO_ID)
   await page.getByRole('button', { name: 'Vorschau erzeugen' }).click()
   await expect(page.getByLabel('Textvorschau')).toHaveValue(/Person: Sam \(Teilnehmer 4\) \(inaktiv\)/)
+})
+
+test('long Group, Expense, and Participant values reflow at 320px', async ({ page }) => {
+  await seedStatementState(page)
+  const longToken = 'SehrLangerWertOhneTrennzeichen'.repeat(3)
+  await page.evaluate(async ({ groupId, aliceId, expenseId, longToken }) => {
+    const request = indexedDB.open('joinsplit', 4)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const tx = db.transaction(['groups', 'participants', 'expenses'], 'readwrite')
+    const groups = tx.objectStore('groups')
+    const participants = tx.objectStore('participants')
+    const expenses = tx.objectStore('expenses')
+    const groupRequest = groups.get(groupId)
+    const participantRequest = participants.get(aliceId)
+    const expenseRequest = expenses.get(expenseId)
+    const [group, participant, expense] = await Promise.all([
+      new Promise<Record<string, unknown>>((resolve, reject) => { groupRequest.onsuccess = () => resolve(groupRequest.result); groupRequest.onerror = () => reject(groupRequest.error) }),
+      new Promise<Record<string, unknown>>((resolve, reject) => { participantRequest.onsuccess = () => resolve(participantRequest.result); participantRequest.onerror = () => reject(participantRequest.error) }),
+      new Promise<Record<string, unknown>>((resolve, reject) => { expenseRequest.onsuccess = () => resolve(expenseRequest.result); expenseRequest.onerror = () => reject(expenseRequest.error) }),
+    ])
+    groups.put({ ...group, name: longToken })
+    participants.put({ ...participant, name: longToken })
+    expenses.put({ ...expense, description: `${longToken}${longToken}` })
+    await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) })
+    db.close()
+  }, { groupId: GROUP_ID, aliceId: ALICE_ID, expenseId: EXPENSE_ID, longToken })
+
+  await page.setViewportSize({ width: 320, height: 700 })
+  await page.goto(`/groups/${GROUP_ID}`)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+  await page.goto(`/groups/${GROUP_ID}/expenses/${EXPENSE_ID}`)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+  await page.getByRole('button', { name: 'Bearbeiten' }).click()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
 })

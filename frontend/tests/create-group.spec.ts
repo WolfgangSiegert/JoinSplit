@@ -625,6 +625,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await addBob
   await page.getByRole('link', { name: '← Gruppe' }).click()
   await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgabe erfassen' })).toBeFocused()
   await page.getByLabel('Beschreibung').fill('Abendessen')
   await page.getByLabel('Betrag in Euro').fill('10,01')
   await page.getByLabel('Bezahlt von').selectOption({ label: 'Alice' })
@@ -647,7 +648,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   const create = page.waitForResponse(response => response.url().endsWith('/expenses') && response.request().method() === 'POST' && response.status() === 201)
   await page.getByRole('button', { name: 'Ausgabe speichern' }).click()
   await create
-  await expect(page.getByRole('heading', { level: 1, name: 'Abendessen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Abendessen' })).toBeFocused()
   const expenseUrl = page.url()
   await page.reload()
   await expect(page.getByText('10,01 €')).toBeVisible()
@@ -658,6 +659,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await deactivate
   await page.goto(expenseUrl)
   await page.getByRole('button', { name: 'Bearbeiten' }).click()
+  await expect(page.getByLabel('Beschreibung')).toBeFocused()
   const historicalBob = page.getByRole('checkbox', { name: 'Bob (inaktiv)' })
   await expect(historicalBob).toBeChecked()
   await expect(historicalBob).toBeEnabled()
@@ -666,13 +668,15 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   const update = page.waitForResponse(response => response.url().includes('/expenses/') && response.request().method() === 'PUT' && response.status() === 200)
   await page.getByRole('button', { name: 'Änderungen speichern' }).click()
   await update
+  await expect(page.getByRole('heading', { level: 1, name: 'Abendessen' })).toBeFocused()
   await expect(page.getByRole('definition').filter({ hasText: '10,02 €' })).toBeVisible()
   await page.getByRole('button', { name: 'Bearbeiten' }).click()
   await expect(page.getByRole('checkbox', { name: 'Bob (inaktiv)' })).not.toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Bob (inaktiv)' })).toBeDisabled()
   await page.reload()
   await page.getByRole('button', { name: 'Ausgabe löschen' }).click()
-  await expect(page.getByRole('dialog')).toContainText('Ausgabe „Abendessen“ endgültig löschen?')
+  await expect(page.getByRole('alertdialog')).toContainText('Ausgabe „Abendessen“ endgültig löschen?')
+  await expect(page.getByRole('button', { name: 'Abbrechen' })).toBeFocused()
   await expectNoAxeViolations(page)
   const deletion = page.waitForResponse(response => response.url().includes('/expenses/') && response.request().method() === 'DELETE' && response.status() === 204)
   await page.getByRole('button', { name: 'Endgültig löschen' }).click()
@@ -681,6 +685,47 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.reload()
   await expect(page.getByText('Noch keine Ausgaben')).toBeVisible()
   await expectNoAxeViolations(page)
+})
+
+test('a failed Expense delete stays actionable and ignores repeated activation', async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalDelete = IDBObjectStore.prototype.delete
+    IDBObjectStore.prototype.delete = function (key: IDBValidKey | IDBKeyRange): IDBRequest<undefined> {
+      if (this.name === 'expenses' && localStorage.getItem('fail-expense-delete') === '1') {
+        const attempts = Number(localStorage.getItem('expense-delete-attempts') ?? '0') + 1
+        localStorage.setItem('expense-delete-attempts', String(attempts))
+        throw new DOMException('Forced Expense delete failure', 'UnknownError')
+      }
+      return originalDelete.call(this, key)
+    }
+  })
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Delete-Härtung')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await page.getByLabel('Beschreibung').fill('Fehlerhafte Löschung')
+  await page.getByLabel('Betrag in Euro').fill('8,40')
+  await page.getByRole('button', { name: 'Ausgabe speichern' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Fehlerhafte Löschung' })).toBeVisible()
+  await page.evaluate(() => localStorage.setItem('fail-expense-delete', '1'))
+  await page.getByRole('button', { name: 'Ausgabe löschen' }).click()
+
+  const dialog = page.getByRole('alertdialog', { name: 'Ausgabe löschen' })
+  const confirm = page.getByRole('button', { name: 'Endgültig löschen' })
+  await page.evaluate(() => {
+    const button = document.querySelector<HTMLButtonElement>('dialog .danger-button')!
+    button.click()
+    button.click()
+  })
+
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('alert')).toHaveText('Die Ausgabe konnte nicht lokal gelöscht werden.')
+  await expect(dialog).toHaveAttribute('aria-busy', 'false')
+  await expect(confirm).toBeEnabled()
+  await expect(confirm).toBeFocused()
+  expect(await page.evaluate(() => localStorage.getItem('expense-delete-attempts'))).toBe('1')
+  await expect(page.getByRole('heading', { level: 1, name: 'Fehlerhafte Löschung' })).toBeVisible()
 })
 
 test('Participant persistence failures are visibly and safely reported', async ({ page }) => {

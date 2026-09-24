@@ -29,6 +29,8 @@ const snapshot = shallowRef<StatementSnapshot | null>(null)
 const actionMessage = ref('')
 const actionFailed = ref(false)
 const shareSupported = ref(false)
+const createTitle = ref<HTMLHeadingElement | null>(null)
+const previewTitle = ref<HTMLHeadingElement | null>(null)
 
 onMounted(() => {
   shareSupported.value = typeof navigator.share === 'function'
@@ -42,7 +44,7 @@ function optionLabel(participantId: string): string {
   return `${participantLabels.value.get(participant.id) ?? participant.name}${status} – ${formatSignedAmountMinor(balance)}`
 }
 
-function createSnapshot(): void {
+async function createSnapshot(): Promise<void> {
   if (!group.value || !participants.value.some(item => item.id === selectedParticipantId.value)) return
 
   snapshot.value = generateStatementSnapshot({
@@ -57,12 +59,16 @@ function createSnapshot(): void {
   })
   actionMessage.value = ''
   actionFailed.value = false
+  await nextTick()
+  previewTitle.value?.focus()
 }
 
-function startNewSnapshot(): void {
+async function startNewSnapshot(): Promise<void> {
   snapshot.value = null
   actionMessage.value = ''
   actionFailed.value = false
+  await nextTick()
+  createTitle.value?.focus()
 }
 
 async function copySnapshot(): Promise<void> {
@@ -116,7 +122,7 @@ async function shareSnapshot(): Promise<void> {
       </p>
 
       <section v-if="!snapshot" class="card mt-6 p-5" aria-labelledby="statement-create-title">
-        <h2 id="statement-create-title" class="text-xl font-semibold">Vorschau erzeugen</h2>
+        <h2 id="statement-create-title" ref="createTitle" tabindex="-1" class="text-xl font-semibold">Vorschau erzeugen</h2>
         <template v-if="participants.length">
           <label for="statement-participant" class="mt-4 block font-medium">Teilnehmer</label>
           <select id="statement-participant" v-model="selectedParticipantId" class="field-input mt-2">
@@ -138,7 +144,7 @@ async function shareSnapshot(): Promise<void> {
 
       <section v-else class="mt-6" aria-labelledby="statement-preview-title">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="statement-preview-title" class="text-xl font-semibold">Vorschau</h2>
+          <h2 id="statement-preview-title" ref="previewTitle" tabindex="-1" class="text-xl font-semibold">Vorschau</h2>
           <button type="button" class="secondary-button" @click="startNewSnapshot">Neue Vorschau erzeugen</button>
         </div>
         <p class="mt-3 text-sm text-gray-600">

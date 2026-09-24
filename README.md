@@ -6,7 +6,8 @@ account before getting started.
 
 ## Current status
 
-The M2 Core milestone is complete. JoinSplit currently supports:
+The M2 Core milestone and the M3 Joining & Settlement feature work are complete.
+JoinSplit currently supports:
 
 - anonymous local-first Group creation,
 - durable browser state and pending-mutation recovery after reload,
@@ -17,6 +18,7 @@ The M2 Core milestone is complete. JoinSplit currently supports:
 - deterministic and exact minimum-transfer read-only Settlement Proposals,
 - offline Participant Statement Snapshots with immutable text preview, copy and
   optional platform sharing,
+- Group archive, reactivation and eligible hard-delete lifecycle,
 - synchronization through the Laravel API to PostgreSQL.
 
 The automated checks cover domain rules in TypeScript and PHP, API and database
@@ -26,9 +28,9 @@ Statement Snapshots are implemented.
 
 ## Product direction
 
-The remaining MVP work completes the Group lifecycle and then hardens the full
-M3 financial workflow. The full single-owner workflow is intended to work
-Offline First.
+M3 hardening covers the complete financial workflow across local persistence,
+the Laravel API and PostgreSQL. The full single-owner workflow is intended to
+work Offline First.
 
 See the [product vision](docs/product/vision.md) and
 [MVP scope](docs/product/mvp.md) for the canonical product direction.
@@ -47,8 +49,8 @@ See the [product vision](docs/product/vision.md) and
 - A Participant is not an Access Identity.
 - Business logic belongs in neither controllers nor components.
 - Pinia holds runtime application state, while IndexedDB durably stores the
-  local identity, Groups, Participants, Expenses, ExpenseShares, settings and
-  pending mutations.
+  local identity, Groups, Participants, Expenses, ExpenseShares, Settlements,
+  settings and pending mutations.
 - Equal Split and Balance Calculation are implemented independently in
   TypeScript and PHP against shared test vectors.
 
