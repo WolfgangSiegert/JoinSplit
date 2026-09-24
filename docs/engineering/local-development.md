@@ -17,8 +17,8 @@ The completed M2 Core includes:
 - ordered synchronization of local mutations to Laravel/PostgreSQL.
 
 The current M3 implementation additionally includes recorded Settlement CRUD
-and the deterministic Settlement Proposal. The minimum-transfer proposal and
-Statement Snapshots are not implemented yet.
+and both Settlement Proposal strategies. Statement Snapshots are not
+implemented yet.
 
 ## Runtimes
 

@@ -7,6 +7,10 @@ const BOB_ID = '52000000-0000-4000-8000-000000000002'
 const CAROL_ID = '52000000-0000-4000-8000-000000000003'
 const EXPENSE_ID = '53000000-0000-4000-8000-000000000001'
 
+function customParticipantId(index: number): string {
+  return `54000000-0000-4000-8000-${String(index).padStart(12, '0')}`
+}
+
 async function expectNoAxeViolations(page: Page): Promise<void> {
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -95,6 +99,97 @@ async function seedProposalState(
   })
 }
 
+async function seedCustomBalanceState(
+  page: Page,
+  participants: ReadonlyArray<{ id: string; name: string; balanceAmountMinor: number }>,
+  strategy: 'deterministic' | 'minimum-transfer',
+): Promise<void> {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+
+  await page.evaluate(async ({ groupId, participants, strategy }) => {
+    const request = indexedDB.open('joinsplit', 4)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
+    const identity = await new Promise<{ id: string }>((resolve, reject) => {
+      identityRequest.onsuccess = () => resolve(identityRequest.result)
+      identityRequest.onerror = () => reject(identityRequest.error)
+    })
+    const transaction = db.transaction(
+      ['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations', 'settings'],
+      'readwrite',
+    )
+    for (const store of ['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations']) {
+      transaction.objectStore(store).clear()
+    }
+    transaction.objectStore('settings').put({
+      key: 'preferences',
+      addSelfAsParticipantByDefault: true,
+      settlementProposalStrategy: strategy,
+    })
+    transaction.objectStore('groups').put({
+      id: groupId,
+      name: 'Vorschlagsreise',
+      currency: 'EUR',
+      ownerAccessIdentityId: identity.id,
+      status: 'active',
+      hasFinancialHistory: true,
+      participantIds: participants.map(participant => participant.id),
+    })
+    participants.forEach((participant, order) => {
+      transaction.objectStore('participants').put({
+        id: participant.id,
+        groupId,
+        name: participant.name,
+        status: 'active',
+        order,
+      })
+    })
+
+    const debtors = participants
+      .filter(participant => participant.balanceAmountMinor < 0)
+      .map(participant => ({ ...participant, remaining: -participant.balanceAmountMinor }))
+    let debtorIndex = 0
+    participants
+      .filter(participant => participant.balanceAmountMinor > 0)
+      .forEach((creditor, expenseIndex) => {
+        const expenseId = `55000000-0000-4000-8000-${String(expenseIndex + 1).padStart(12, '0')}`
+        transaction.objectStore('expenses').put({
+          id: expenseId,
+          groupId,
+          description: `Ausgabe ${expenseIndex + 1}`,
+          amountMinor: creditor.balanceAmountMinor,
+          incurredOn: '2026-09-24',
+          payerParticipantId: creditor.id,
+          creatorAccessIdentityId: identity.id,
+          splitMethod: 'equal',
+        })
+        let remainingExpense = creditor.balanceAmountMinor
+        while (remainingExpense > 0) {
+          const debtor = debtors[debtorIndex]!
+          const shareAmountMinor = Math.min(remainingExpense, debtor.remaining)
+          transaction.objectStore('expenseShares').put({
+            expenseId,
+            participantId: debtor.id,
+            amountMinor: shareAmountMinor,
+          })
+          remainingExpense -= shareAmountMinor
+          debtor.remaining -= shareAmountMinor
+          if (debtor.remaining === 0) debtorIndex += 1
+        }
+      })
+
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+    db.close()
+  }, { groupId: GROUP_ID, participants, strategy })
+}
+
 async function storedFinancialMutationCounts(page: Page): Promise<{ settlements: number; pendingMutations: number }> {
   return page.evaluate(async () => {
     const request = indexedDB.open('joinsplit', 4)
@@ -134,21 +229,94 @@ test('shows the deterministic proposal in stable order without recording payment
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
-test('does not substitute the deterministic proposal when minimum-transfer is selected', async ({ page }) => {
-  await seedProposalState(page, { strategy: 'minimum-transfer' })
+test('switching strategy shows the exact proposal without changing financial state', async ({ page }) => {
+  await seedCustomBalanceState(page, [
+    { id: customParticipantId(1), name: 'Debtor A', balanceAmountMinor: -600 },
+    { id: customParticipantId(2), name: 'Debtor B', balanceAmountMinor: -400 },
+    { id: customParticipantId(3), name: 'Creditor A', balanceAmountMinor: 400 },
+    { id: customParticipantId(4), name: 'Creditor B', balanceAmountMinor: 600 },
+  ], 'deterministic')
   await page.goto(`/groups/${GROUP_ID}/balances`)
 
   const proposal = page.getByRole('region', { name: 'Ausgleichsvorschlag' })
-  await expect(proposal.getByLabel('Strategie')).toHaveValue('minimum-transfer')
-  await expect(proposal.getByText('Diese Strategie ist noch nicht verfügbar.')).toBeVisible()
-  await expect(proposal).toContainText('folgt in einem späteren Schritt')
-  await expect(proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' })).toHaveCount(0)
+  const transfers = proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' }).getByRole('listitem')
+  await expect(transfers).toHaveCount(3)
 
-  await proposal.getByLabel('Strategie').selectOption('deterministic')
-  await expect(proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' })).toBeVisible()
+  await proposal.getByLabel('Strategie').selectOption('minimum-transfer')
+  await expect(transfers).toHaveCount(2)
+  await expect(transfers.nth(0)).toContainText('Debtor A zahlt Creditor B')
+  await expect(transfers.nth(0)).toContainText('6,00 €')
+  await expect(transfers.nth(1)).toContainText('Debtor B zahlt Creditor A')
+  await expect(transfers.nth(1)).toContainText('4,00 €')
   await page.reload()
-  await expect(proposal.getByLabel('Strategie')).toHaveValue('deterministic')
+  await expect(proposal.getByLabel('Strategie')).toHaveValue('minimum-transfer')
+  await expect(transfers).toHaveCount(2)
   await expect(storedFinancialMutationCounts(page)).resolves.toEqual({ settlements: 0, pendingMutations: 0 })
+})
+
+test('keeps an unavailable persisted exact strategy visible and recovers below the limit', async ({ page }) => {
+  const participants = Array.from({ length: 12 }, (_, index) => ({
+    id: customParticipantId(index + 1),
+    name: `Debtor ${index + 1}`,
+    balanceAmountMinor: -100,
+  }))
+  participants.push({ id: customParticipantId(13), name: 'Creditor', balanceAmountMinor: 1200 })
+  await seedCustomBalanceState(page, participants, 'minimum-transfer')
+  await page.goto(`/groups/${GROUP_ID}/balances`)
+
+  const proposal = page.getByRole('region', { name: 'Ausgleichsvorschlag' })
+  const strategy = proposal.getByLabel('Strategie')
+  await expect(strategy).toHaveValue('minimum-transfer')
+  await expect(strategy.locator('option[value="minimum-transfer"]')).toBeDisabled()
+  await expect(proposal.getByRole('status')).toContainText('Aktuell haben 13 Teilnehmer einen offenen Saldo')
+  await expect(proposal.getByRole('status')).toContainText('höchstens 12')
+  await expect(proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' })).toHaveCount(0)
+  await expect(storedFinancialMutationCounts(page)).resolves.toEqual({ settlements: 0, pendingMutations: 0 })
+  await expectNoAxeViolations(page)
+
+  await strategy.selectOption('deterministic')
+  await expect(strategy).toHaveValue('deterministic')
+  await expect(proposal).toContainText('bei 13 offenen Salden deaktiviert')
+  await expect(proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' })).toBeVisible()
+
+  await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 4)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const transaction = db.transaction(['expenseShares', 'settings'], 'readwrite')
+    transaction.objectStore('expenseShares').put({
+      expenseId: '55000000-0000-4000-8000-000000000001',
+      participantId: '54000000-0000-4000-8000-000000000001',
+      amountMinor: 0,
+    })
+    transaction.objectStore('expenseShares').put({
+      expenseId: '55000000-0000-4000-8000-000000000001',
+      participantId: '54000000-0000-4000-8000-000000000002',
+      amountMinor: 200,
+    })
+    transaction.objectStore('settings').put({
+      key: 'preferences',
+      addSelfAsParticipantByDefault: true,
+      settlementProposalStrategy: 'minimum-transfer',
+    })
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
+    db.close()
+  })
+  await page.reload()
+
+  await expect(strategy).toHaveValue('minimum-transfer')
+  await expect(strategy.locator('option[value="minimum-transfer"]')).toBeEnabled()
+  await expect(proposal.getByRole('status')).toHaveCount(0)
+  await expect(proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' }).getByRole('listitem')).toHaveCount(11)
+  await expect(storedFinancialMutationCounts(page)).resolves.toEqual({ settlements: 0, pendingMutations: 0 })
+
+  await page.setViewportSize({ width: 320, height: 700 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
 test('a failed strategy write restores the stored selection and reports its own error', async ({ page }) => {

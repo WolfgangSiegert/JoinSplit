@@ -65,6 +65,33 @@
       }
     },
     {
+      "name": "proposal tie uses larger amount after participant order",
+      "participants": [
+        { "participantId": "d1", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-2" },
+        { "participantId": "d2", "participantOrder": 2, "status": "active", "balanceAmountMinor": "-2" },
+        { "participantId": "c1", "participantOrder": 3, "status": "active", "balanceAmountMinor": "3" },
+        { "participantId": "c2", "participantOrder": 4, "status": "active", "balanceAmountMinor": "1" }
+      ],
+      "expected": {
+        "deterministic": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "d1", "receiverParticipantId": "c1", "amountMinor": "2" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c1", "amountMinor": "1" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c2", "amountMinor": "1" }
+          ]
+        },
+        "minimumTransfer": {
+          "status": "success",
+          "transfers": [
+            { "senderParticipantId": "d1", "receiverParticipantId": "c1", "amountMinor": "2" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c1", "amountMinor": "1" },
+            { "senderParticipantId": "d2", "receiverParticipantId": "c2", "amountMinor": "1" }
+          ]
+        }
+      }
+    },
+    {
       "name": "greedy can use more transfers than the exact strategy",
       "participants": [
         { "participantId": "debtor-a", "participantOrder": 1, "status": "active", "balanceAmountMinor": "-600" },

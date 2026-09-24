@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { calculateParticipantBalances, formatSignedAmountMinor } from '../../../../domain/balance'
 import { formatSettlementAmountMinor } from '../../../../domain/settlement'
-import { proposeDeterministicSettlements } from '../../../../domain/settlement-proposal'
+import {
+  EXACT_NON_ZERO_PARTICIPANT_LIMIT,
+  proposeDeterministicSettlements,
+  proposeMinimumTransferSettlements,
+} from '../../../../domain/settlement-proposal'
 
 const route = useRoute()
 const groupsStore = useGroupsStore()
@@ -18,17 +22,24 @@ const savingStrategy = ref(false)
 const strategyPersistenceError = ref('')
 const visibleStrategyOverride = ref<'deterministic' | 'minimum-transfer' | null>(null)
 const visibleStrategy = computed(() => visibleStrategyOverride.value ?? settingsStore.settlementProposalStrategy)
-const deterministicProposal = computed(() => proposeDeterministicSettlements(
-  balances.value.map((balance) => {
-    const participant = participantById.value.get(balance.participantId)
-    return {
-      participantId: balance.participantId,
-      participantOrder: participant?.order ?? -1,
-      status: participant?.status ?? 'active',
-      balanceAmountMinor: balance.balanceAmountMinor.toString(10),
-    }
-  }),
-))
+const proposalParticipants = computed(() => balances.value.map((balance) => {
+  const participant = participantById.value.get(balance.participantId)
+  return {
+    participantId: balance.participantId,
+    participantOrder: participant?.order ?? -1,
+    status: participant?.status ?? 'active',
+    balanceAmountMinor: balance.balanceAmountMinor.toString(10),
+  }
+}))
+const deterministicProposal = computed(() => proposeDeterministicSettlements(proposalParticipants.value))
+const minimumTransferProposal = computed(() => proposeMinimumTransferSettlements(proposalParticipants.value))
+const nonZeroParticipantCount = computed(() => proposalParticipants.value
+  .filter(participant => participant.balanceAmountMinor !== '0')
+  .length)
+const minimumTransferUnavailable = computed(() => nonZeroParticipantCount.value > EXACT_NON_ZERO_PARTICIPANT_LIMIT)
+const visibleProposal = computed(() => visibleStrategy.value === 'minimum-transfer'
+  ? minimumTransferProposal.value
+  : deterministicProposal.value)
 
 function balanceText(amountMinor: bigint): string {
   if (amountMinor > 0n) return `Soll erhalten: ${formatSignedAmountMinor(amountMinor)}`
@@ -132,29 +143,35 @@ async function changeSettlementStrategy(event: Event): Promise<void> {
             @change="changeSettlementStrategy"
           >
             <option value="deterministic">Einfacher deterministischer Ausgleich</option>
-            <option value="minimum-transfer">Möglichst wenige Zahlungen</option>
+            <option
+              value="minimum-transfer"
+              :disabled="minimumTransferUnavailable"
+            >Möglichst wenige Zahlungen</option>
           </select>
           <p id="balance-settlement-strategy-help" class="mt-2 text-sm text-gray-600">
             Die Auswahl gilt auf diesem Gerät. Sie erfasst und verändert keine Zahlungen.
+            <span v-if="minimumTransferUnavailable" class="mt-1 block">
+              „Möglichst wenige Zahlungen“ ist bei {{ nonZeroParticipantCount }} offenen Salden deaktiviert; unterstützt werden höchstens {{ EXACT_NON_ZERO_PARTICIPANT_LIMIT }}.
+            </span>
           </p>
           <p v-if="strategyPersistenceError" class="error-text mt-3 text-sm" role="alert">
             {{ strategyPersistenceError }}
           </p>
 
-          <div v-if="visibleStrategy === 'minimum-transfer'" class="mt-4 rounded-lg bg-gray-100 p-4" role="status">
-            <p class="font-medium">Diese Strategie ist noch nicht verfügbar.</p>
+          <div v-if="visibleProposal.status === 'unavailable'" class="mt-4 rounded-lg bg-gray-100 p-4" role="status">
+            <p class="font-medium">Für diese Gruppe sind möglichst wenige Zahlungen nicht verfügbar.</p>
             <p class="mt-1 text-sm text-gray-700">
-              „Möglichst wenige Zahlungen“ folgt in einem späteren Schritt. Wähle bis dahin den einfachen deterministischen Ausgleich.
+              Aktuell haben {{ visibleProposal.nonZeroParticipantCount }} Teilnehmer einen offenen Saldo. Diese Strategie unterstützt höchstens {{ visibleProposal.limit }}. Es wird kein anderer Vorschlag als Ersatz angezeigt.
             </p>
           </div>
 
-          <template v-else-if="deterministicProposal.status === 'success'">
-            <p v-if="deterministicProposal.transfers.length === 0" class="mt-4 rounded-lg bg-gray-100 p-4" role="status">
+          <template v-else-if="visibleProposal.status === 'success'">
+            <p v-if="visibleProposal.transfers.length === 0" class="mt-4 rounded-lg bg-gray-100 p-4" role="status">
               Es ist keine Ausgleichszahlung nötig.
             </p>
             <ol v-else class="mt-4 space-y-3" aria-label="Vorgeschlagene Zahlungen">
               <li
-                v-for="transfer in deterministicProposal.transfers"
+                v-for="transfer in visibleProposal.transfers"
                 :key="`${transfer.senderParticipantId}:${transfer.receiverParticipantId}`"
                 class="rounded-lg border border-gray-200 p-4"
               >

@@ -33,6 +33,18 @@ export type DeterministicSettlementProposalResult =
   | { readonly status: 'success'; readonly transfers: readonly SettlementProposalTransfer[] }
   | InvalidSettlementProposalResult
 
+export type MinimumTransferSettlementProposalResult =
+  | { readonly status: 'success'; readonly transfers: readonly SettlementProposalTransfer[] }
+  | {
+      readonly status: 'unavailable'
+      readonly reason: 'non_zero_participant_limit'
+      readonly nonZeroParticipantCount: number
+      readonly limit: typeof EXACT_NON_ZERO_PARTICIPANT_LIMIT
+    }
+  | InvalidSettlementProposalResult
+
+export const EXACT_NON_ZERO_PARTICIPANT_LIMIT = 12 as const
+
 interface InvalidSettlementProposalResult {
   readonly status: 'invalid'
   readonly error: SettlementProposalValidationError
@@ -67,10 +79,98 @@ export function proposeDeterministicSettlements(
   const validation = validateParticipants(input)
   if (validation.status === 'invalid') return validation
 
-  const debtors = validation.participants
+  return {
+    status: 'success',
+    transfers: materializeDeterministicTransfers(validation.participants),
+  }
+}
+
+/**
+ * Builds a globally minimum-transfer proposal for up to twelve non-zero
+ * balances. The final proposal-level tie-break is applied after each candidate
+ * partition has been materialized with the deterministic strategy.
+ */
+export function proposeMinimumTransferSettlements(
+  input: readonly SettlementProposalParticipant[],
+): MinimumTransferSettlementProposalResult {
+  const validation = validateParticipants(input)
+  if (validation.status === 'invalid') return validation
+
+  const participants = validation.participants.filter(participant => participant.balanceAmountMinor !== 0n)
+  if (participants.length > EXACT_NON_ZERO_PARTICIPANT_LIMIT) {
+    return {
+      status: 'unavailable',
+      reason: 'non_zero_participant_limit',
+      nonZeroParticipantCount: participants.length,
+      limit: EXACT_NON_ZERO_PARTICIPANT_LIMIT,
+    }
+  }
+  if (participants.length === 0) return { status: 'success', transfers: [] }
+
+  const fullMask = (1 << participants.length) - 1
+  const zeroSumMasks = new Uint8Array(fullMask + 1)
+  const blockTransfers = new Map<number, readonly SettlementProposalTransfer[]>()
+
+  for (let mask = 1; mask <= fullMask; mask += 1) {
+    const block = participants.filter((_participant, index) => (mask & (1 << index)) !== 0)
+    if (balancesCancelExactly(block)) {
+      zeroSumMasks[mask] = 1
+      blockTransfers.set(mask, materializeDeterministicTransfers(block))
+    }
+  }
+
+  interface PartitionState {
+    readonly blockCount: number
+    readonly transfers: readonly SettlementProposalTransfer[]
+  }
+
+  const participantOrders = new Map(participants.map(participant => [participant.participantId, participant.participantOrder]))
+  const best: Array<PartitionState | undefined> = new Array(fullMask + 1)
+  best[0] = { blockCount: 0, transfers: [] }
+
+  for (let mask = 1; mask <= fullMask; mask += 1) {
+    const anchor = mask & -mask
+    let candidateMask = mask
+
+    while (candidateMask > 0) {
+      if ((candidateMask & anchor) !== 0 && zeroSumMasks[candidateMask] === 1) {
+        const remainder = best[mask ^ candidateMask]
+        if (remainder) {
+          const transfers = [
+            ...remainder.transfers,
+            ...blockTransfers.get(candidateMask)!,
+          ].sort((left, right) => compareTransfers(left, right, participantOrders))
+          const candidate: PartitionState = {
+            blockCount: remainder.blockCount + 1,
+            transfers,
+          }
+          const current = best[mask]
+          if (
+            !current
+            || candidate.blockCount > current.blockCount
+            || (
+              candidate.blockCount === current.blockCount
+              && compareProposals(candidate.transfers, current.transfers, participantOrders) < 0
+            )
+          ) {
+            best[mask] = candidate
+          }
+        }
+      }
+      candidateMask = (candidateMask - 1) & mask
+    }
+  }
+
+  return { status: 'success', transfers: best[fullMask]!.transfers }
+}
+
+function materializeDeterministicTransfers(
+  participants: readonly ParsedParticipant[],
+): readonly SettlementProposalTransfer[] {
+  const debtors = participants
     .filter(participant => participant.balanceAmountMinor < 0n)
     .map(participant => ({ ...participant }))
-  const creditors = validation.participants
+  const creditors = participants
     .filter(participant => participant.balanceAmountMinor > 0n)
     .map(participant => ({ ...participant }))
   const transfers: SettlementProposalTransfer[] = []
@@ -100,10 +200,10 @@ export function proposeDeterministicSettlements(
   }
 
   if (debtorIndex < debtors.length || creditorIndex < creditors.length) {
-    return invalid('balance_sum_not_zero')
+    throw new Error('Cannot materialize an unbalanced participant block')
   }
 
-  return { status: 'success', transfers }
+  return transfers
 }
 
 function validateParticipants(input: readonly SettlementProposalParticipant[]): ValidationResult {
@@ -213,6 +313,35 @@ function transfer(
     receiverParticipantId: creditor.participantId,
     amountMinor: amountMinor.toString(10),
   }
+}
+
+function compareTransfers(
+  left: SettlementProposalTransfer,
+  right: SettlementProposalTransfer,
+  participantOrders: ReadonlyMap<string, number>,
+): number {
+  const senderOrder = participantOrders.get(left.senderParticipantId)! - participantOrders.get(right.senderParticipantId)!
+  if (senderOrder !== 0) return senderOrder
+
+  const receiverOrder = participantOrders.get(left.receiverParticipantId)! - participantOrders.get(right.receiverParticipantId)!
+  if (receiverOrder !== 0) return receiverOrder
+
+  const leftAmount = BigInt(left.amountMinor)
+  const rightAmount = BigInt(right.amountMinor)
+  return leftAmount > rightAmount ? -1 : leftAmount < rightAmount ? 1 : 0
+}
+
+function compareProposals(
+  left: readonly SettlementProposalTransfer[],
+  right: readonly SettlementProposalTransfer[],
+  participantOrders: ReadonlyMap<string, number>,
+): number {
+  const commonLength = Math.min(left.length, right.length)
+  for (let index = 0; index < commonLength; index += 1) {
+    const comparison = compareTransfers(left[index]!, right[index]!, participantOrders)
+    if (comparison !== 0) return comparison
+  }
+  return left.length - right.length
 }
 
 function invalid(error: SettlementProposalValidationError): InvalidSettlementProposalResult {
