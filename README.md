@@ -13,17 +13,20 @@ The M2 Core milestone is complete. JoinSplit currently supports:
 - Participant add, rename, deactivate and eligible delete operations,
 - Expense create, edit and delete with deterministic Equal Split,
 - derived Participant balances and traceable balance details,
+- recorded Settlement create, edit and delete with immediate balance updates,
+- deterministic, read-only Settlement Proposals,
 - synchronization through the Laravel API to PostgreSQL.
 
 The automated checks cover domain rules in TypeScript and PHP, API and database
 behavior, IndexedDB upgrades, browser integration and automated accessibility
-checks. Settlement proposals, recorded Settlements and Statement Snapshots
-remain later MVP work and are not represented as completed features.
+checks. Recorded Settlements and the deterministic Settlement Proposal are
+implemented. The minimum-transfer proposal and Statement Snapshots remain
+later MVP work and are not represented as completed features.
 
 ## Product direction
 
-The intended MVP extends the completed M2 Core with settlement proposals,
-recorded Settlements and a shareable Statement Snapshot. The full single-owner
+The remaining MVP work adds the minimum-transfer proposal, a shareable
+Statement Snapshot and the remaining Group lifecycle. The full single-owner
 workflow is intended to work Offline First.
 
 See the [product vision](docs/product/vision.md) and

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { calculateParticipantBalances, formatSignedAmountMinor } from '../../../../domain/balance'
+import { formatSettlementAmountMinor } from '../../../../domain/settlement'
+import { proposeDeterministicSettlements } from '../../../../domain/settlement-proposal'
 
 const route = useRoute()
 const groupsStore = useGroupsStore()
+const settingsStore = useSettingsStore()
 const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
 const participants = computed(() => groupsStore.participantsForGroup(groupId.value))
@@ -11,11 +14,51 @@ const settlements = computed(() => groupsStore.settlementsForGroup(groupId.value
 const balances = computed(() => calculateParticipantBalances(groupId.value, participants.value, expenses.value, settlements.value))
 const participantById = computed(() => new Map(participants.value.map(participant => [participant.id, participant])))
 const allBalanced = computed(() => balances.value.length > 0 && balances.value.every(balance => balance.balanceAmountMinor === 0n))
+const savingStrategy = ref(false)
+const strategyPersistenceError = ref('')
+const visibleStrategyOverride = ref<'deterministic' | 'minimum-transfer' | null>(null)
+const visibleStrategy = computed(() => visibleStrategyOverride.value ?? settingsStore.settlementProposalStrategy)
+const deterministicProposal = computed(() => proposeDeterministicSettlements(
+  balances.value.map((balance) => {
+    const participant = participantById.value.get(balance.participantId)
+    return {
+      participantId: balance.participantId,
+      participantOrder: participant?.order ?? -1,
+      status: participant?.status ?? 'active',
+      balanceAmountMinor: balance.balanceAmountMinor.toString(10),
+    }
+  }),
+))
 
 function balanceText(amountMinor: bigint): string {
   if (amountMinor > 0n) return `Soll erhalten: ${formatSignedAmountMinor(amountMinor)}`
   if (amountMinor < 0n) return `Soll zahlen: ${formatSignedAmountMinor(amountMinor)}`
   return `Ausgeglichen: ${formatSignedAmountMinor(amountMinor)}`
+}
+
+function participantName(participantId: string): string {
+  return participantById.value.get(participantId)?.name ?? 'Unbekannter Teilnehmer'
+}
+
+function participantIsInactive(participantId: string): boolean {
+  return participantById.value.get(participantId)?.status === 'inactive'
+}
+
+async function changeSettlementStrategy(event: Event): Promise<void> {
+  const value = (event.target as HTMLSelectElement).value
+  if (value !== 'deterministic' && value !== 'minimum-transfer') return
+
+  visibleStrategyOverride.value = value
+  savingStrategy.value = true
+  strategyPersistenceError.value = ''
+  try {
+    await settingsStore.setSettlementProposalStrategy(value)
+  } catch {
+    strategyPersistenceError.value = 'Die Strategie konnte nicht lokal gespeichert werden.'
+  } finally {
+    visibleStrategyOverride.value = null
+    savingStrategy.value = false
+  }
 }
 </script>
 
@@ -71,6 +114,66 @@ function balanceText(amountMinor: bigint): string {
               </NuxtLink>
             </li>
           </ul>
+        </section>
+
+        <section class="card mt-6 p-5" aria-labelledby="settlement-proposal">
+          <h2 id="settlement-proposal" class="text-xl font-semibold">Ausgleichsvorschlag</h2>
+          <p class="mt-2 text-sm text-gray-600">
+            Der Vorschlag ist nur eine Rechenhilfe und keine erfasste Zahlung.
+          </p>
+
+          <label for="balance-settlement-strategy" class="mt-4 block font-medium">Strategie</label>
+          <select
+            id="balance-settlement-strategy"
+            class="field-input mt-2"
+            :value="visibleStrategy"
+            :disabled="savingStrategy"
+            aria-describedby="balance-settlement-strategy-help"
+            @change="changeSettlementStrategy"
+          >
+            <option value="deterministic">Einfacher deterministischer Ausgleich</option>
+            <option value="minimum-transfer">Möglichst wenige Zahlungen</option>
+          </select>
+          <p id="balance-settlement-strategy-help" class="mt-2 text-sm text-gray-600">
+            Die Auswahl gilt auf diesem Gerät. Sie erfasst und verändert keine Zahlungen.
+          </p>
+          <p v-if="strategyPersistenceError" class="error-text mt-3 text-sm" role="alert">
+            {{ strategyPersistenceError }}
+          </p>
+
+          <div v-if="visibleStrategy === 'minimum-transfer'" class="mt-4 rounded-lg bg-gray-100 p-4" role="status">
+            <p class="font-medium">Diese Strategie ist noch nicht verfügbar.</p>
+            <p class="mt-1 text-sm text-gray-700">
+              „Möglichst wenige Zahlungen“ folgt in einem späteren Schritt. Wähle bis dahin den einfachen deterministischen Ausgleich.
+            </p>
+          </div>
+
+          <template v-else-if="deterministicProposal.status === 'success'">
+            <p v-if="deterministicProposal.transfers.length === 0" class="mt-4 rounded-lg bg-gray-100 p-4" role="status">
+              Es ist keine Ausgleichszahlung nötig.
+            </p>
+            <ol v-else class="mt-4 space-y-3" aria-label="Vorgeschlagene Zahlungen">
+              <li
+                v-for="transfer in deterministicProposal.transfers"
+                :key="`${transfer.senderParticipantId}:${transfer.receiverParticipantId}`"
+                class="rounded-lg border border-gray-200 p-4"
+              >
+                <p class="break-words font-medium">
+                  {{ participantName(transfer.senderParticipantId) }}
+                  <span v-if="participantIsInactive(transfer.senderParticipantId)" class="font-normal text-gray-600">(inaktiv)</span>
+                  zahlt
+                  {{ participantName(transfer.receiverParticipantId) }}
+                  <span v-if="participantIsInactive(transfer.receiverParticipantId)" class="font-normal text-gray-600">(inaktiv)</span>
+                </p>
+                <p class="mt-1 text-lg font-semibold">{{ formatSettlementAmountMinor(BigInt(transfer.amountMinor)) }}</p>
+              </li>
+            </ol>
+          </template>
+
+          <div v-else class="mt-4 rounded-lg bg-red-50 p-4 text-red-900" role="alert">
+            <p class="font-medium">Der Ausgleichsvorschlag kann nicht berechnet werden.</p>
+            <p class="mt-1 text-sm">Die zugrunde liegenden Salden sind ungültig. Es wurden keine Zahlungen verändert.</p>
+          </div>
         </section>
       </template>
     </div>

@@ -15,8 +15,10 @@ fixture. No optimizer, arbitrary-precision, or other new dependency is needed.
 
 Each input Participant contains:
 
-- `participantId`: unique within the input Group,
-- `participantOrder`: unique stable Group order,
+- `participantId`: unique within the input Group and not empty or composed only
+  of ASCII whitespace (`U+0009` through `U+000D`, or `U+0020`),
+- `participantOrder`: unique stable Group order represented as a JSON-safe
+  integer from `0` through `9007199254740991`, inclusive,
 - `status`: `active` or `inactive`,
 - `balanceAmountMinor`: signed minor-unit amount.
 
@@ -67,7 +69,8 @@ canonical. The balance total must be exactly zero before either strategy runs.
 
 ## Shared validation
 
-Both strategies fail before producing a partial result when:
+Each Participant input must be an object rather than an array or scalar. Both
+strategies fail before producing a partial result when:
 
 - Participant IDs or participant-order values are duplicated,
 - an ID is blank, an order is invalid, or a status is unknown,

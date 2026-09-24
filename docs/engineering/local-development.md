@@ -16,8 +16,9 @@ The completed M2 Core includes:
 - derived Participant balances and balance details,
 - ordered synchronization of local mutations to Laravel/PostgreSQL.
 
-Settlement proposals, recorded Settlements and Statement Snapshots are not part
-of the current implementation.
+The current M3 implementation additionally includes recorded Settlement CRUD
+and the deterministic Settlement Proposal. The minimum-transfer proposal and
+Statement Snapshots are not implemented yet.
 
 ## Runtimes
 
@@ -114,7 +115,7 @@ Do not put credentials in this public runtime setting.
 ## Local browser state
 
 The client persists its local-first state in IndexedDB database `joinsplit`,
-currently at schema version 3. Rehydration completes before domain UI is shown.
+currently at schema version 4. Rehydration completes before domain UI is shown.
 Connectivity, active synchronization, form drafts and transient error/focus
 state are not persisted.
 
