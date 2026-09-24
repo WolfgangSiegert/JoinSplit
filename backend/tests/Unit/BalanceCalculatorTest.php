@@ -48,8 +48,8 @@ it('does not mutate inputs and ignores expense and share input order', function 
     $result = (new BalanceCalculator)->calculate('group-1', $participants, $expenses);
 
     expect($result)->toBe([
-        ['participantId' => 'alice', 'paidAmountMinor' => 0, 'shareAmountMinor' => 2, 'balanceAmountMinor' => -2],
-        ['participantId' => 'bob', 'paidAmountMinor' => 3, 'shareAmountMinor' => 1, 'balanceAmountMinor' => 2],
+        ['participantId' => 'alice', 'paidAmountMinor' => 0, 'shareAmountMinor' => 2, 'sentSettlementAmountMinor' => 0, 'receivedSettlementAmountMinor' => 0, 'balanceAmountMinor' => -2],
+        ['participantId' => 'bob', 'paidAmountMinor' => 3, 'shareAmountMinor' => 1, 'sentSettlementAmountMinor' => 0, 'receivedSettlementAmountMinor' => 0, 'balanceAmountMinor' => 2],
     ])->and($participants)->toBe($originalParticipants)
         ->and($expenses)->toBe($originalExpenses);
 });
@@ -125,4 +125,56 @@ it('rejects participant aggregates outside the PHP integer range', function () {
     }
 
     (new BalanceCalculator)->calculate('group-1', $participants, $expenses);
+})->throws(OverflowException::class);
+
+it('includes Settlement contributions in stable participant order', function () {
+    $participants = [
+        ['id' => 'creditor', 'groupId' => 'group-1', 'order' => 1],
+        ['id' => 'debtor', 'groupId' => 'group-1', 'order' => 2],
+    ];
+    $expenses = [[
+        'id' => 'expense-1',
+        'groupId' => 'group-1',
+        'amountMinor' => 1000,
+        'payerParticipantId' => 'creditor',
+        'shares' => [
+            ['participantId' => 'creditor', 'amountMinor' => 500],
+            ['participantId' => 'debtor', 'amountMinor' => 500],
+        ],
+    ]];
+    $settlements = [[
+        'id' => 'settlement-1',
+        'groupId' => 'group-1',
+        'senderParticipantId' => 'debtor',
+        'receiverParticipantId' => 'creditor',
+        'amountMinor' => 400,
+    ]];
+
+    expect((new BalanceCalculator)->calculate('group-1', $participants, $expenses, $settlements))->toBe([
+        ['participantId' => 'creditor', 'paidAmountMinor' => 1000, 'shareAmountMinor' => 500, 'sentSettlementAmountMinor' => 0, 'receivedSettlementAmountMinor' => 400, 'balanceAmountMinor' => 100],
+        ['participantId' => 'debtor', 'paidAmountMinor' => 0, 'shareAmountMinor' => 500, 'sentSettlementAmountMinor' => 400, 'receivedSettlementAmountMinor' => 0, 'balanceAmountMinor' => -100],
+    ]);
+});
+
+it('rejects a resulting signed-64 Balance overflow independent of input order', function () {
+    $participants = [
+        ['id' => 'alice', 'groupId' => 'group-1', 'order' => 1],
+        ['id' => 'bob', 'groupId' => 'group-1', 'order' => 2],
+    ];
+    $expenses = [[
+        'id' => 'expense-1',
+        'groupId' => 'group-1',
+        'amountMinor' => 1,
+        'payerParticipantId' => 'alice',
+        'shares' => [['participantId' => 'bob', 'amountMinor' => 1]],
+    ]];
+    $settlements = [[
+        'id' => 'settlement-1',
+        'groupId' => 'group-1',
+        'senderParticipantId' => 'alice',
+        'receiverParticipantId' => 'bob',
+        'amountMinor' => PHP_INT_MAX,
+    ]];
+
+    (new BalanceCalculator)->calculate('group-1', $participants, $expenses, $settlements);
 })->throws(OverflowException::class);

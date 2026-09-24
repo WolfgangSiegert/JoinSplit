@@ -38,6 +38,8 @@ describe('Participant Balance domain', () => {
       participantId: expected.participantId,
       paidAmountMinor: BigInt(expected.paidAmountMinor),
       shareAmountMinor: BigInt(expected.shareAmountMinor),
+      sentSettlementAmountMinor: 0n,
+      receivedSettlementAmountMinor: 0n,
       balanceAmountMinor: BigInt(expected.balanceAmountMinor),
     })))
   })

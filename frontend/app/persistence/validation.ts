@@ -1,13 +1,14 @@
 import type { Group, Participant } from '../domain/create-group'
-import type { PendingMutation } from '../domain/pending-mutation'
+import type { PendingAddParticipant, PendingCreateGroup, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
 import type { DurableState } from './database'
 import { normalizeName } from '../domain/create-group'
 import type { Expense } from '../domain/expense'
 import { isCalendarDate } from '../domain/expense'
+import { isCanonicalPositiveMinor, type DurableSettlementSnapshot } from '../domain/settlement'
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const CREDENTIAL = /^[0-9a-f]{64}$/u
-const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense'])
+const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement'])
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function keys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const actual = Object.keys(value); return actual.length === expected.length && actual.every(key => expected.includes(key))
@@ -37,6 +38,9 @@ function mutation(value: unknown): value is PendingMutation {
   if (value.type === 'CreateExpense' || value.type === 'UpdateExpense' || value.type === 'DeleteExpense') {
     return keys(payload, ['expense']) && expense(payload.expense) && payload.expense.groupId === value.groupId
   }
+  if (value.type === 'CreateSettlement' || value.type === 'UpdateSettlement' || value.type === 'DeleteSettlement') {
+    return keys(payload, ['settlement']) && durableSettlement(payload.settlement) && payload.settlement.groupId === value.groupId
+  }
   if (value.type === 'CreateGroup') {
     if (!keys(payload, ['groupId', 'name', 'currency', 'actorId', 'initialParticipant'])
       || payload.groupId !== value.groupId || !name(payload.name) || payload.currency !== 'EUR' || !uuid(payload.actorId)) return false
@@ -52,6 +56,13 @@ function mutation(value: unknown): value is PendingMutation {
   return keys(payload, ['participantId']) && uuid(payload.participantId)
 }
 
+export function durableSettlement(value: unknown): value is DurableSettlementSnapshot {
+  return record(value) && keys(value, ['id', 'groupId', 'senderParticipantId', 'receiverParticipantId', 'amountMinor', 'occurredOn', 'creatorAccessIdentityId'])
+    && uuid(value.id) && uuid(value.groupId) && uuid(value.senderParticipantId) && uuid(value.receiverParticipantId)
+    && value.senderParticipantId !== value.receiverParticipantId && isCanonicalPositiveMinor(value.amountMinor)
+    && typeof value.occurredOn === 'string' && isCalendarDate(value.occurredOn) && uuid(value.creatorAccessIdentityId)
+}
+
 function expense(value: unknown): value is Expense {
   if (!record(value) || !keys(value, ['id', 'groupId', 'description', 'amountMinor', 'incurredOn', 'payerParticipantId', 'creatorAccessIdentityId', 'splitMethod', 'shares'])
     || !uuid(value.id) || !uuid(value.groupId) || !uuid(value.payerParticipantId) || !uuid(value.creatorAccessIdentityId)
@@ -65,15 +76,19 @@ export function validateDurableState(value: DurableState): DurableState {
   if (identity !== null && (!uuid(identity.id) || !CREDENTIAL.test(identity.credential))) throw new Error('Invalid persisted access identity')
   if (!value.groups.every(group) || !value.participants.every(participant) || !value.pendingMutations.every(mutation)
     || !value.expenses.every(expense)
-    || (value.settings !== null && typeof value.settings.addSelfAsParticipantByDefault !== 'boolean')) throw new Error('Invalid persisted state shape')
+    || !value.settlements.every(durableSettlement)
+    || (value.settings !== null && (typeof value.settings.addSelfAsParticipantByDefault !== 'boolean'
+      || (value.settings.settlementProposalStrategy !== 'deterministic' && value.settings.settlementProposalStrategy !== 'minimum-transfer')))) throw new Error('Invalid persisted state shape')
 
   const groupIds = new Set(value.groups.map(item => item.id)); const participantIds = new Set(value.participants.map(item => item.id))
   const expenseIds = new Set(value.expenses.map(item => item.id))
+  const settlementIds = new Set(value.settlements.map(item => item.id))
   const mutationIds = new Set(value.pendingMutations.map(item => item.id)); const createdOrders = new Set(value.pendingMutations.map(item => item.createdOrder))
   if (groupIds.size !== value.groups.length || participantIds.size !== value.participants.length
-    || expenseIds.size !== value.expenses.length || mutationIds.size !== value.pendingMutations.length || createdOrders.size !== value.pendingMutations.length) throw new Error('Duplicate persisted identifiers or queue order')
+    || expenseIds.size !== value.expenses.length || settlementIds.size !== value.settlements.length
+    || mutationIds.size !== value.pendingMutations.length || createdOrders.size !== value.pendingMutations.length) throw new Error('Duplicate persisted identifiers or queue order')
   if ([...groupIds].some(id => participantIds.has(id))) throw new Error('Persisted group and participant identifiers collide')
-  if (!identity && (value.groups.length || value.participants.length || value.pendingMutations.length)) throw new Error('Persisted domain state has no access identity')
+  if (!identity && (value.groups.length || value.participants.length || value.pendingMutations.length || value.expenses.length || value.settlements.length)) throw new Error('Persisted domain state has no access identity')
 
   for (const currentGroup of value.groups) {
     if (identity && currentGroup.ownerAccessIdentityId !== identity.id) throw new Error('Persisted group owner does not match access identity')
@@ -94,9 +109,17 @@ export function validateDurableState(value: DurableState): DurableState {
     if (currentExpense.shares.reduce((sum, share) => sum + share.amountMinor, 0) !== currentExpense.amountMinor) throw new Error('Persisted ExpenseShare sum mismatch')
     if (!currentGroup.hasFinancialHistory) throw new Error('Persisted Group financial history mismatch')
   }
+  for (const currentSettlement of value.settlements) {
+    const currentGroup = value.groups.find(item => item.id === currentSettlement.groupId)
+    if (!currentGroup || !identity || currentSettlement.creatorAccessIdentityId !== identity.id) throw new Error('Persisted Settlement ownership mismatch')
+    const participantIdsForGroup = new Set(value.participants.filter(item => item.groupId === currentSettlement.groupId).map(item => item.id))
+    if (!participantIdsForGroup.has(currentSettlement.senderParticipantId) || !participantIdsForGroup.has(currentSettlement.receiverParticipantId)) throw new Error('Persisted Settlement Participant mismatch')
+    if (!currentGroup.hasFinancialHistory) throw new Error('Persisted Group financial history mismatch')
+  }
 
   const orderedMutations = [...value.pendingMutations].sort((a, b) => a.createdOrder - b.createdOrder)
-  const latestParticipantMutation = new Map<string, PendingMutation>()
+  type ParticipantStateMutation = PendingCreateGroup | PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingDeleteParticipant
+  const latestParticipantMutation = new Map<string, ParticipantStateMutation>()
   for (const current of orderedMutations) {
     const currentGroup = value.groups.find(item => item.id === current.groupId)
     if (!currentGroup) throw new Error('Persisted mutation has no group')
@@ -118,6 +141,31 @@ export function validateDurableState(value: DurableState): DurableState {
       }
       continue
     }
+    if (current.type === 'CreateSettlement' || current.type === 'UpdateSettlement' || current.type === 'DeleteSettlement') {
+      const snapshot = current.payload.settlement
+      if (!identity || snapshot.creatorAccessIdentityId !== identity.id) throw new Error('Persisted Settlement mutation ownership mismatch')
+      const participantBelongedToGroup = (participantId: string): boolean => {
+        const localParticipant = value.participants.find(item => item.id === participantId)
+        if (localParticipant) return localParticipant.groupId === current.groupId
+        return orderedMutations.some(item => item.createdOrder > current.createdOrder
+          && item.groupId === current.groupId && item.type === 'DeleteParticipant'
+          && item.payload.participantId === participantId)
+      }
+      if (!participantBelongedToGroup(snapshot.senderParticipantId) || !participantBelongedToGroup(snapshot.receiverParticipantId)) {
+        throw new Error('Persisted Settlement mutation Participant mismatch')
+      }
+      if (!currentGroup.hasFinancialHistory) throw new Error('Persisted Settlement mutation financial history mismatch')
+      const local = value.settlements.find(item => item.id === snapshot.id)
+      if (current.type === 'DeleteSettlement') {
+        if (local) throw new Error('Persisted DeleteSettlement local state mismatch')
+      } else {
+        const newer = orderedMutations.some(item => item.createdOrder > current.createdOrder
+          && (item.type === 'CreateSettlement' || item.type === 'UpdateSettlement' || item.type === 'DeleteSettlement')
+          && item.payload.settlement.id === snapshot.id)
+        if (!newer && JSON.stringify(local) !== JSON.stringify(snapshot)) throw new Error(`Persisted ${current.type} local state mismatch`)
+      }
+      continue
+    }
     const participantId = current.payload.participantId
     const localParticipant = value.participants.find(item => item.id === participantId)
     if (localParticipant && localParticipant.groupId !== current.groupId) throw new Error('Persisted Participant mutation group mismatch')
@@ -125,7 +173,6 @@ export function validateDurableState(value: DurableState): DurableState {
   }
 
   for (const [participantId, latestMutation] of latestParticipantMutation) {
-    if (latestMutation.type === 'CreateExpense' || latestMutation.type === 'UpdateExpense' || latestMutation.type === 'DeleteExpense') continue
     const latest = latestMutation
     const local = value.participants.find(item => item.id === participantId)
     if (latest.type === 'DeleteParticipant') {

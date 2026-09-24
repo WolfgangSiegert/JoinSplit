@@ -25,7 +25,7 @@ async function seedBalanceState(
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
 
   await page.evaluate(async ({ groupId, aliceId, bobId, carolId, expenseId, participants, expenses, archived }) => {
-    const request = indexedDB.open('joinsplit', 3)
+    const request = indexedDB.open('joinsplit', 4)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -105,7 +105,7 @@ test('balance overview and participant composition use local data, stable order,
   await page.goto(`/groups/${GROUP_ID}/balances`)
 
   await expect(page.getByRole('heading', { level: 1, name: 'Salden' })).toBeVisible()
-  await expect(page.getByText('Berechnet aus den lokal gespeicherten Ausgaben dieser Gruppe.')).toBeVisible()
+  await expect(page.getByText('Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.')).toBeVisible()
   const items = page.locator('section[aria-labelledby="participant-balances"] li')
   await expect(items).toHaveCount(3)
   await expect(items.nth(0)).toContainText('Alice')
@@ -185,7 +185,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await page.getByRole('button', { name: 'Endgültig löschen' }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Noch keine Ausgaben' })).toBeVisible()
   await page.getByRole('link', { name: 'Salden' }).click()
-  await expect(page.getByText('Noch keine Ausgaben. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
+  await expect(page.getByText('Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Ausgeglichen: 0,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('Ausgeglichen: 0,00 €')
 })
@@ -213,7 +213,7 @@ test('empty Participant, no Expense, and all-balanced states are distinct and ac
 
   await seedBalanceState(page, { expenses: 'none' })
   await page.goto(`/groups/${GROUP_ID}/balances`)
-  await expect(page.getByText('Noch keine Ausgaben. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
+  await expect(page.getByText('Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
   await expect(page.getByText('Ausgeglichen: 0,00 €')).toHaveCount(3)
 
   await seedBalanceState(page, { expenses: 'balanced' })

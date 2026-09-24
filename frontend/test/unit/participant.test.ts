@@ -72,6 +72,6 @@ describe('Participant local workflow', () => {
   test('allows a durable delete mutation to reference an absent local Participant', async () => {
     const mutation: PendingMutation = { id: MUTATION_ID, type: 'DeleteParticipant', groupId: GROUP_ID, createdOrder: 0, payload: { participantId: ALICE_ID } }
     const { validateDurableState } = await import('../../app/persistence/validation')
-    expect(() => validateDurableState({ accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32) }, groups: [{ ...group, participantIds: [CAROL_ID] }], participants: [carol], pendingMutations: [mutation], expenses: [], settings: null })).not.toThrow()
+    expect(() => validateDurableState({ accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32) }, groups: [{ ...group, participantIds: [CAROL_ID] }], participants: [carol], pendingMutations: [mutation], expenses: [], settlements: [], settings: null })).not.toThrow()
   })
 })

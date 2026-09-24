@@ -1,5 +1,6 @@
 import { canDeleteParticipant, prepareParticipantAdd, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantRename } from '../domain/participant'
 import { participantHasFinancialReferences } from '../domain/expense'
+import { participantHasSettlementReferences } from '../domain/settlement'
 import { persistParticipantAdd, persistParticipantDelete, persistParticipantUpdate } from '../persistence/database'
 import { useGroupsStore } from '../stores/groups'
 import { serializeGroupLocalWrite } from './group-local-write'
@@ -64,7 +65,8 @@ export function useParticipants(dependencies: ParticipantDependencies = {
       const participant = groupsStore.participants.find(item => item.id === participantId)
       const group = participant && groupsStore.findGroup(participant.groupId)
       if (!participant || !group || group.status !== 'active') throw new Error('Active group and participant required')
-      if (!canDeleteParticipant(participantHasFinancialReferences(participant.id, groupsStore.expenses))) throw new Error('Participant cannot be deleted')
+      if (!canDeleteParticipant(participantHasFinancialReferences(participant.id, groupsStore.expenses)
+        || participantHasSettlementReferences(participant.id, groupsStore.settlements))) throw new Error('Participant cannot be deleted')
       const prepared = prepareParticipantDelete(group, participant, groupsStore.pendingMutations, undefined, createdOrder)
       await dependencies.persistDelete(prepared.group, participant.id, prepared.mutation)
       groupsStore.commitParticipantDelete(prepared.group, participant.id, prepared.mutation)

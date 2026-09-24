@@ -10,6 +10,7 @@ import {
 } from '../persistence/database'
 import { validateDurableState } from '../persistence/validation'
 import { restorePendingMutation } from '../domain/pending-mutation'
+import { restoreSettlement } from '../domain/settlement'
 
 export type ApplicationLifecycle = 'loading' | 'ready' | 'failed'
 
@@ -40,6 +41,7 @@ export const useApplicationLifecycleStore = defineStore('applicationLifecycle', 
         groups: durableState.groups,
         participants: durableState.participants,
         expenses: durableState.expenses,
+        settlements: durableState.settlements.map(restoreSettlement),
         pendingMutations: durableState.pendingMutations.map(restorePendingMutation),
       })
       useSettingsStore().hydrate(durableState.settings)

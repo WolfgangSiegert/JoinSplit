@@ -51,7 +51,7 @@ Name:
 joinsplit
 
 Aktuelle Schema-Version:
-3
+4
 
 Object stores:
 
@@ -62,6 +62,7 @@ Object stores:
 - settings
 - expenses
 - expenseShares
+- settlements
 
 ## Persisted state
 
@@ -103,16 +104,20 @@ Persistieren.
 
 Persistieren.
 
-Ab Schema v2 verwendet die Queue eine explizite diskriminierte Union. Schema v3
+Ab Schema v2 verwendet die Queue eine explizite diskriminierte Union. Schema v4
 umfasst CreateGroup, AddParticipant, RenameParticipant,
 DeactivateParticipant, DeleteParticipant, CreateExpense, UpdateExpense und
-DeleteExpense. Jeder Eintrag besitzt eine unabhängige lokale UUID und eine
+DeleteExpense sowie CreateSettlement, UpdateSettlement und DeleteSettlement.
+Jeder Eintrag besitzt eine unabhängige lokale UUID und eine
 ganzzahlige `createdOrder`. Neue Werte werden als Maximum der vorhandenen Werte
 plus eins vergeben; Lücken bleiben zulässig. Die Synchronisation verarbeitet
 die Einträge nach `createdOrder` und blockiert spätere Mutationen derselben Group,
 solange ein früherer Eintrag nicht bestätigt ist. Mutationen werden nicht
 zusammengefasst. Expense-Mutationen enthalten den vollständigen unveränderlichen
 Expense-Snapshot einschließlich Shares; DeleteExpense enthält ihn als Tombstone.
+Settlement-Mutationen verwenden vollständige unveränderliche
+`DurableSettlementSnapshot`-Werte; DeleteSettlement enthält diesen als
+Tombstone.
 
 Die persistierte Mutation bleibt die kanonische Retry-Eingabe.
 
@@ -128,7 +133,7 @@ Insbesondere gehört der globale Default für:
 
 zum dauerhaften Benutzerzustand.
 
-JS-020 legt für das geplante Schema v4 zusätzlich
+Schema v4 ergänzt
 `settlementProposalStrategy: 'deterministic' | 'minimum-transfer'` fest. Der
 Initialwert ist `deterministic`. Die Einstellung ist gerätelokal und erzeugt
 weder einen API-Aufruf noch eine Pending Mutation.
@@ -199,7 +204,7 @@ Beim Clientstart:
 5. Participants laden
 6. Pending Mutations laden
 7. Expenses und Expense Shares laden und zusammenführen
-8. ab Schema v4 Settlements laden
+8. Settlements laden
 9. Settings laden
 10. Pinia hydratisieren
 11. App-Lifecycle auf `ready` setzen
@@ -244,7 +249,7 @@ v2 migriert die Pending-Mutation-Queue auf unabhängige Mutations-IDs und
 `createdOrder`. v3 ergänzt expenses und expenseShares und ergänzt bei bestehenden
 Groups den irreversiblen Ausgangswert `hasFinancialHistory: false`.
 
-Das in JS-020 definierte, aber noch nicht implementierte Schema v4 ergänzt den
+Das mit JS-021 implementierte Schema v4 ergänzt den
 Store `settlements`, die drei vollständigen unveränderlichen Mutationstypen
 `CreateSettlement`, `UpdateSettlement` und `DeleteSettlement` sowie die globale
 Strategieeinstellung. Settlement-Beträge werden in IndexedDB und den
@@ -270,9 +275,11 @@ Domain-IDs sowie ihren unveränderten Payload.
 Der anschließende Upgrade-Schritt v2 → v3 legt `expenses` mit Schlüssel `id`
 und `expenseShares` mit zusammengesetztem Schlüssel
 `[expenseId, participantId]` an. Bestehende Records aller älteren Stores bleiben
-erhalten. Ein direkter Start von v1 durchläuft beide Schritte in derselben
-IndexedDB-Upgrade-Transaktion; eine neue Datenbank wird unmittelbar als v3
-angelegt.
+erhalten. v3 → v4 legt `settlements` mit Schlüssel `id` an und ergänzt eine
+vorhandene Settings-Row um die fehlende Standardstrategie `deterministic`, ohne
+andere Einstellungen zu überschreiben. Ein direkter Start von v1 durchläuft
+alle Schritte in derselben IndexedDB-Upgrade-Transaktion; eine neue Datenbank
+wird unmittelbar als v4 angelegt.
 
 ## Sync after rehydration
 

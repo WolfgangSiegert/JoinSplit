@@ -2,14 +2,18 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
 import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingDeleteParticipant } from '../domain/pending-mutation'
 import type { Expense, ExpenseShare } from '../domain/expense'
+import type { DurableSettlementSnapshot } from '../domain/settlement'
 
 export const DATABASE_NAME = 'joinsplit'
-export const DATABASE_VERSION = 3
+export const DATABASE_VERSION = 4
 const ACCESS_IDENTITY_KEY = 'current'
 const SETTINGS_KEY = 'preferences'
 
 export interface DurableAccessIdentity { readonly id: string; readonly credential: string }
-export interface DurableSettings { readonly addSelfAsParticipantByDefault: boolean }
+export interface DurableSettings {
+  readonly addSelfAsParticipantByDefault: boolean
+  readonly settlementProposalStrategy: 'deterministic' | 'minimum-transfer'
+}
 interface AccessIdentityRecord extends DurableAccessIdentity { readonly key: typeof ACCESS_IDENTITY_KEY }
 interface SettingsRecord extends DurableSettings { readonly key: typeof SETTINGS_KEY }
 interface JoinSplitDatabase extends DBSchema {
@@ -20,6 +24,7 @@ interface JoinSplitDatabase extends DBSchema {
   settings: { key: string; value: SettingsRecord }
   expenses: { key: string; value: Omit<Expense, 'shares'> }
   expenseShares: { key: [string, string]; value: ExpenseShare & { readonly expenseId: string } }
+  settlements: { key: string; value: DurableSettlementSnapshot }
 }
 
 interface LegacyCreateGroupRecord {
@@ -46,6 +51,7 @@ export interface DurableState {
   readonly participants: Participant[]
   readonly pendingMutations: PendingMutation[]
   readonly expenses: Expense[]
+  readonly settlements: DurableSettlementSnapshot[]
   readonly settings: DurableSettings | null
 }
 
@@ -85,6 +91,18 @@ function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
           return cursor.continue().then(migrate)
         })
       }
+      if (oldVersion < 4) {
+        db.createObjectStore('settlements', { keyPath: 'id' })
+        const settings = transaction.objectStore('settings')
+        void settings.openCursor().then(function migrate(cursor): Promise<void> | void {
+          if (!cursor) return
+          const value = cursor.value as SettingsRecord & { settlementProposalStrategy?: DurableSettings['settlementProposalStrategy'] }
+          if (value.settlementProposalStrategy !== 'deterministic' && value.settlementProposalStrategy !== 'minimum-transfer') {
+            cursor.update({ ...value, settlementProposalStrategy: 'deterministic' })
+          }
+          return cursor.continue().then(migrate)
+        })
+      }
     },
   })
   return databasePromise
@@ -92,11 +110,11 @@ function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
 
 export async function loadDurableState(): Promise<DurableState> {
   const db = await database()
-  const tx = db.transaction(['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares'], 'readonly')
-  const [identities, groups, participants, pendingMutations, settingsRecords, expenseRecords, expenseShares] = await Promise.all([
+  const tx = db.transaction(['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'], 'readonly')
+  const [identities, groups, participants, pendingMutations, settingsRecords, expenseRecords, expenseShares, settlements] = await Promise.all([
     tx.objectStore('accessIdentity').getAll(), tx.objectStore('groups').getAll(),
     tx.objectStore('participants').getAll(), tx.objectStore('pendingMutations').getAll(),
-    tx.objectStore('settings').getAll(), tx.objectStore('expenses').getAll(), tx.objectStore('expenseShares').getAll(),
+    tx.objectStore('settings').getAll(), tx.objectStore('expenses').getAll(), tx.objectStore('expenseShares').getAll(), tx.objectStore('settlements').getAll(),
   ])
   await tx.done
   if (identities.length > 1 || settingsRecords.length > 1) throw new Error('Invalid persistence singleton records')
@@ -114,8 +132,24 @@ export async function loadDurableState(): Promise<DurableState> {
           - (participantOrder.get(right.participantId) ?? Number.MAX_SAFE_INTEGER))
         .map(({ participantId, amountMinor }) => ({ participantId, amountMinor })),
     })),
-    settings: settings ? { addSelfAsParticipantByDefault: settings.addSelfAsParticipantByDefault } : null,
+    settlements,
+    settings: settings ? {
+      addSelfAsParticipantByDefault: settings.addSelfAsParticipantByDefault,
+      settlementProposalStrategy: settings.settlementProposalStrategy,
+    } : null,
   }
+}
+
+export async function persistSettlementSave(group: Group, settlement: DurableSettlementSnapshot, mutation: PendingMutation): Promise<void> {
+  const db = await database(); const tx = db.transaction(['groups', 'settlements', 'pendingMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('groups').put(group), tx.objectStore('settlements').put(settlement), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
+}
+
+export async function persistSettlementDelete(settlementId: string, mutation: PendingMutation): Promise<void> {
+  const db = await database(); const tx = db.transaction(['settlements', 'pendingMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('settlements').delete(settlementId), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
 }
 
 function expenseRecord(expense: Expense): Omit<Expense, 'shares'> {

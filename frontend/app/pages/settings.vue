@@ -21,6 +21,15 @@ async function changeDefault(event: Event): Promise<void> {
     saving.value = false
   }
 }
+
+async function changeSettlementStrategy(event: Event): Promise<void> {
+  const value = (event.target as HTMLSelectElement).value
+  if (value !== 'deterministic' && value !== 'minimum-transfer') return
+  saving.value = true; persistenceError.value = ''
+  try { await settingsStore.setSettlementProposalStrategy(value) }
+  catch { persistenceError.value = 'Die Einstellung konnte nicht lokal gespeichert werden.' }
+  finally { saving.value = false }
+}
 </script>
 
 <template>
@@ -51,6 +60,15 @@ async function changeDefault(event: Event): Promise<void> {
         <p v-if="persistenceError" class="error-text mt-3 text-sm" role="alert">
           {{ persistenceError }}
         </p>
+      </section>
+      <section class="card mt-5 p-5" aria-labelledby="settlement-defaults">
+        <h2 id="settlement-defaults" class="text-lg font-semibold">Ausgleichsvorschläge</h2>
+        <label for="settlement-strategy" class="mt-4 block font-medium">Standardstrategie</label>
+        <select id="settlement-strategy" class="field-input mt-2" :value="settingsStore.settlementProposalStrategy" :disabled="saving" @change="changeSettlementStrategy">
+          <option value="deterministic">Einfacher deterministischer Ausgleich</option>
+          <option value="minimum-transfer">Möglichst wenige Zahlungen</option>
+        </select>
+        <p class="mt-3 text-sm text-gray-600">Die Auswahl bleibt auf diesem Gerät gespeichert und ändert keine bereits erfassten Zahlungen.</p>
       </section>
     </div>
   </main>

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
 import { prepareCreateGroupMutation, type PendingCreateGroup, type PendingMutation } from '../domain/pending-mutation'
 import type { Expense } from '../domain/expense'
+import type { Settlement } from '../domain/settlement'
 
 export type MutationSyncErrorKind =
   | 'network' | 'unauthorized' | 'conflict' | 'validation' | 'server'
@@ -22,6 +23,7 @@ interface GroupsState {
   groups: Group[]
   participants: Participant[]
   expenses: Expense[]
+  settlements: Settlement[]
   pendingMutations: PendingMutation[]
   mutationSync: Record<string, MutationSyncState>
   syncedGroups: Record<string, true>
@@ -32,11 +34,12 @@ interface HydratedGroupsState {
   readonly participants: Participant[]
   readonly pendingMutations: PendingMutation[]
   readonly expenses?: Expense[]
+  readonly settlements?: Settlement[]
 }
 
 export const useGroupsStore = defineStore('groups', {
   state: (): GroupsState => ({
-    groups: [], participants: [], expenses: [], pendingMutations: [], mutationSync: {}, syncedGroups: {},
+    groups: [], participants: [], expenses: [], settlements: [], pendingMutations: [], mutationSync: {}, syncedGroups: {},
   }),
 
   getters: {
@@ -61,6 +64,7 @@ export const useGroupsStore = defineStore('groups', {
         groups: state.groups,
         participants: state.participants,
         expenses: state.expenses ?? [],
+        settlements: state.settlements ?? [],
         pendingMutations: state.pendingMutations,
         mutationSync: Object.fromEntries(state.pendingMutations.map(mutation => [
           mutation.id, { state: 'pending' as const, error: null },
@@ -106,6 +110,22 @@ export const useGroupsStore = defineStore('groups', {
     commitExpenseDelete(expenseId: string, mutation: PendingMutation): void {
       this.expenses = this.expenses.filter(item => item.id !== expenseId)
       this.queueMutation(mutation)
+    },
+
+    commitSettlementSave(group: Group, settlement: Settlement, mutation: PendingMutation): void {
+      this.groups = this.groups.map(item => item.id === group.id ? group : item)
+      this.settlements = [...this.settlements.filter(item => item.id !== settlement.id), settlement]
+      this.queueMutation(mutation)
+    },
+
+    commitSettlementDelete(settlementId: string, mutation: PendingMutation): void {
+      this.settlements = this.settlements.filter(item => item.id !== settlementId)
+      this.queueMutation(mutation)
+    },
+
+    settlementsForGroup(groupId: string): Settlement[] {
+      return this.settlements.filter(settlement => settlement.groupId === groupId)
+        .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn))
     },
 
     expensesForGroup(groupId: string): Expense[] {

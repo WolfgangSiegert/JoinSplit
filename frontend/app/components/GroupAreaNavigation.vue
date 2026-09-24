@@ -4,7 +4,7 @@ const route = useRoute()
 
 const areas = computed(() => [
   { label: 'Ausgaben', to: `/groups/${props.groupId}`, current: route.path === `/groups/${props.groupId}` },
-  { label: 'Salden', to: `/groups/${props.groupId}/balances`, current: route.path.startsWith(`/groups/${props.groupId}/balances`) },
+  { label: 'Salden', to: `/groups/${props.groupId}/balances`, current: route.path.startsWith(`/groups/${props.groupId}/balances`) || route.path.startsWith(`/groups/${props.groupId}/settlements`) },
   { label: 'Teilnehmer verwalten', to: `/groups/${props.groupId}/participants`, current: route.path === `/groups/${props.groupId}/participants` },
 ])
 </script>

@@ -1,5 +1,6 @@
 import type { CreateGroupPayload } from './create-group'
 import type { Expense } from './expense'
+import type { DurableSettlementSnapshot } from './settlement'
 
 export interface PendingMutationBase {
   readonly id: string
@@ -67,6 +68,21 @@ export interface PendingDeleteExpense extends PendingMutationBase {
   readonly payload: Readonly<{ readonly expense: Readonly<Expense> }>
 }
 
+export interface PendingCreateSettlement extends PendingMutationBase {
+  readonly type: 'CreateSettlement'
+  readonly payload: Readonly<{ readonly settlement: Readonly<DurableSettlementSnapshot> }>
+}
+
+export interface PendingUpdateSettlement extends PendingMutationBase {
+  readonly type: 'UpdateSettlement'
+  readonly payload: Readonly<{ readonly settlement: Readonly<DurableSettlementSnapshot> }>
+}
+
+export interface PendingDeleteSettlement extends PendingMutationBase {
+  readonly type: 'DeleteSettlement'
+  readonly payload: Readonly<{ readonly settlement: Readonly<DurableSettlementSnapshot> }>
+}
+
 export type PendingMutation =
   | PendingCreateGroup
   | PendingAddParticipant
@@ -76,6 +92,9 @@ export type PendingMutation =
   | PendingCreateExpense
   | PendingUpdateExpense
   | PendingDeleteExpense
+  | PendingCreateSettlement
+  | PendingUpdateSettlement
+  | PendingDeleteSettlement
 
 export function nextCreatedOrder(mutations: readonly PendingMutation[]): number {
   return mutations.reduce((maximum, mutation) => Math.max(maximum, mutation.createdOrder), -1) + 1
@@ -93,6 +112,9 @@ export function freezePendingMutation<T extends PendingMutation>(mutation: T): R
     for (const share of mutation.payload.expense.shares) Object.freeze(share)
     Object.freeze(mutation.payload.expense.shares)
     Object.freeze(mutation.payload.expense)
+  }
+  if (mutation.type === 'CreateSettlement' || mutation.type === 'UpdateSettlement' || mutation.type === 'DeleteSettlement') {
+    Object.freeze(mutation.payload.settlement)
   }
   Object.freeze(mutation.payload)
   return Object.freeze(mutation)
@@ -115,6 +137,9 @@ export function restorePendingMutation(mutation: PendingMutation): PendingMutati
       ...mutation,
       payload: { expense: { ...mutation.payload.expense, shares: mutation.payload.expense.shares.map(share => ({ ...share })) } },
     })
+  }
+  if (mutation.type === 'CreateSettlement' || mutation.type === 'UpdateSettlement' || mutation.type === 'DeleteSettlement') {
+    return freezePendingMutation({ ...mutation, payload: { settlement: { ...mutation.payload.settlement } } })
   }
   return freezePendingMutation({ ...mutation, payload: { ...mutation.payload } } as PendingMutation)
 }

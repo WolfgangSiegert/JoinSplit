@@ -7,7 +7,8 @@ const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
 const participants = computed(() => groupsStore.participantsForGroup(groupId.value))
 const expenses = computed(() => groupsStore.expensesForGroup(groupId.value))
-const balances = computed(() => calculateParticipantBalances(groupId.value, participants.value, expenses.value))
+const settlements = computed(() => groupsStore.settlementsForGroup(groupId.value))
+const balances = computed(() => calculateParticipantBalances(groupId.value, participants.value, expenses.value, settlements.value))
 const participantById = computed(() => new Map(participants.value.map(participant => [participant.id, participant])))
 const allBalanced = computed(() => balances.value.length > 0 && balances.value.every(balance => balance.balanceAmountMinor === 0n))
 
@@ -25,12 +26,14 @@ function balanceText(amountMinor: bigint): string {
       <header>
         <p class="text-sm font-semibold tracking-wide text-brand-700">{{ group.name }}</p>
         <h1 class="mt-2 text-3xl font-semibold text-brand-900">Salden</h1>
-        <p class="mt-2 text-gray-600">Berechnet aus den lokal gespeicherten Ausgaben dieser Gruppe.</p>
+        <p class="mt-2 text-gray-600">Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.</p>
       </header>
 
       <GroupAreaNavigation :group-id="group.id" />
 
       <GroupSyncStatus :group-id="group.id" class="mt-6" />
+
+      <NuxtLink :to="`/groups/${group.id}/settlements`" class="secondary-button mt-5 w-full">Erfasste Zahlungen verwalten</NuxtLink>
 
       <p v-if="group.status === 'archived'" class="card mt-6 p-4">
         Diese archivierte Gruppe ist schreibgeschützt. Ihre Salden bleiben lesbar.
@@ -42,8 +45,8 @@ function balanceText(amountMinor: bigint): string {
       </section>
 
       <template v-else>
-        <p v-if="!expenses.length" class="card mt-6 p-4">
-          Noch keine Ausgaben. Alle Teilnehmer sind derzeit ausgeglichen.
+        <p v-if="!expenses.length && !settlements.length" class="card mt-6 p-4">
+          Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.
         </p>
         <p v-else-if="allBalanced" class="card mt-6 p-4">
           Alle Teilnehmer sind ausgeglichen.

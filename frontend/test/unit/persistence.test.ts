@@ -49,7 +49,8 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
     }],
     pendingMutations: [pendingMutation],
     expenses: [],
-    settings: { addSelfAsParticipantByDefault: false },
+    settlements: [],
+    settings: { addSelfAsParticipantByDefault: false, settlementProposalStrategy: 'deterministic' },
     ...overrides,
   }
 }
@@ -71,7 +72,52 @@ describe('durable state validation and bootstrap', () => {
     expect(useGroupsStore().participants[0]?.id).toBe(PARTICIPANT_ID)
     expect(useGroupsStore().createGroupSync[GROUP_ID]).toEqual({ state: 'pending', error: null })
     expect(useSettingsStore().addSelfAsParticipantByDefault).toBe(false)
+    expect(useSettingsStore().settlementProposalStrategy).toBe('deterministic')
     expect(persistIdentity).not.toHaveBeenCalled()
+  })
+
+  test('validates durable Settlement strings and hydrates runtime bigint values', async () => {
+    const settlement = {
+      id: '66666666-6666-4666-8666-666666666666', groupId: GROUP_ID,
+      senderParticipantId: PARTICIPANT_ID, receiverParticipantId: SECOND_PARTICIPANT_ID,
+      amountMinor: '9223372036854775807', occurredOn: '2026-09-24', creatorAccessIdentityId: ACTOR_ID,
+    }
+    const state = durableState({
+      groups: [{ ...durableState().groups[0]!, hasFinancialHistory: true, participantIds: [PARTICIPANT_ID, SECOND_PARTICIPANT_ID] }],
+      participants: [durableState().participants[0]!, { id: SECOND_PARTICIPANT_ID, groupId: GROUP_ID, name: 'Ada', status: 'active', order: 1 }],
+      pendingMutations: [], settlements: [settlement],
+    })
+    expect(validateDurableState(state)).toBe(state)
+    await useApplicationLifecycleStore().initialize({ load: vi.fn(async () => state), persistIdentity: vi.fn(async () => {}) })
+    expect(useGroupsStore().settlements[0]?.amountMinor).toBe(9223372036854775807n)
+    expect(() => validateDurableState({ ...state, settlements: [{ ...settlement, amountMinor: '01' }] })).toThrow()
+  })
+
+  test('accepts a Settlement tombstone before a later Participant deletion in the same FIFO', () => {
+    const settlement = { id: '66666666-6666-4666-8666-666666666666', groupId: GROUP_ID, senderParticipantId: PARTICIPANT_ID, receiverParticipantId: SECOND_PARTICIPANT_ID, amountMinor: '400', occurredOn: '2026-09-24', creatorAccessIdentityId: ACTOR_ID }
+    const value = durableState({
+      groups: [{ ...durableState().groups[0]!, hasFinancialHistory: true, participantIds: [SECOND_PARTICIPANT_ID] }],
+      participants: [{ id: SECOND_PARTICIPANT_ID, groupId: GROUP_ID, name: 'Ada', status: 'active', order: 1 }],
+      settlements: [],
+      pendingMutations: [
+        { id: '77777777-7777-4777-8777-777777777777', type: 'DeleteSettlement', groupId: GROUP_ID, createdOrder: 0, payload: { settlement } },
+        { id: '88888888-8888-4888-8888-888888888888', type: 'DeleteParticipant', groupId: GROUP_ID, createdOrder: 1, payload: { participantId: PARTICIPANT_ID } },
+      ],
+    })
+    expect(validateDurableState(value)).toBe(value)
+  })
+
+  test('rejects Settlement mutation snapshots with wrong ownership or impossible Participant order', () => {
+    const settlement = { id: '66666666-6666-4666-8666-666666666666', groupId: GROUP_ID, senderParticipantId: PARTICIPANT_ID, receiverParticipantId: SECOND_PARTICIPANT_ID, amountMinor: '400', occurredOn: '2026-09-24', creatorAccessIdentityId: ACTOR_ID }
+    const base = durableState({
+      groups: [{ ...durableState().groups[0]!, hasFinancialHistory: true, participantIds: [SECOND_PARTICIPANT_ID] }],
+      participants: [{ id: SECOND_PARTICIPANT_ID, groupId: GROUP_ID, name: 'Ada', status: 'active', order: 1 }], settlements: [],
+    })
+    expect(() => validateDurableState({ ...base, pendingMutations: [{ id: '77777777-7777-4777-8777-777777777777', type: 'DeleteSettlement', groupId: GROUP_ID, createdOrder: 0, payload: { settlement: { ...settlement, creatorAccessIdentityId: SECOND_PARTICIPANT_ID } } }] })).toThrow('ownership')
+    expect(() => validateDurableState({ ...base, pendingMutations: [
+      { id: '88888888-8888-4888-8888-888888888888', type: 'DeleteParticipant', groupId: GROUP_ID, createdOrder: 0, payload: { participantId: PARTICIPANT_ID } },
+      { id: '77777777-7777-4777-8777-777777777777', type: 'DeleteSettlement', groupId: GROUP_ID, createdOrder: 1, payload: { settlement } },
+    ] })).toThrow('Participant mismatch')
   })
 
   test('reconstructs and freezes every known mutation level after rehydration', async () => {

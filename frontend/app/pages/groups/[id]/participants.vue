@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { normalizeName } from '../../../domain/create-group'
 import { participantHasFinancialReferences } from '../../../domain/expense'
+import { participantHasSettlementReferences } from '../../../domain/settlement'
 import { hasDuplicateParticipantName } from '../../../domain/participant'
 
 const route = useRoute()
@@ -30,6 +31,7 @@ const duplicateConfirmButton = ref<HTMLButtonElement | null>(null)
 
 function hasFinancialReferences(participantId: string): boolean {
   return participantHasFinancialReferences(participantId, groupsStore.expenses)
+    || participantHasSettlementReferences(participantId, groupsStore.settlements)
 }
 
 watch(addName, () => {
@@ -173,8 +175,8 @@ async function cancelRename(id: string): Promise<void> {
             <button v-if="participant.status === 'active'" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} deaktivieren`" @click="submitDeactivate(participant.id, participant.name)">{{ busyAction === `deactivate:${participant.id}` ? 'Wird deaktiviert …' : 'Deaktivieren' }}</button>
             <button v-if="!hasFinancialReferences(participant.id)" :ref="(element) => { if (element) triggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="danger-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} löschen`" @click="askDelete(participant.id, $event.currentTarget as HTMLButtonElement)">Löschen</button>
           </div>
-          <p v-if="group.status === 'active' && hasFinancialReferences(participant.id) && participant.status === 'active'" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Ausgaben nicht gelöscht werden. Deaktiviere die Person, damit sie für neue Ausgaben nicht mehr auswählbar ist.</p>
-          <p v-else-if="group.status === 'active' && hasFinancialReferences(participant.id)" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Ausgaben nicht gelöscht werden und bleibt für den finanziellen Verlauf erhalten.</p>
+          <p v-if="group.status === 'active' && hasFinancialReferences(participant.id) && participant.status === 'active'" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Finanzdaten nicht gelöscht werden. Deaktiviere die Person, damit sie für neue Ausgaben nicht mehr auswählbar ist.</p>
+          <p v-else-if="group.status === 'active' && hasFinancialReferences(participant.id)" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Finanzdaten nicht gelöscht werden und bleibt für den finanziellen Verlauf erhalten.</p>
         </li>
       </ul>
 

@@ -39,7 +39,7 @@ async function focusWithKeyboard(page: Page, locator: Locator, maximumTabs = 10)
 
 async function durableSnapshot(page: Page): Promise<DurableSnapshot> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 3)
+    const request = indexedDB.open('joinsplit', 4)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -121,7 +121,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   await expect(page.getByRole('heading', { level: 2, name: 'Noch keine Ausgaben' })).toBeVisible()
 
   await page.goto(`/groups/${groupId}/balances`)
-  await expect(page.getByText('Noch keine Ausgaben. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
+  await expect(page.getByText('Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Ausgeglichen: 0,00 €')
   await expect(page.getByRole('link', { name: /Bobby/ })).toContainText('Ausgeglichen: 0,00 €')
 
@@ -336,7 +336,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await expect(page.getByRole('button', { name: 'Bob löschen' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Cara löschen' })).toHaveCount(0)
   await expect(page.getByText(
-    'Kann wegen vorhandener Ausgaben nicht gelöscht werden. Deaktiviere die Person, damit sie für neue Ausgaben nicht mehr auswählbar ist.',
+    'Kann wegen vorhandener Finanzdaten nicht gelöscht werden. Deaktiviere die Person, damit sie für neue Ausgaben nicht mehr auswählbar ist.',
   )).toHaveCount(3)
   await expect(page.getByRole('button', { name: 'Alice deaktivieren' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Bob deaktivieren' })).toBeVisible()

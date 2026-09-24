@@ -35,4 +35,14 @@ class Participant extends Model
     {
         return $this->hasMany(ExpenseShare::class);
     }
+
+    public function sentSettlements(): HasMany
+    {
+        return $this->hasMany(Settlement::class, 'sender_participant_id');
+    }
+
+    public function receivedSettlements(): HasMany
+    {
+        return $this->hasMany(Settlement::class, 'receiver_participant_id');
+    }
 }

@@ -14,6 +14,8 @@ class ParticipantDeletionEligibility
     private function hasFinancialReferences(Participant $participant): bool
     {
         return $participant->paidExpenses()->exists()
-            || $participant->expenseShares()->exists();
+            || $participant->expenseShares()->exists()
+            || $participant->sentSettlements()->exists()
+            || $participant->receivedSettlements()->exists();
     }
 }
