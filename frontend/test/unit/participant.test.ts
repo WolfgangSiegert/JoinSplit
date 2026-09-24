@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { Group, Participant } from '../../app/domain/create-group'
-import { canDeleteParticipant, nextParticipantOrder, prepareParticipantAdd, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantRename } from '../../app/domain/participant'
+import { canDeleteParticipant, hasDuplicateParticipantName, nextParticipantOrder, prepareParticipantAdd, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantRename } from '../../app/domain/participant'
 import { migrateLegacyCreateGroupRecords } from '../../app/persistence/database'
 import { sortPendingMutations, type PendingMutation } from '../../app/domain/pending-mutation'
 
@@ -25,6 +25,13 @@ describe('Participant local workflow', () => {
     expect(result.value.mutation.id).not.toBe(result.value.participant.id)
     expect(Object.isFrozen(result.value.mutation.payload)).toBe(true)
     expect(nextParticipantOrder([alice, carol])).toBe(3)
+  })
+
+  test('detects normalized duplicate names while allowing a rename to keep its own name', () => {
+    expect(hasDuplicateParticipantName([alice, carol], '  ALICE\u3000')).toBe(true)
+    expect(hasDuplicateParticipantName([alice, carol], 'Alice', ALICE_ID)).toBe(false)
+    expect(hasDuplicateParticipantName([alice, carol], 'Carol', ALICE_ID)).toBe(true)
+    expect(hasDuplicateParticipantName([alice, carol], '   ')).toBe(false)
   })
 
   test('renames, deactivates and deletes without changing stable order', () => {

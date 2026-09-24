@@ -532,21 +532,27 @@ Zentrale User Flows erhalten zusätzlich eine manuelle Accessibility-Prüfung.
 
 ## Git and Publishing Guardrails
 
-Bis zur ausdrücklichen menschlichen Freigabe bleibt Git lokal.
+Das öffentliche Source-Repository und der bestehende `origin`-Remote sind
+Bestandteil des Projekts:
 
-Nicht erlaubt sind:
+https://github.com/WolfgangSiegert/JoinSplit
 
-- GitHub-Repository für den Sourcecode erstellen,
-- Git Remote konfigurieren,
-- Push,
-- Pull Request,
-- Veröffentlichung des Sourcecodes.
+Materielle Git- und Publishing-Schritte benötigen jeweils eine separate
+ausdrückliche menschliche Freigabe:
 
-Nach dem M1 Walking Skeleton wird erneut geprüft, ob Publishing sinnvoll ist.
+- Änderungen implementieren bedeutet nicht automatisch committen.
+- Commit-Freigabe bedeutet nicht automatisch integrieren.
+- Integrationsfreigabe bedeutet nicht automatisch pushen.
+- Push-Freigabe bedeutet nicht automatisch einen Pull Request erstellen.
 
-Auch dann ist eine ausdrückliche menschliche Freigabe erforderlich.
+Ohne passende Freigabe bleiben Änderungen im aktuellen lokalen Arbeitsstand.
+Kein neues Repository, Remote-Wechsel, Force-Push oder History Rewrite ohne eine
+ausdrückliche Freigabe genau dieser Operation.
 
 ## AI and Codex Delivery
+
+Der Mensch verantwortet Produkt- und Architekturentscheidungen sowie die
+Freigaben für Commit, Integration und Veröffentlichung.
 
 ChatGPT verantwortet insbesondere:
 
@@ -556,9 +562,12 @@ ChatGPT verantwortet insbesondere:
 - Lernunterstützung,
 - Agent-Briefing,
 - Review,
-- Integration.
+- Vorbereitung und Koordination der Integration.
 
-Codex bearbeitet klar abgegrenzte Ausführungsaufgaben.
+Codex bearbeitet klar abgegrenzte Ausführungsaufgaben. Nach einer ausdrücklichen
+menschlichen Freigabe darf Codex auch den konkret benannten Commit-,
+Integrations- oder Publishing-Schritt ausführen und muss das Ergebnis
+überprüfbar berichten.
 
 Vor Codex-Delegation müssen mindestens klar sein:
 

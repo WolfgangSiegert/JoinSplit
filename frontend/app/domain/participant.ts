@@ -42,6 +42,18 @@ export function validateParticipantName(value: string): {
   return { normalizedName, errors: {} }
 }
 
+export function hasDuplicateParticipantName(
+  participants: readonly Participant[],
+  name: string,
+  excludedParticipantId?: string,
+): boolean {
+  const normalizedName = normalizeName(name).toLocaleLowerCase('de-DE')
+  if (!normalizedName) return false
+
+  return participants.some(participant => participant.id !== excludedParticipantId
+    && normalizeName(participant.name).toLocaleLowerCase('de-DE') === normalizedName)
+}
+
 export function nextParticipantOrder(participants: readonly Participant[]): number {
   return participants.reduce((maximum, participant) => Math.max(maximum, participant.order), -1) + 1
 }

@@ -745,6 +745,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.getByRole('button', { name: 'Endgültig löschen' }).click()
   await deletion
   await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Alice löschen' })).toBeFocused()
   await page.reload()
   await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
   const orders = await page.evaluate(async () => {

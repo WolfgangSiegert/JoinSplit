@@ -30,6 +30,8 @@ function balanceText(amountMinor: bigint): string {
 
       <GroupAreaNavigation :group-id="group.id" />
 
+      <GroupSyncStatus :group-id="group.id" class="mt-6" />
+
       <p v-if="group.status === 'archived'" class="card mt-6 p-4">
         Diese archivierte Gruppe ist schreibgeschützt. Ihre Salden bleiben lesbar.
       </p>

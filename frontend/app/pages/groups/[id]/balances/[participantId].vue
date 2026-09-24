@@ -42,6 +42,8 @@ function balanceText(amountMinor: bigint): string {
         <p v-if="participant.status === 'inactive'" class="mt-2 text-gray-600">Inaktiver Teilnehmer</p>
       </header>
 
+      <GroupSyncStatus :group-id="group.id" class="mt-6" />
+
       <p v-if="group.status === 'archived'" class="card mt-6 p-4">
         Diese archivierte Gruppe ist schreibgeschützt. Der finanzielle Stand bleibt lesbar.
       </p>

@@ -18,9 +18,7 @@ Der Mensch verantwortet:
 - Freigaben,
 - Architekturentscheidungen,
 - Lernverständnis,
-- Integration,
-- Commits,
-- Veröffentlichung.
+- Freigaben für Integration, Commits und Veröffentlichung.
 
 ### ChatGPT
 
@@ -169,20 +167,31 @@ Bei relevanten Änderungen wird insbesondere geprüft:
 - sind Tests und Checks nachvollziehbar,
 - wurde bestehendes Verhalten unbeabsichtigt verändert.
 
-Der Mensch verantwortet Commit und Integration.
+Der Mensch verantwortet die Freigabe von Commit und Integration. Nach einer
+ausdrücklichen Freigabe darf Codex den benannten Integrationsschritt ausführen
+und muss dessen Ergebnis anschließend überprüfbar berichten.
 
 ## Git and Publishing
 
-Bis zur ausdrücklichen menschlichen Freigabe:
+Das öffentliche Source-Repository existiert unter:
 
-- Git bleibt lokal,
-- kein GitHub-Repository für den Sourcecode,
-- kein Remote,
-- kein Push,
-- keine Pull Requests,
-- keine Veröffentlichung.
+https://github.com/WolfgangSiegert/JoinSplit
 
-GitHub Project darf für private Planung verwendet werden.
+Der bestehende `origin`-Remote darf für ausdrücklich freigegebene
+Integrationsschritte verwendet werden. Für jeden materiellen Schritt gilt eine
+eigene menschliche Freigabeschranke:
+
+- Änderungen implementieren bedeutet nicht automatisch committen.
+- Commit-Freigabe bedeutet nicht automatisch in `main` integrieren.
+- Integrationsfreigabe bedeutet nicht automatisch pushen.
+- Push-Freigabe bedeutet nicht automatisch einen Pull Request erstellen.
+
+Ohne passende Freigabe bleiben die Änderungen im aktuellen lokalen Arbeitsstand.
+Kein Force-Push, History Rewrite, Remote-Wechsel oder neues Repository ohne eine
+ausdrückliche Freigabe genau dieser Operation.
+
+GitHub Project bleibt die zentrale Aufgabenübersicht und darf nur im jeweils
+freigegebenen Task-Scope verändert werden.
 
 ## Durable Decisions
 

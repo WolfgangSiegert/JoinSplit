@@ -6,21 +6,25 @@ account before getting started.
 
 ## Current status
 
-The M1 Walking Skeleton is complete. Create Group works local-first, with an
-anonymous Access Identity and synchronization through Nuxt, Laravel, and
-PostgreSQL. Offline creation, failure handling, and retry paths are covered.
+The M2 Core milestone is complete. JoinSplit currently supports:
 
-M1 client state is still memory-only and is lost on reload. The complete MVP is
-not finished: participant management, shared expenses, balances, settlement
-proposals, settlements, and Statement Snapshots are product direction rather
-than completed features.
+- anonymous local-first Group creation,
+- durable browser state and pending-mutation recovery after reload,
+- Participant add, rename, deactivate and eligible delete operations,
+- Expense create, edit and delete with deterministic Equal Split,
+- derived Participant balances and traceable balance details,
+- synchronization through the Laravel API to PostgreSQL.
+
+The automated checks cover domain rules in TypeScript and PHP, API and database
+behavior, IndexedDB upgrades, browser integration and automated accessibility
+checks. Settlement proposals, recorded Settlements and Statement Snapshots
+remain later MVP work and are not represented as completed features.
 
 ## Product direction
 
-The intended MVP supports Participants, shared Expenses with Equal Split,
-Balances, settlement proposals, recorded settlements, and a shareable Statement
-Snapshot. The full single-owner workflow is intended to work Offline First.
-These capabilities describe the planned MVP, not the current implementation.
+The intended MVP extends the completed M2 Core with settlement proposals,
+recorded Settlements and a shareable Statement Snapshot. The full single-owner
+workflow is intended to work Offline First.
 
 See the [product vision](docs/product/vision.md) and
 [MVP scope](docs/product/mvp.md) for the canonical product direction.
@@ -38,7 +42,11 @@ See the [product vision](docs/product/vision.md) and
 - Pending Mutations synchronize local changes to the server.
 - A Participant is not an Access Identity.
 - Business logic belongs in neither controllers nor components.
-- M1 keeps client identity, domain state, settings, and pending operations only in memory.
+- Pinia holds runtime application state, while IndexedDB durably stores the
+  local identity, Groups, Participants, Expenses, ExpenseShares, settings and
+  pending mutations.
+- Equal Split and Balance Calculation are implemented independently in
+  TypeScript and PHP against shared test vectors.
 
 The durable details live in the
 [domain model](docs/architecture/domain-model.md),
@@ -83,6 +91,13 @@ guide.
 AI-assisted development is part of this project's learning and showcase
 workflow. Responsibilities, review expectations, and safeguards are documented
 in the [AI development workflow](docs/ai/workflow.md).
+
+## Repository
+
+The source repository is public at
+[WolfgangSiegert/JoinSplit](https://github.com/WolfgangSiegert/JoinSplit).
+Commits, integration, pushes and pull requests still require explicit human
+approval for the corresponding step.
 
 ## License
 

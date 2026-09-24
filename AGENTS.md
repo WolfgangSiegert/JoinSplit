@@ -27,11 +27,13 @@
 - Laravel remains the canonical application API.
 - Avoid unnecessary dependency on Nuxt server-only functionality for core product behavior.
 - Do not duplicate server state in Pinia without a concrete reason.
-- Keep Git local.
-- Do not create GitHub repositories or Git remotes.
-- Do not push.
-- Do not open pull requests.
-- Do not publish source code.
+- The public source repository and its `origin` remote already exist. Do not
+  create or replace repositories or remotes.
+- Commits, integration, pushes and pull requests require explicit human approval
+  for that specific step. Approval for one step does not imply approval for the
+  next publishing step.
+- Never force-push or rewrite published history unless the human explicitly
+  authorizes that exact operation.
 - Do not install Laravel, Nuxt, Capacitor, PWA tooling, or any dependencies until explicitly requested.
 - Do not create speculative files or application code.
 

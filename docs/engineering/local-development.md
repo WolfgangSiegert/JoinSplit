@@ -1,77 +1,54 @@
-# Local development — JS-008
+# Local development
 
-## Scope
+## Current scope
 
-`backend/` contains Laravel 13 and Pest. `frontend/` contains Nuxt 4, Vue,
-TypeScript strict, Pinia, Nuxt UI, Tailwind CSS 4, Vitest, Playwright and axe.
-There are no JoinSplit domain models, domain migrations, API operations,
-identity handling, offline storage or Create Group screens yet.
+`backend/` contains the Laravel 13/PostgreSQL API and Pest tests. `frontend/`
+contains the Nuxt 4 application, TypeScript domain logic, Pinia runtime state,
+IndexedDB persistence, Vitest tests and Playwright/axe browser integration.
 
-The default User/account model, user provider and all three scaffold migrations
-are removed. There are no application migrations or seeded application data.
-Sessions and cache use files; queues run synchronously, so none requires tables.
+The completed M2 Core includes:
+
+- anonymous Access Identity and local-first Group creation,
+- durable Groups, Participants, Expenses, ExpenseShares, settings and pending
+  mutations,
+- Participant management,
+- Expense CRUD with deterministic Equal Split,
+- derived Participant balances and balance details,
+- ordered synchronization of local mutations to Laravel/PostgreSQL.
+
+Settlement proposals, recorded Settlements and Statement Snapshots are not part
+of the current implementation.
 
 ## Runtimes
 
-Verified on this Mac:
+The repository currently targets:
 
-| Runtime | Version |
+| Runtime | Version source |
 | --- | --- |
-| Node, existing nvm | 24.20.0 |
-| npm, bundled with Node; not used for dependency installation | 11.19.0 |
-| pnpm, existing Homebrew installation | 8.10.5 |
-| PHP, Homebrew | 8.5.10 |
-| Composer, Homebrew | 2.10.3 |
-| PostgreSQL, Homebrew `postgresql@18` | 18.6 |
+| Node 24 | `frontend/.nvmrc` and `frontend/package.json` |
+| pnpm 8.10.5 | `frontend/package.json` |
+| PHP 8.5 | `backend/composer.json` and CI |
+| Composer 2 | CI setup |
+| PostgreSQL 18 | local setup and CI service |
 
-Node 24 is selected by `frontend/.nvmrc`; activate it with `nvm use` whenever
-opening a frontend terminal. Other projects' Node versions were not replaced.
-pnpm was not upgraded. PHP has PDO, pdo_pgsql and pgsql enabled by its formula;
-no manual extension installation or php.ini editing was required.
-
-Homebrew installation used `brew install composer postgresql@18`; Composer
-brought PHP and its required libraries. The preceding update migrated old
-Homebrew catalogs and installed pkgconf 3.0.7, but its linking conflicted with
-the existing pkg-config 0.29.2_3 symlinks. That unrelated linking conflict was
-left unresolved. Installation and all application checks succeeded afterward.
+Use `nvm use` before frontend commands. Do not update runtime or dependency
+versions as a side effect of unrelated work.
 
 ## Local PostgreSQL
 
-Only the formula-created default cluster is used:
-`/opt/homebrew/var/postgresql@18`. It was started with `pg_ctl`, without a
-login service. To start it again after stopping it or restarting the machine:
-
-```sh
-/opt/homebrew/opt/postgresql@18/bin/pg_ctl \
-  -D /opt/homebrew/var/postgresql@18 \
-  -l /opt/homebrew/var/log/postgresql@18.log start
-```
-
-To stop this cluster when no application needs it:
-
-```sh
-/opt/homebrew/opt/postgresql@18/bin/pg_ctl \
-  -D /opt/homebrew/var/postgresql@18 stop
-```
+The verified local setup uses separate databases and non-superuser roles:
 
 | Purpose | Database | Role | Connection |
 | --- | --- | --- | --- |
-| Development | joinsplit_dev | joinsplit_dev | 127.0.0.1:5432 |
-| Test | joinsplit_test | joinsplit_test | 127.0.0.1:5432 |
+| Development | `joinsplit_dev` | `joinsplit_dev` | `127.0.0.1:5432` |
+| Test | `joinsplit_test` | `joinsplit_test` | `127.0.0.1:5432` |
 
-Both roles are non-superusers, cannot create roles or databases, and own only
-their corresponding JoinSplit database. PUBLIC access was revoked on these two
-databases. The test role's connection to the development database was explicitly
-verified to fail.
+The test role must not be able to connect to the development database. This
+separation protects against accidental destructive test setup; local trust
+authentication is not a production security configuration.
 
-Homebrew initialized local connections with trust authentication. No database
-passwords or production credentials were created, and no authentication config
-was changed. This is a local development setup: role separation protects against
-accidental test access, not impersonation by other local processes under trust
-authentication. It is not a production security configuration.
-
-For a fresh default cluster only, create the same roles/databases once using
-the cluster owner's `psql -d postgres` connection:
+For a fresh local PostgreSQL 18 cluster, create the roles and databases once as
+the cluster owner:
 
 ```sql
 CREATE ROLE joinsplit_dev LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
@@ -82,29 +59,24 @@ REVOKE ALL ON DATABASE joinsplit_dev FROM PUBLIC;
 REVOKE ALL ON DATABASE joinsplit_test FROM PUBLIC;
 ```
 
-## Backend
+## Backend setup
 
-From the canonical repository root:
+From the repository root:
 
 ```sh
 cd backend
 composer install
-```
-
-On this machine `.env` and `.env.testing` already exist, have separate generated
-application keys, and are ignored by Git. For a fresh checkout, copy
-`.env.example` to each file. In `.env.testing`, set `APP_ENV=testing`,
-`DB_DATABASE=joinsplit_test` and `DB_USERNAME=joinsplit_test`. Then generate keys:
-
-```sh
+cp .env.example .env
+cp .env.example .env.testing
 php artisan key:generate
 php artisan key:generate --env=testing
 ```
 
-Keep all real credentials and application keys in ignored environment files.
-`.env.example` contains no secrets. Local environments and configuration defaults
-use `SESSION_DRIVER=file`, `CACHE_STORE=file` and `QUEUE_CONNECTION=sync`.
-Start development and run checks with:
+Configure `.env` for `joinsplit_dev`. Configure `.env.testing` for
+`APP_ENV=testing`, database `joinsplit_test` and role `joinsplit_test`. Both files
+are ignored by Git; never commit application keys or credentials.
+
+Prepare and run the backend:
 
 ```sh
 php artisan migrate
@@ -112,23 +84,16 @@ composer test
 composer dev
 ```
 
-Laravel listens on `http://127.0.0.1:8000`. `/` is a minimal landing page and
-`/up` is Laravel's standard health endpoint. No backend Node/Vite build is needed.
+Laravel listens on `http://127.0.0.1:8000`; `/up` is the health endpoint.
 
-Pest uses the official Laravel plugin. PHPUnit configuration forces the local
-PostgreSQL test database and role, clears a connection URL override, and uses
-in-memory cache/session drivers. The base test case refuses a wrong database or
-role before tests run. `composer test` clears cached
-application configuration first. The smoke tests only read the test database; no reset is needed because there
-are no application migrations or database writes.
+Pest forces the PostgreSQL test connection through `phpunit.xml`. The base test
+case refuses to run unless Laravel resolves the testing environment, database
+and role exactly as expected. Feature tests use Laravel's database reset
+facilities against that isolated database.
 
-Console output mocking is disabled using Laravel's built-in option, so these
-smoke tests do not require a direct Mockery dependency.
-Future mock-based tests or factories may need separately approved packages.
+## Frontend setup
 
-## Frontend
-
-From the canonical repository root, in a separate terminal:
+In a separate terminal from the repository root:
 
 ```sh
 cd frontend
@@ -137,13 +102,37 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Nuxt listens on `http://127.0.0.1:3000`. The page contains only a heading and a
-short introductory sentence. Pinia is registered without a speculative store.
-Nuxt UI registers the Tailwind 4 Vite plugin itself; it is not registered twice.
-CSS imports Tailwind and Nuxt UI. Automatic web fonts, color-mode integration,
-Nuxt devtools and telemetry are disabled for this minimal bootstrap.
+Nuxt listens on `http://127.0.0.1:3000` and sends API mutations to
+`http://127.0.0.1:8000` by default. Override the public API base only when needed:
 
 ```sh
+NUXT_PUBLIC_API_BASE=http://127.0.0.1:8000 pnpm dev
+```
+
+Do not put credentials in this public runtime setting.
+
+## Local browser state
+
+The client persists its local-first state in IndexedDB database `joinsplit`,
+currently at schema version 3. Rehydration completes before domain UI is shown.
+Connectivity, active synchronization, form drafts and transient error/focus
+state are not persisted.
+
+For isolated development troubleshooting, IndexedDB may be deleted manually in
+browser developer tools. This loses unsynchronized local data and the anonymous
+Access Identity credential. It is a developer operation, not an application
+recovery feature.
+
+Multiple open tabs are not coordinated in M2. There is no BroadcastChannel,
+cross-tab lock or leader election, so concurrent tabs can temporarily hold
+different runtime state.
+
+## Verification
+
+Run frontend checks after installing dependencies:
+
+```sh
+cd frontend
 pnpm test:unit
 pnpm typecheck
 pnpm build
@@ -151,84 +140,36 @@ pnpm exec playwright install chromium --only-shell
 pnpm test:e2e
 ```
 
-The typecheck covers the Nuxt application, Vitest configuration/unit tests and
-Playwright configuration/tests.
-TypeScript 6 is deliberately bounded to its major version. `vue-tsc` is the
-additional direct development dependency approved during JS-008.
+Vitest covers TypeScript domain, persistence orchestration and synchronization
+units. Strict typechecking covers the Nuxt application and test sources.
+Playwright starts the built Nuxt server plus a real Laravel test server and uses
+real IndexedDB and PostgreSQL. Browser tests include axe checks for the selected
+WCAG 2 A/AA, 2.1 A/AA and 2.2 AA tags; automated axe results are not a complete
+accessibility conformance assessment.
 
-Vitest handles frontend unit tests and, when needed, Nuxt-focused tests.
-`pnpm test:unit` runs the single replaceable TypeScript runner smoke test under
-`test/unit/` in Node without starting Nuxt. `test/nuxt/` is reserved for future
-Nuxt-runtime tests; no runtime project or DOM dependencies are configured yet.
-`@nuxt/test-utils` is installed for that future concrete need. Playwright + axe
-cover real-browser/E2E and accessibility checks; Pest covers backend/API and
-persistence tests.
+Before Playwright runs `migrate:fresh`, a dedicated guard verifies
+`APP_ENV=testing`, database `joinsplit_test` and role `joinsplit_test`. Never
+redirect the browser suite to the development database.
 
-Playwright starts the previously built production server on
-`http://127.0.0.1:3100` and shuts it down afterward. A conflicting server is not
-reused. Only Chromium's headless shell was installed, with Playwright's required
-support binary; no Firefox or WebKit was installed. Build before running E2E
-tests after application changes.
+Run backend checks separately:
 
-The single browser smoke test verifies HTTP success, title, heading, Vue mounting,
-no uncaught page errors and zero axe violations for WCAG 2 A/AA, 2.1 A/AA and
-2.2 AA tags. This is not a complete accessibility conformance assessment.
+```sh
+cd backend
+composer test
+```
 
-## Verification at bootstrap
+## Continuous integration
 
-- Laravel 13.31.0: HTTP 200 for `/` and `/up`.
-- PostgreSQL: both local JoinSplit databases were reset to the empty migration
-  set. Only Laravel migration bookkeeping remains; all user/session/cache/queue
-  scaffold tables are removed. Development and test databases remain separate;
-  the test role cannot connect to the development database.
-- Pest 4.7.8 with Laravel plugin 4.1.0: two tests, five assertions passed.
-- Nuxt 4.5.2: development server and production build passed.
-- Vitest 5.0.0: one pure TypeScript smoke test passed in the Node unit project.
-- Strict application, Vitest and browser-test typechecks passed.
-- pnpm frozen-lockfile installation passed without upgrading pnpm.
-- Chromium: one smoke test passed; axe reported no violations in that test.
+`.github/workflows/ci.yml` runs for pushes and pull requests targeting `main`.
+The existing verification job performs:
 
-There is no CI, nested Git repository, workspace manager or publishing setup.
-Generated dependencies, output, test reports and local environments are ignored.
-No files were staged or committed during the bootstrap.
+1. frozen pnpm dependency installation,
+2. Vitest unit tests,
+3. strict TypeScript checks,
+4. Nuxt production build,
+5. Composer dependency installation,
+6. Pest against the PostgreSQL 18 service,
+7. Playwright/axe browser integration with the database safety guard.
 
-## Create Group integration — JS-013
-
-The Nuxt client sends pending CreateGroup operations to Laravel's canonical
-`POST /api/groups` endpoint. The public Nuxt runtime setting `apiBase` defaults
-to `http://127.0.0.1:8000`, matching `composer dev`. Override it with
-`NUXT_PUBLIC_API_BASE` when Laravel uses another origin; do not put credentials
-in this setting.
-
-`pnpm test:e2e` exercises the production Nuxt build together with a Laravel
-test server on `http://127.0.0.1:8001`. Before that server starts, Playwright
-explicitly binds Laravel to `APP_ENV=testing`, the `joinsplit_test` database and
-the `joinsplit_test` role. A guard verifies those effective Laravel configuration
-values before `migrate:fresh` may run. The browser suite must never be redirected
-to `joinsplit_dev`.
-
-Pest is independently protected by the forced database values in `phpunit.xml`
-and the checks in the backend base TestCase. Those PHPUnit safeguards do not
-configure Playwright's standalone Artisan processes.
-
-The browser integration covers a real successful Nuxt → Laravel → PostgreSQL
-creation, an idempotent retry returning HTTP 200, offline local creation, and a
-failed request followed by a successful retry of the same immutable operation.
-
-## Durable browser state — JS-015
-
-The frontend stores the Access Identity, Groups, Participants, pending Create
-Group mutations and the global initial-participant default in the `joinsplit`
-IndexedDB database. Reloading the application rehydrates this state before the
-domain UI becomes available. Connectivity, active synchronization, errors and
-form drafts remain transient.
-
-For isolated development or browser-test troubleshooting, local browser state
-can be cleared manually in the browser developer tools under
-Application → Storage → IndexedDB → `joinsplit` → Delete database. This is a
-developer operation, not an application reset feature. Clearing browser data
-loses unsynchronized local data and the anonymous Access Identity credential.
-
-Multiple open tabs are not coordinated in this milestone. There is no
-BroadcastChannel, cross-tab lock or leader election, so concurrent tabs may
-temporarily show different runtime state.
+Generated dependencies, build output, local environments, browser reports and
+logs are ignored by Git.
