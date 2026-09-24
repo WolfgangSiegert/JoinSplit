@@ -33,10 +33,12 @@ der Lage sein:
 - tatsächlich erfolgte Settlements zu dokumentieren,
 - einen verständlichen Statement Snapshot zu teilen.
 
-Der Kernworkflow muss von Beginn an offline nutzbar sein, einschließlich der
-anonymen Nutzung und Gruppenerstellung. Eine initiale Netzwerkverbindung ist
-nicht erforderlich. Der Abschnitt Offline-First Scope definiert den
-verbindlichen Offline-Umfang.
+Der Kernworkflow muss nach dem Laden der Webanwendung ohne Verbindung zur
+Laravel-API nutzbar sein, einschließlich der Nutzung ohne Account und der
+Gruppenerstellung. Der aktuelle MVP garantiert ohne Service Worker weder den
+erstmaligen Aufruf noch einen erneuten Start der Webanwendung ohne
+Netzwerkverbindung. Der Abschnitt Offline-First Scope definiert den
+verbindlichen fachlichen Offline-Umfang.
 
 ## MVP Usage Model
 
@@ -53,11 +55,15 @@ Participants benötigen:
 Participation Invitations und kollaborativer Mehrbenutzerzugriff gehören nicht
 zum MVP.
 
-Die grundlegende Nutzung von JoinSplit ist anonymous-first.
+Die grundlegende Nutzung von JoinSplit ist accountless-first. „Ohne Account“
+bedeutet nicht, dass eingegebene Namen und Finanzdaten anonym sind.
 
 Offline erstellte Daten werden zunächst lokal gehalten. Nach der Synchronisation
 bleiben Laravel und PostgreSQL die kanonische serverseitige Repräsentation der
-gemeinsamen Daten.
+gemeinsamen Daten. Für den noch zu implementierenden M4-Portfolio-Release gilt
+dies innerhalb seiner aktiven serverseitigen Aufbewahrungsperiode. Die
+zeitlich begrenzte Demo ist im
+[Portfolio-Demo-Vertrag](portfolio-demo.md) separat definiert.
 
 ## Included Capabilities
 
@@ -216,11 +222,12 @@ Der Offline-First-Scope ist bewusst auf den Single-Owner-Kernworkflow begrenzt.
 
 ### Offline verfügbar
 
-Die folgende Liste definiert den verbindlichen Offline-Umfang des MVP.
-Eine initiale Netzwerkverbindung oder zuvor online verfügbare Group ist nicht
-erforderlich. Der Nutzer muss vollständig offline:
+Die folgende Liste definiert den verbindlichen fachlichen Offline-Umfang des
+MVP. Eine Verbindung zur Laravel-API oder eine zuvor serverseitig verfügbare
+Group ist dafür nicht erforderlich. Nachdem die Webanwendung geladen wurde,
+muss der Nutzer ohne API-Verbindung:
 
-- JoinSplit anonym nutzen können,
+- JoinSplit ohne Account nutzen können,
 - eine Gruppe erstellen und lokal vorhandene Gruppen öffnen können,
 - Participants hinzufügen, ändern, deaktivieren und im Rahmen der
   Lifecycle-Regeln entfernen können,
@@ -243,9 +250,10 @@ funktionieren.
 
 Offline erstellte Groups und ihre Fachdaten sowie weitere lokale Änderungen
 werden lokal gehalten und mit dem Laravel-Backend synchronisiert, sobald eine
-Netzwerkverbindung verfügbar ist. Dies setzt keine frühere Verbindung voraus.
-Nach der Synchronisation bleiben Laravel und PostgreSQL die kanonische
-serverseitige Repräsentation.
+Netzwerkverbindung verfügbar ist. Dies setzt keine frühere API-Verbindung
+voraus. Nach der Synchronisation bleiben Laravel und PostgreSQL die kanonische
+serverseitige Repräsentation. Der noch zu implementierende M4-Portfolio-Release
+begrenzt diese Repräsentation durch seinen separaten Aufbewahrungsvertrag.
 
 Der Nutzer soll erkennen können, wenn:
 
@@ -322,7 +330,9 @@ Konkrete Priorisierung und technische Umsetzung werden später entschieden.
 JoinSplit soll langfristig als PWA auslieferbar sein.
 
 Offline First im MVP bedeutet nicht automatisch, dass bereits der vollständige
-PWA-Installations- und Distributionsumfang umgesetzt werden muss.
+PWA-Installations- und Distributionsumfang umgesetzt werden muss. Insbesondere
+garantiert der aktuelle Web-Release ohne Service Worker keinen Offline-Start der
+App Shell.
 
 ### Native Distribution
 

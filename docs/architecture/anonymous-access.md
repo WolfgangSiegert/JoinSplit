@@ -15,6 +15,20 @@ abschließende Umsetzung eines dauerhaften anonymen Zugriffs für den vollständ
 Offline-First-MVP. Laravel und PostgreSQL bleiben nach der Synchronisation
 autoritativ.
 
+## Current Post-M1 Status
+
+Dieses Dokument bleibt die historische Architekturgrundlage für die anonyme
+Access Identity. Seit M2 werden Access Identity und Credential gemäß
+[`local-persistence.md`](local-persistence.md) dauerhaft in IndexedDB
+gespeichert. Es gibt weiterhin weder Credential-Recovery noch Multi-Device-
+Zugriff. Öffentlich wird dies als Nutzung „ohne Account“ bezeichnet; Namen und
+Finanzdaten werden dadurch nicht anonym.
+
+Der [M4-Portfolio-Demo-Vertrag](../product/portfolio-demo.md) ergänzt eine
+zeitlich begrenzte Serverkopie. Ein lokaler Reset entfernt Browserdaten und
+Credential, aber keine synchronisierte Serverkopie; für diese bleibt die
+automatische Aufbewahrungsgrenze maßgeblich.
+
 ## Identity and Credential
 
 Der Client erzeugt vor jeder erforderlichen Netzwerkverbindung einmalig:

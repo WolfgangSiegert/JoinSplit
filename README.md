@@ -9,7 +9,7 @@ account before getting started.
 The M2 Core milestone and the M3 Joining & Settlement feature work are complete.
 JoinSplit currently supports:
 
-- anonymous local-first Group creation,
+- accountless local-first Group creation,
 - durable browser state and pending-mutation recovery after reload,
 - Participant add, rename, deactivate and eligible delete operations,
 - Expense create, edit and delete with deterministic Equal Split,
@@ -29,8 +29,19 @@ Statement Snapshots are implemented.
 ## Product direction
 
 M3 hardening covers the complete financial workflow across local persistence,
-the Laravel API and PostgreSQL. The full single-owner workflow is intended to
-work Offline First.
+the Laravel API and PostgreSQL. Once the application has loaded, its
+single-owner core workflow remains usable without an API connection and queues
+changes for later synchronization. The current release has no Service Worker
+and does not guarantee a first load or restart while offline.
+
+M4 prepares a public portfolio demo rather than a production-ready financial
+service. Its approved release and data-handling boundary is documented in the
+[portfolio demo contract](docs/product/portfolio-demo.md). The corresponding
+production operating requirements live in the
+[production operations contract](docs/engineering/production-operations.md).
+The planned canonical application URL is `https://joinsplit.tiny-bits.org`,
+with a project entry on `https://tiny-bits.org`; these links are targets and do
+not claim that the release is live yet.
 
 See the [product vision](docs/product/vision.md) and
 [MVP scope](docs/product/mvp.md) for the canonical product direction.
@@ -44,7 +55,8 @@ See the [product vision](docs/product/vision.md) and
 ## Architecture
 
 - Laravel is the canonical application API.
-- The workflow is anonymous-first and local-first.
+- The workflow is accountless-first and local-first; this does not imply that
+  submitted names or financial data are anonymous.
 - Pending Mutations synchronize local changes to the server.
 - A Participant is not an Access Identity.
 - Business logic belongs in neither controllers nor components.
@@ -89,8 +101,10 @@ guide.
 - [Product vision](docs/product/vision.md)
 - [MVP scope](docs/product/mvp.md)
 - [MVP UX flow](docs/product/ux-flow.md)
+- [Portfolio demo contract](docs/product/portfolio-demo.md)
 - [Domain model](docs/architecture/domain-model.md)
 - [Local development](docs/engineering/local-development.md)
+- [Production operations contract](docs/engineering/production-operations.md)
 
 ## AI-assisted development
 

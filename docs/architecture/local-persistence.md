@@ -10,7 +10,8 @@ Ziele:
 - Offline-First-Verhalten fortführen,
 - Pending Mutations nach Reload weiter synchronisieren können,
 - Pinia als Runtime-State beibehalten,
-- Laravel/PostgreSQL nach erfolgreichem Sync als kanonische Serverrepräsentation beibehalten.
+- Laravel/PostgreSQL nach erfolgreichem Sync als kanonische
+  Serverrepräsentation beibehalten.
 
 ## Technology
 
@@ -236,7 +237,9 @@ Nicht erlaubt:
 - stiller Reset
 - automatisches Starten mit leerem State
 
-Ein expliziter Reset lokaler Daten ist ein eigener späterer Use Case.
+Ein expliziter Reset lokaler Daten ist kein Fehler-Recovery-Automatismus. Der
+freigegebene M4-Zielvertrag führt ihn als eigene, bestätigungspflichtige Aktion
+mit klarer Server-Retention-Warnung ein.
 
 ## Schema upgrades
 
@@ -292,6 +295,17 @@ pending bleibt bestehen.
 Online:
 bestehende Mutation darf erneut synchronisiert werden.
 
+Ein nachgewiesener Ablauf der zeitlich begrenzten M4-Serverkopie ist dagegen
+kein temporärer Sync-Fehler. Die dafür geplante Implementierung persistiert
+auf der Access Identity, ob sie jemals erfolgreich synchronisiert wurde, sowie
+einen terminalen `expired-local-only`-Zustand. Der unterstützte Client verwendet
+den Registrierungsweg nur für eine frische, noch nie synchronisierte Identity.
+Der terminale Zustand beendet betroffene Retry-Einträge und verhindert im
+Client eine automatische Re-Registrierung oder Rekonstruktion der Serverkopie.
+Die lokalen Domain-Daten bleiben bis zu einem ausdrücklich bestätigten lokalen
+Reset erhalten. Dieses Verhalten ist Bestandteil des freigegebenen
+M4-Zielvertrags und noch nicht im Schema v4 implementiert.
+
 Dabei werden nicht neu erzeugt:
 
 - Group ID
@@ -327,6 +341,13 @@ Mindestens prüfen:
 - Offline → Reload → weiterhin pending
 - späterer Retry synchronisiert dieselbe Mutation
 - keine Group-/Participant-Duplikate
+- M4-Erweiterung: abgelaufener Serverstand überlebt Reload als
+  `expired-local-only`
+- M4-Erweiterung: abgelaufene Mutationen erzeugen keine Endlos-Retries
+- M4-Erweiterung: eine jemals synchronisierte Identity kann nach Ablauf nicht
+  erneut registriert werden
+- M4-Erweiterung: lokaler Reset warnt, löscht alle IndexedDB-Daten und erzeugt
+  keine Serverlöschung
 
 ### Pest
 
@@ -343,6 +364,7 @@ Nicht Bestandteil dieser Architekturphase:
 - Background Sync API
 - IndexedDB encryption framework
 - complex data recovery
+- automatic reconstruction of an expired server copy
 - data export/import
 - generic repository layer
 - generic sync engine

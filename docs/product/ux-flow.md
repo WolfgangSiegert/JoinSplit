@@ -40,7 +40,8 @@ Die Wireframes sind statisch, kein interaktiver Prototyp.
 Der [Create-Group-Vertrag](../architecture/create-group-alignment.md) wurde am
 2026-09-14 ausdrücklich menschlich freigegeben. Der Architekturabgleich für
 Group plus optionalen Participant, gemeinsamen Erfolg und duplikatfreien Retry
-ist dokumentarisch abgeschlossen. Die M1-Grenze bleibt Arbeitsspeicher.
+ist dokumentarisch abgeschlossen. Die damalige M1-Grenze blieb Arbeitsspeicher;
+seit M2 werden Access Identity und Fachdaten dauerhaft in IndexedDB gespeichert.
 
 ## Main Journey
 
@@ -240,6 +241,10 @@ Connectivity und Synchronisation werden als getrennte Zustände dargestellt:
 - **Synchronisiert:** Der Server hat den Stand bestätigt.
 - **Sync fehlgeschlagen:** Lokale Änderungen bleiben erhalten; ein temporärer
   Fehler kann erneut versucht werden.
+- **M4-Ziel – nur lokal, Serversynchronisierung beendet:** Die lokale Group bleibt
+  nutzbar, ihre zeitlich begrenzte Serverkopie existiert nicht mehr. Dieser
+  Zustand ist terminal: Es gibt weder Endlos-Retries noch eine automatische
+  Rekonstruktion der Serverkopie.
 - **Abgelehnt oder Konflikt:** Der betroffene Vorgang und der bekannte Grund
   werden verständlich angezeigt. Die konkrete Korrekturaktion folgt der noch zu
   definierenden Konfliktregel.
@@ -251,12 +256,18 @@ Snapshots zeigen ihren Erstellungszeitpunkt und weisen gegebenenfalls auf noch
 nicht synchronisierte enthaltene Änderungen hin. Ein erzeugter Snapshot bleibt
 statisch.
 
-Für M1 gelten engere Grenzen: Access Identity und Credential existieren nur im
-Arbeitsspeicher. Reload, Tab-Verlust oder Browser-Neustart können den Zugriff
-verlieren. Die M1-Oberfläche darf deshalb keine dauerhafte lokale Speicherung
-versprechen. Der vollständige Offline-First-MVP benötigt eine separat zu
-entscheidende dauerhafte lokale Persistenz und eine offline verfügbare App
-Shell.
+Die historische M1-Grenze hielt Access Identity und Credential nur im
+Arbeitsspeicher. Seit M2 liegen beide dauerhaft in IndexedDB. Das schützt nicht
+vor Löschen oder Verlust des Browserprofils und schafft keine Recovery- oder
+Multi-Device-Funktion. Eine offline verfügbare App Shell bleibt weiterhin
+außerhalb des aktuellen Releases.
+
+Als noch zu implementierendes M4-Ziel erscheint vor der ersten Dateneingabe eine
+Testdatenwarnung. Ein sichtbarer Link erklärt Single Owner, Browserbindung,
+Recovery-, Offline- und Aufbewahrungsgrenzen. Ein ausdrücklich lokaler Reset
+warnt vor dem Verlust aller Browserdaten und ausstehenden Änderungen. Er
+entfernt IndexedDB und Credential, löscht aber keine synchronisierte
+Serverkopie und darf dies auch nicht behaupten.
 
 ## Confirmed UX Decisions
 
@@ -325,11 +336,9 @@ Konformitätsaussage erfordert eine spätere Prüfung der Implementierung.
 
 ## Open Product and Architecture Questions
 
-Folgende Punkte werden durch JS-009 nicht entschieden:
+Folgende Punkte wurden durch JS-009 nicht entschieden:
 
 - Bearbeitung historischer Expenses mit inzwischen inaktiven Participants,
-- dauerhafte anonyme Access Identity und lokale Persistenz im vollständigen
-  MVP,
 - Offline-Bereitstellung der App Shell,
 - Versionierung und Konfliktbehandlung beim Sync,
 - serverseitige Speicherung gerätelokaler Einstellungen; sie ist für den MVP
@@ -337,4 +346,7 @@ Folgende Punkte werden durch JS-009 nicht entschieden:
 
 Die Create-Group-Architektur einschließlich Namensvalidation, optionalem
 Participant, lokalem Erfolg und Retry ist im freigegebenen Vertrag konkretisiert.
-Die übrigen Fragen blockieren den begrenzten M1 Create-Group-Slice nicht.
+Die dauerhafte lokale Persistenz wurde mit M2 entschieden. Die M4-Grenzen für
+öffentliche Demo, Retention und lokalen Reset stehen im
+[Portfolio-Demo-Vertrag](portfolio-demo.md). Die übrigen Fragen blockierten den
+begrenzten M1 Create-Group-Slice nicht.

@@ -249,14 +249,19 @@ eingeführt.
 
 ## Offline-First Engineering Principles
 
-Offline First ist eine bestätigte MVP-Anforderung und beginnt mit der anonymen
-Nutzung und Erstellung einer Group. Eine initiale Netzwerkverbindung ist nicht
-erforderlich. Der verbindliche Offline-Umfang steht in `docs/product/mvp.md`.
+Offline First ist eine bestätigte MVP-Anforderung und beginnt mit der Nutzung
+ohne Account und der Erstellung einer Group. Eine initiale Verbindung zur
+Laravel-API ist nicht erforderlich. Ohne Service Worker garantiert der aktuelle
+Web-Release jedoch keinen erstmaligen oder erneuten Start der App Shell ohne
+Netzwerk. Der verbindliche fachliche Offline-Umfang steht in
+`docs/product/mvp.md`.
 
 ### Server Authority
 
 Laravel und PostgreSQL bleiben die kanonische serverseitige Repräsentation der
-gemeinsamen Daten.
+gemeinsamen Daten. Für den noch zu implementierenden M4-Portfolio-Release gilt
+dies nur innerhalb seiner aktiven Aufbewahrungsperiode. Der zeitlich begrenzte
+Demo-Betrieb ist keine dauerhafte Backup- oder Recovery-Zusage.
 
 Offline First macht den Browser nicht zur dauerhaften alleinigen Source of
 Truth.
@@ -508,6 +513,11 @@ nicht eingerichtete Tools zu installieren oder zu konfigurieren.
 
 Bei Änderungen an Verhalten, Architektur oder dauerhaften Entscheidungen wird
 die relevante Dokumentation aktualisiert.
+
+Produktive Änderungen berücksichtigen zusätzlich den freigegebenen Vertrag für
+Retention, Logs, Backup, Restore und manuelle Freigabe in
+`docs/engineering/production-operations.md`, sobald dieser Release-Pfad
+betroffen ist.
 
 Vor Integration oder Commit muss der Mensch die Änderung prüfen und verstehen.
 

@@ -691,8 +691,10 @@ Die konkrete Transaktionssteuerung wird in Laravel später festgelegt.
 
 Offline First ändert die fachlichen Regeln nicht.
 
-Der MVP-Kernworkflow beginnt offline mit der anonymen Nutzung und Erstellung
-einer Group; eine initiale Netzwerkverbindung ist nicht erforderlich.
+Nachdem die Webanwendung geladen wurde, beginnt der MVP-Kernworkflow ohne
+Laravel-API-Verbindung mit der Nutzung ohne Account und der Erstellung einer
+Group. Ohne Service Worker garantiert der aktuelle Web-Release keinen
+erstmaligen oder erneuten Start der App Shell ohne Netzwerkverbindung.
 Group repräsentiert weiterhin das gemeinsame Vorhaben bzw. Event.
 
 Der Offline-Umfang umfasst Participant-Verwaltung, das Erstellen, Bearbeiten und
@@ -707,8 +709,10 @@ Laravel synchronisiert, sobald eine Netzwerkverbindung verfügbar ist.
 Nach der Synchronisation bleiben Laravel und PostgreSQL die kanonische
 serverseitige Repräsentation.
 
-Access Identity bleibt ein technologieneutrales Konzept. Wie ein anonymer
-Offline-Zugriff technisch erzeugt oder gespeichert wird, bleibt offen.
+Access Identity bleibt ein fachlich vom Participant getrenntes Konzept. Die
+technische Erzeugung und dauerhafte Speicherung in IndexedDB sind inzwischen in
+[`anonymous-access.md`](anonymous-access.md) und
+[`local-persistence.md`](local-persistence.md) festgelegt.
 
 Die offline ausgeführte TypeScript-Domainlogik und die serverseitige
 PHP-Domainlogik müssen insbesondere für:

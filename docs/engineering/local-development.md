@@ -38,6 +38,11 @@ The repository currently targets:
 Use `nvm use` before frontend commands. Do not update runtime or dependency
 versions as a side effect of unrelated work.
 
+Production requirements are deliberately separate from this local setup. See
+the [production operations contract](production-operations.md). Never copy
+production secrets into local files or point local cleanup/expiry tests at a
+production database.
+
 ## Local PostgreSQL
 
 The verified local setup uses separate databases and non-superuser roles:
