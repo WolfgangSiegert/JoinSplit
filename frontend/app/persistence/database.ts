@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
-import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingDeleteParticipant } from '../domain/pending-mutation'
+import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingArchiveGroup, PendingReactivateGroup, PendingDeleteGroup } from '../domain/pending-mutation'
 import type { Expense, ExpenseShare } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 
@@ -204,6 +204,30 @@ export async function persistParticipantUpdate(participant: Participant, mutatio
 export async function persistParticipantDelete(group: Group, participantId: string, mutation: PendingDeleteParticipant): Promise<void> {
   const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations'], 'readwrite')
   await Promise.all([tx.objectStore('groups').put(group), tx.objectStore('participants').delete(participantId), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
+}
+
+export async function persistGroupStatus(
+  group: Group,
+  mutation: PendingArchiveGroup | PendingReactivateGroup,
+): Promise<void> {
+  const db = await database(); const tx = db.transaction(['groups', 'pendingMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('groups').put(group), tx.objectStore('pendingMutations').add(mutation)])
+  await tx.done
+}
+
+export async function persistGroupDeleteRequest(mutation: PendingDeleteGroup): Promise<void> {
+  const db = await database(); const tx = db.transaction('pendingMutations', 'readwrite')
+  await tx.store.add(mutation); await tx.done
+}
+
+export async function acknowledgeGroupDelete(group: Group, mutationId: string): Promise<void> {
+  const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations'], 'readwrite')
+  await Promise.all([
+    tx.objectStore('groups').delete(group.id),
+    ...group.participantIds.map(participantId => tx.objectStore('participants').delete(participantId)),
+    tx.objectStore('pendingMutations').delete(mutationId),
+  ])
   await tx.done
 }
 

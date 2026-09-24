@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Exceptions\ExpenseConflictException;
+use App\Exceptions\GroupLifecycleConflictException;
 use App\Exceptions\PersistenceException;
 use App\Models\AccessIdentity;
 use App\Models\Expense;
@@ -133,8 +134,11 @@ class ManageExpense
             ->lockForUpdate()
             ->first();
 
-        if (! $group || ! $group->is_active) {
+        if (! $group) {
             throw new NotFoundHttpException;
+        }
+        if (! $group->is_active) {
+            throw new GroupLifecycleConflictException;
         }
 
         return $group;

@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Exceptions\ParticipantConflictException;
+use App\Exceptions\GroupLifecycleConflictException;
 use App\Models\AccessIdentity;
 use App\Models\Group;
 use App\Models\Participant;
@@ -72,7 +73,8 @@ class ManageParticipant
         $query = Group::query()->whereKey($groupId)->where('owner_access_identity_id', $actor->id);
         if ($lock) $query->lockForUpdate();
         $group = $query->first();
-        if (! $group || ! $group->is_active) throw new NotFoundHttpException;
+        if (! $group) throw new NotFoundHttpException;
+        if (! $group->is_active) throw new GroupLifecycleConflictException;
         return $group;
     }
 }

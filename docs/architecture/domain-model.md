@@ -109,8 +109,8 @@ Eine archivierte Group ist read-only:
 Der Owner darf die Group reaktivieren. Diese Statusänderung ist die Ausnahme
 vom Schreibschutz; danach gelten wieder die normalen Regeln einer aktiven Group.
 
-Die konkrete technische Darstellung des Lifecycle-Status wird später
-entschieden.
+Der technische Client-, Persistenz- und HTTP-Vertrag ist in
+[`group-lifecycle.md`](./group-lifecycle.md) festgelegt.
 
 ## Participant
 

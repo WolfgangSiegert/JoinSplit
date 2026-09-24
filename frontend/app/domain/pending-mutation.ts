@@ -83,6 +83,21 @@ export interface PendingDeleteSettlement extends PendingMutationBase {
   readonly payload: Readonly<{ readonly settlement: Readonly<DurableSettlementSnapshot> }>
 }
 
+export interface PendingArchiveGroup extends PendingMutationBase {
+  readonly type: 'ArchiveGroup'
+  readonly payload: Readonly<{ readonly status: 'archived' }>
+}
+
+export interface PendingReactivateGroup extends PendingMutationBase {
+  readonly type: 'ReactivateGroup'
+  readonly payload: Readonly<{ readonly status: 'active' }>
+}
+
+export interface PendingDeleteGroup extends PendingMutationBase {
+  readonly type: 'DeleteGroup'
+  readonly payload: Readonly<Record<string, never>>
+}
+
 export type PendingMutation =
   | PendingCreateGroup
   | PendingAddParticipant
@@ -95,6 +110,9 @@ export type PendingMutation =
   | PendingCreateSettlement
   | PendingUpdateSettlement
   | PendingDeleteSettlement
+  | PendingArchiveGroup
+  | PendingReactivateGroup
+  | PendingDeleteGroup
 
 export function nextCreatedOrder(mutations: readonly PendingMutation[]): number {
   return mutations.reduce((maximum, mutation) => Math.max(maximum, mutation.createdOrder), -1) + 1

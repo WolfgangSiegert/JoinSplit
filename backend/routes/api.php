@@ -2,11 +2,14 @@
 
 use App\Http\Controllers\CreateGroupController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\GroupLifecycleController;
 use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\SettlementController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/groups', CreateGroupController::class);
+Route::patch('/groups/{group}', [GroupLifecycleController::class, 'update']);
+Route::delete('/groups/{group}', [GroupLifecycleController::class, 'destroy']);
 Route::post('/groups/{group}/participants', [ParticipantController::class, 'store']);
 Route::patch('/groups/{group}/participants/{participant}', [ParticipantController::class, 'update']);
 Route::delete('/groups/{group}/participants/{participant}', [ParticipantController::class, 'destroy']);

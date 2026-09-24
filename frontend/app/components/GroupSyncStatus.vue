@@ -2,8 +2,10 @@
 const props = withDefaults(defineProps<{
   groupId: string
   showSynced?: boolean
+  pendingDeletion?: boolean
 }>(), {
   showSynced: false,
+  pendingDeletion: false,
 })
 
 const groupId = computed(() => props.groupId)
@@ -11,16 +13,18 @@ const { syncState, visibleState, attemptSync } = useCreateGroupSync(groupId)
 
 const message = computed(() => {
   if (visibleState.value === 'offline') {
-    return 'Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.'
+    return props.pendingDeletion
+      ? 'Offline. Die Gruppenlöschung bleibt lokal vorgemerkt und wird später synchronisiert.'
+      : 'Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.'
   }
   if (visibleState.value === 'syncing') {
-    return 'Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.'
+    return props.pendingDeletion ? 'Die Gruppenlöschung wird synchronisiert.' : 'Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.'
   }
   if (visibleState.value === 'failed') {
     return syncState.value?.error?.message ?? 'Synchronisierung fehlgeschlagen.'
   }
   if (visibleState.value === 'pending') {
-    return 'Synchronisierung ausstehend. Die Gruppe ist lokal nutzbar.'
+    return props.pendingDeletion ? 'Die endgültige Gruppenlöschung ist noch nicht synchronisiert.' : 'Synchronisierung ausstehend. Die Gruppe ist lokal nutzbar.'
   }
   return props.showSynced ? 'Synchronisiert. Die Gruppe wurde vom Server bestätigt.' : ''
 })

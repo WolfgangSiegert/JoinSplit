@@ -2,6 +2,7 @@ import { synchronizeCreateGroup } from '../services/create-group-sync'
 import { synchronizeParticipantMutation } from '../services/participant-sync'
 import { synchronizeExpenseMutation } from '../services/expense-sync'
 import { synchronizeSettlementMutation } from '../services/settlement-sync'
+import { synchronizeGroupLifecycleMutation } from '../services/group-lifecycle-sync'
 import type { PendingMutation } from '../domain/pending-mutation'
 
 function unreachableMutation(mutation: never): never { throw new Error(`Unsupported pending mutation: ${String(mutation)}`) }
@@ -36,6 +37,10 @@ export function useCreateGroupSync(groupId: Ref<string>) {
       case 'DeactivateParticipant':
       case 'DeleteParticipant':
         return synchronizeParticipantMutation(options)
+      case 'ArchiveGroup':
+      case 'ReactivateGroup':
+      case 'DeleteGroup':
+        return synchronizeGroupLifecycleMutation(options)
       default:
         return unreachableMutation(mutation)
     }

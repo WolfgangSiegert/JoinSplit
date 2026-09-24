@@ -73,9 +73,8 @@ export async function synchronizeParticipantMutation(options: Options): Promise<
   if (!pending || !['AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant'].includes(pending.type)) return { outcome: 'not-pending' }
   if (options.groupsStore.mutationSync[pending.id]?.state === 'syncing') return { outcome: 'busy' }
   const mutation = options.groupsStore.beginMutationSync(pending.id)
-  if (!mutation || mutation.type === 'CreateGroup'
-    || mutation.type === 'CreateExpense' || mutation.type === 'UpdateExpense' || mutation.type === 'DeleteExpense'
-    || mutation.type === 'CreateSettlement' || mutation.type === 'UpdateSettlement' || mutation.type === 'DeleteSettlement') return { outcome: 'busy' }
+  if (!mutation || (mutation.type !== 'AddParticipant' && mutation.type !== 'RenameParticipant'
+    && mutation.type !== 'DeactivateParticipant' && mutation.type !== 'DeleteParticipant')) return { outcome: 'busy' }
   if (!options.identity.accessIdentityId || !options.identity.credential) {
     const result = failed('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)
     if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)

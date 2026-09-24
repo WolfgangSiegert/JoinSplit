@@ -8,7 +8,7 @@ import { isCanonicalPositiveMinor, type DurableSettlementSnapshot } from '../dom
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const CREDENTIAL = /^[0-9a-f]{64}$/u
-const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement'])
+const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement', 'ArchiveGroup', 'ReactivateGroup', 'DeleteGroup'])
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function keys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const actual = Object.keys(value); return actual.length === expected.length && actual.every(key => expected.includes(key))
@@ -48,6 +48,9 @@ function mutation(value: unknown): value is PendingMutation {
       && keys(payload.initialParticipant, ['participantId', 'name'])
       && uuid(payload.initialParticipant.participantId) && name(payload.initialParticipant.name))
   }
+  if (value.type === 'ArchiveGroup') return keys(payload, ['status']) && payload.status === 'archived'
+  if (value.type === 'ReactivateGroup') return keys(payload, ['status']) && payload.status === 'active'
+  if (value.type === 'DeleteGroup') return keys(payload, [])
   if (value.type === 'AddParticipant') return keys(payload, ['participantId', 'name', 'order']) && uuid(payload.participantId) && name(payload.name) && integer(payload.order)
   if (value.type === 'RenameParticipant') return keys(payload, ['participantId', 'name', 'active', 'order'])
     && uuid(payload.participantId) && name(payload.name) && typeof payload.active === 'boolean' && integer(payload.order)
@@ -96,6 +99,28 @@ export function validateDurableState(value: DurableState): DurableState {
     if (new Set(ordered.map(item => item.order)).size !== ordered.length
       || ordered.map(item => item.id).join('|') !== currentGroup.participantIds.join('|')) throw new Error('Persisted group participant ordering is inconsistent')
   }
+  for (const currentGroup of value.groups) {
+    const lifecycle = [...value.pendingMutations]
+      .filter(mutation => mutation.groupId === currentGroup.id
+        && (mutation.type === 'ArchiveGroup' || mutation.type === 'ReactivateGroup'))
+      .sort((left, right) => left.createdOrder - right.createdOrder)
+    const latest = lifecycle.at(-1)
+    const expectedStatus = latest?.type === 'ArchiveGroup' ? 'archived'
+      : latest?.type === 'ReactivateGroup' ? 'active' : undefined
+    if (expectedStatus && currentGroup.status !== expectedStatus) throw new Error('Persisted Group lifecycle mismatch')
+    if (lifecycle.some(mutation => mutation.type === 'ArchiveGroup') && !currentGroup.hasFinancialHistory) {
+      throw new Error('Persisted Group archive history mismatch')
+    }
+    const deletion = value.pendingMutations.find(mutation => mutation.groupId === currentGroup.id && mutation.type === 'DeleteGroup')
+    if (deletion) {
+      if (currentGroup.status !== 'active' || currentGroup.hasFinancialHistory
+        || value.expenses.some(expense => expense.groupId === currentGroup.id)
+        || value.settlements.some(settlement => settlement.groupId === currentGroup.id)
+        || value.pendingMutations.some(mutation => mutation.groupId === currentGroup.id && mutation.id !== deletion.id)) {
+        throw new Error('Persisted Group deletion tombstone mismatch')
+      }
+    }
+  }
   if (value.participants.some(item => !groupIds.has(item.groupId))) throw new Error('Persisted participant has no group')
   for (const currentExpense of value.expenses) {
     const currentGroup = value.groups.find(item => item.id === currentExpense.groupId)
@@ -123,6 +148,7 @@ export function validateDurableState(value: DurableState): DurableState {
   for (const current of orderedMutations) {
     const currentGroup = value.groups.find(item => item.id === current.groupId)
     if (!currentGroup) throw new Error('Persisted mutation has no group')
+    if (current.type === 'ArchiveGroup' || current.type === 'ReactivateGroup' || current.type === 'DeleteGroup') continue
     if (current.type === 'CreateGroup') {
       if (!identity || current.payload.actorId !== identity.id || current.payload.name !== currentGroup.name) throw new Error('Persisted CreateGroup mismatch')
       const initial = current.payload.initialParticipant

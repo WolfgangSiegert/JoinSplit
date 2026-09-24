@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Exceptions\PersistenceException;
+use App\Exceptions\GroupLifecycleConflictException;
 use App\Exceptions\SettlementConflictException;
 use App\Models\AccessIdentity;
 use App\Models\Expense;
@@ -143,7 +144,7 @@ class ManageSettlement
             throw new NotFoundHttpException;
         }
         if (! $group->is_active) {
-            throw new SettlementConflictException;
+            throw new GroupLifecycleConflictException;
         }
 
         return $group;

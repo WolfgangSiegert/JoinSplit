@@ -298,7 +298,7 @@ it('deletes idempotently only within an owned active group and exposes no GET ro
     test()->withHeaders(js17Headers(JS17_OTHER_ACCESS, JS17_OTHER_CREDENTIAL))->deleteJson($expenseUrl)
         ->assertNotFound();
     Group::whereKey(JS17_GROUP)->update(['is_active' => false]);
-    test()->withHeaders(js17Headers())->deleteJson($expenseUrl)->assertNotFound();
+    test()->withHeaders(js17Headers())->deleteJson($expenseUrl)->assertConflict();
 
     expect(Expense::whereKey(JS17_EXPENSE)->exists())->toBeTrue();
 });
@@ -313,11 +313,11 @@ it('keeps archived groups read-only for create, update, and delete', function ()
 
     test()->withHeaders(js17Headers())->postJson($collectionUrl, js17ExpensePayload([
         'expenseId' => JS17_OTHER_EXPENSE,
-    ]))->assertNotFound();
+    ]))->assertConflict();
     test()->withHeaders(js17Headers())->putJson($expenseUrl, js17UpdatePayload([
         'description' => 'Must not change',
-    ]))->assertNotFound();
-    test()->withHeaders(js17Headers())->deleteJson($expenseUrl)->assertNotFound();
+    ]))->assertConflict();
+    test()->withHeaders(js17Headers())->deleteJson($expenseUrl)->assertConflict();
 
     expect(Expense::findOrFail(JS17_EXPENSE)->description)->toBe('Dinner');
 });

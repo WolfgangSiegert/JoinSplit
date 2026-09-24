@@ -46,6 +46,12 @@ export const useGroupsStore = defineStore('groups', {
     pendingCreateGroups: state => state.pendingMutations.filter(
       (mutation): mutation is PendingCreateGroup => mutation.type === 'CreateGroup',
     ),
+    pendingGroupDeletions: state => state.pendingMutations.filter(
+      mutation => mutation.type === 'DeleteGroup',
+    ),
+    visibleGroups: state => state.groups.filter(group => !state.pendingMutations.some(
+      mutation => mutation.groupId === group.id && mutation.type === 'DeleteGroup',
+    )),
     createGroupSync: state => Object.fromEntries(state.groups.map(group => {
       const mutations = state.pendingMutations.filter(item => item.groupId === group.id)
         .sort((left, right) => left.createdOrder - right.createdOrder)
@@ -123,6 +129,23 @@ export const useGroupsStore = defineStore('groups', {
       this.queueMutation(mutation)
     },
 
+    commitGroupStatus(group: Group, mutation: PendingMutation): void {
+      this.groups = this.groups.map(item => item.id === group.id ? group : item)
+      this.queueMutation(mutation)
+    },
+
+    commitGroupDeleteRequest(mutation: PendingMutation): void {
+      this.queueMutation(mutation)
+    },
+
+    commitGroupDeleteAcknowledgement(groupId: string, mutationId: string): void {
+      this.groups = this.groups.filter(group => group.id !== groupId)
+      this.participants = this.participants.filter(participant => participant.groupId !== groupId)
+      this.pendingMutations = this.pendingMutations.filter(mutation => mutation.id !== mutationId)
+      delete this.mutationSync[mutationId]
+      delete this.syncedGroups[groupId]
+    },
+
     settlementsForGroup(groupId: string): Settlement[] {
       return this.settlements.filter(settlement => settlement.groupId === groupId)
         .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn))
@@ -139,7 +162,16 @@ export const useGroupsStore = defineStore('groups', {
     },
 
     findGroup(groupId: string): Group | undefined {
+      if (this.hasPendingGroupDelete(groupId)) return undefined
+      return this.findStoredGroup(groupId)
+    },
+
+    findStoredGroup(groupId: string): Group | undefined {
       return this.groups.find(group => group.id === groupId)
+    },
+
+    hasPendingGroupDelete(groupId: string): boolean {
+      return this.pendingMutations.some(mutation => mutation.groupId === groupId && mutation.type === 'DeleteGroup')
     },
 
     participantsForGroup(groupId: string): Participant[] {

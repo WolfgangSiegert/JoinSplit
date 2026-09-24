@@ -91,5 +91,5 @@ it('keeps archived groups read-only and prohibits ownership fields', function ()
     test()->withHeaders(js16Headers())->postJson('/api/groups/'.JS16_GROUP.'/participants', [
         'participantId' => JS16_NEW_PARTICIPANT, 'name' => 'Bob', 'order' => 1, 'ownerId' => JS16_OTHER_ACCESS,
     ])->assertUnprocessable();
-    test()->withHeaders(js16Headers())->patchJson('/api/groups/'.JS16_GROUP.'/participants/'.JS16_PARTICIPANT, ['name' => 'Alicia'])->assertNotFound();
+    test()->withHeaders(js16Headers())->patchJson('/api/groups/'.JS16_GROUP.'/participants/'.JS16_PARTICIPANT, ['name' => 'Alicia'])->assertConflict();
 });
