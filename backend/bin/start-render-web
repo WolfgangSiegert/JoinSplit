@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+php artisan app:validate-production-config
+php artisan migrate --force
+php artisan app:prune-expired-identities
+exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf

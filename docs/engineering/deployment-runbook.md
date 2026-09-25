@@ -1,130 +1,134 @@
-# Web Portfolio Deployment Runbook
+# Render and Neon Deployment Runbook
 
 ## Purpose and authority
 
-This runbook operationalizes the repository-owned boundary in
-[production-operations.md](production-operations.md). It does not authorize a
-deployment. Creating paid resources, applying the App Platform specification,
-running production migrations, switching DNS or publishing a release each
-requires the named human operator's explicit approval.
+This runbook describes the first production deployment of JoinSplit to Render
+and Neon. The committed `render.yaml` is the canonical infrastructure template.
+It is not authorization to enter secrets, change DNS, deploy, or publish source
+code. Each external change remains behind explicit human approval.
 
-The canonical template is [.do/app.yaml](../../.do/app.yaml). It deliberately
-contains blocking CHANGE_ME values and references an existing production
-PostgreSQL cluster. Applying the committed file unchanged must fail; it must
-never create a development database as a fallback.
+The canonical public origin is `https://joinsplit.tiny-bits.org`.
 
-## Fixed release boundary
+## Fixed deployment boundary
 
-- Region: DigitalOcean Frankfurt (fra).
-- Components: one Node 24 Nuxt service and one PHP 8.5 Laravel service.
-- Database: existing Managed PostgreSQL 18 Standard Edition cluster.
-- Browser origin: https://joinsplit.tiny-bits.org.
-- Source deployment: GitHub main, with deploy_on_push disabled.
-- Ingress order: /api, /up and /ready to Laravel; all other paths to Nuxt.
-  Prefixes are preserved.
-- Laravel readiness uses /ready; liveness uses /up.
-- Nuxt readiness and liveness use /health.
-- The checked-in 512 MiB service sizes are provisional. They cost USD 5 per
-  service per month at the time of JS-029 and require measured runtime memory
-  verification before provisioning. A change that makes the total expected
-  monthly cost exceed USD 35 requires a new human decision.
+- Render region: Frankfurt
+- Neon region: AWS `eu-central-1` (Frankfurt)
+- application: one free Docker web service containing Node 24 Nuxt, PHP 8.5
+  Laravel, Apache and the Laravel scheduler
+- database: Neon Free PostgreSQL
+- cleanup: Laravel scheduler while the service is awake, plus cleanup on every
+  cold start
+- source: GitHub `main`, with automatic deploys disabled
 
-The buildpack choice is intentional. DigitalOcean's current buildpacks support
-the repository's Node 24 and PHP 8.5 ranges. A Dockerfile is not introduced
-without a concrete buildpack limitation.
+Only the combined service owns the custom domain. Apache sends `/api/*`, `/up`,
+and `/ready` to Laravel and proxies all other paths to Nuxt inside the same
+container. This preserves the required single browser origin.
 
-## Inputs that must exist before applying the spec
+Laravel connects to Neon using `sslmode=verify-full` and the system CA bundle.
+The complete Neon connection string is a Render secret and must never be
+committed, pasted into logs, or exposed to the frontend.
 
-Record these values in the private release record, never in Git:
+## Cost boundary
 
-- named release and incident operator,
-- alert destination,
-- approved commit and successful CI run URL,
-- existing Managed PostgreSQL cluster name,
-- production APP_KEY,
-- base64-encoded Standard Edition CA certificate,
-- current backup timestamp and verified seven-day recovery policy,
-- measured frontend and backend peak memory,
-- expected monthly cost.
+The selected baseline costs USD 0 per month within provider free-tier limits:
 
-The approved public operator name (`Wolfgang Siegert`) and privacy contact
-(`mailto:WoSiegert@hotmail.com`) are intentionally committed as public runtime
-configuration. Replace both APP_KEY placeholders, both CA placeholders and the
-PostgreSQL cluster placeholder in a private working copy. Do not print or check
-in the rendered spec. Configure deployment and domain alerts to the approved
-destination in DigitalOcean before production traffic is enabled.
+- one Render Free web service,
+- one Neon Free project,
+- no paid Render private service or cron job.
 
-## Database preparation
+Render can suspend the service when free instance hours, bandwidth, build
+minutes, or outbound-traffic limits are exhausted. Neon can suspend compute
+when its free allowance is exhausted. A payment method can turn some overages
+into charges, so the Render spend limit and provider usage alerts must be set
+before release. Upgrading either provider requires a new human decision.
 
-1. Create or select PostgreSQL 18 Standard Edition in FRA1 only after the cost
-   gate is approved.
-2. Attach the App Platform app and database to the same VPC and restrict the
-   database trusted sources to the app and explicitly approved operator access.
-3. Create the joinsplit database and least-privileged joinsplit_app user
-   represented by the App Spec.
-4. Enable verify-full, download the Standard Edition CA certificate and encode
-   it as a single-line base64 secret.
-5. Confirm that the App Platform binding resolves the private database URL; a
-   public database URL is rejected by the Laravel production validator.
+## Required inputs
 
-At runtime backend/bin/with-production-database-ca writes the decoded CA with
-owner-only permissions to the absolute DB_SSLROOTCERT path, then replaces
-itself with the requested process. It never prints the certificate or database
-URL.
+Before creating resources, confirm:
+
+- the approved Git commit and green CI run,
+- the Render workspace and billing method,
+- the Neon project owner and billing method,
+- the named incident operator and alert destination,
+- access to DNS for `tiny-bits.org`,
+- confirmation that both resources show the Free plan before creation.
+
+## Create the Neon database
+
+1. In Neon, create a project in AWS `eu-central-1`.
+2. Select the Free plan. Accept that it provides only the provider's short
+   restore history and no portfolio recovery guarantee.
+3. Keep the generated production role and database dedicated to JoinSplit.
+4. Copy the pooled connection string once into a password manager. Do not send
+   it through chat or commit it.
+5. Confirm that the hostname ends in `.neon.tech` and the connection uses TLS.
+6. Do not create development or CI databases in the production project.
+
+The connection string is later entered as the combined service's `DB_URL`.
+`DB_SSLMODE=verify-full` and
+`DB_SSLROOTCERT=/etc/ssl/certs/ca-certificates.crt` remain separate variables.
 
 ## Pre-deployment verification
 
-1. Confirm the approved commit is on main and its full CI run is green.
-2. Work from a private copy of .do/app.yaml; replace every blocking value.
-3. Validate the complete spec with the current DigitalOcean CLI/API without
-   creating or updating an app.
-4. Confirm both services and the migration job still disable deploy_on_push.
-5. Confirm the canonical domain, TLS 1.3, ingress order, health checks and
-   private database binding.
-6. Confirm debug is disabled, logs use stderr, the client origin is exact,
-   database TLS uses verify-full, only REMOTE_ADDR is trusted as proxy, and
-   secrets have runtime-only scope.
-7. Verify the latest managed backup and record the operator, commit, CI run,
-   expected cost and rollback target.
+From the approved repository revision:
 
-## Deployment
+1. run the complete backend and frontend test suites,
+2. run strict TypeScript and the production Nuxt build,
+3. build the Laravel Docker image,
+4. inspect `render.yaml` and confirm automatic deploys are off,
+5. confirm that no secret is present in source or build output,
+6. confirm the cleanup command is covered by tests.
 
-After a separate explicit human deployment approval:
+Do not proceed if the working tree differs from the approved commit or CI is
+not green.
 
-1. Submit the private rendered spec or update the existing app with it.
-2. The single PRE_DEPLOY job materializes the CA, validates production
-   configuration and runs php artisan migrate --force exactly once.
-3. App Platform must keep traffic away from Laravel until /ready succeeds.
-   /ready performs a minimal database query, rejects pending migrations and
-   returns only ready or unavailable.
-4. Verify /up, /ready, /health, the application shell and one bounded API flow
-   through the canonical domain.
-5. Verify the starter domain redirects to the canonical domain. The starter
-   hostname is only known after app creation, so its explicit redirect is added
-   to the private live spec during this step and retained in release evidence.
-6. Verify the security headers, exact CORS response and absence of cacheable
-   authenticated responses.
-7. Record the deployment ID, migration result, smoke result and operator.
+## Create the Render services
 
-No deployment command may run test seeders, migrate:fresh, destructive cleanup
-or rollback migrations.
+1. In Render, create a Blueprint from the JoinSplit GitHub repository.
+2. Confirm that `render.yaml` proposes exactly one Frankfurt web service with
+   the Free compute plan. Stop if Render proposes a paid service.
+3. Locally run `php artisan key:generate --show` once. Store the complete
+   `base64:...` result in a password manager; do not paste it into chat.
+4. Enter that value as the service's `APP_KEY`. A plain Render-generated Base64
+   value is not a valid substitute because it lacks Laravel's `base64:` key
+   encoding.
+5. Enter the Neon connection string as `DB_URL` when prompted.
+6. Apply the Blueprint only after the cost summary matches the approved plans.
+7. Trigger the deploy. Container startup validates configuration, runs
+   idempotent migrations and performs retention cleanup before serving traffic.
+8. Verify `/up` and `/ready` before changing DNS.
+9. Verify scheduler and startup-cleanup output contains no identifiers or
+   financial data.
+
+## Domain and release verification
+
+1. Add `joinsplit.tiny-bits.org` to the public Nuxt service.
+2. Add the exact DNS record shown by Render at the DNS provider.
+3. Wait for Render's TLS certificate to become valid.
+4. Verify HTTP-to-HTTPS and Render-hostname redirects to the canonical origin.
+5. Verify the application shell and one bounded create/update/delete workflow.
+6. Verify `/ready` through the canonical domain and confirm there is no separate
+   public Laravel service.
+7. Record the commit, Render deploy identifiers, migration result, smoke-test
+   result, and operator.
+
+Do not place real names or financial data in the smoke test.
+
+## Monitoring and recovery
+
+Render runtime logs for the selected workspace must be verified to retain
+data-bearing logs for no more than seven days. Alerts cover failed deploys,
+readiness, 5xx rates, failed cleanup runs, domain/TLS failures, and database
+capacity. A controlled alert test is required before launch.
+
+Neon Free's short restore history is best-effort infrastructure recovery, not a
+portfolio guarantee or user backup. A paid restore window is deliberately
+deferred until the showcase demonstrates a real need.
 
 ## Rollback
 
-If configuration validation, migration, readiness or smoke verification fails,
-do not route normal traffic to the candidate. Select the preceding retained
-App Platform deployment only when it is compatible with the now-current
-database schema. Do not run migrate:rollback as part of application rollback.
-
-A database restore is a separate destructive recovery decision. Restore only
-into an isolated non-production cluster first, verify the recorded RPO/RTO and
-obtain explicit human approval before any production recovery action.
-
-## Evidence required to close JS-029
-
-- repository tests and production builds pass,
-- the template parses and retains every blocking placeholder,
-- fail-fast tests cover unsafe origins, debug mode, public database hosts,
-  missing CA, weak TLS, file logging and proxy trust,
-- /ready and security headers are tested,
-- no DigitalOcean resource, secret or deployment was created by JS-029.
+Use Render's retained successful deploy to roll application code back. Do not
+run `migrate:rollback` automatically. A database restore is a separate,
+explicit incident decision because it can discard accepted mutations. Keep the
+service unavailable if the previous application revision is incompatible with
+the current schema.

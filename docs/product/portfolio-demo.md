@@ -16,9 +16,9 @@ portfolio at `https://tiny-bits.org`. The approved responsible operator is
 Wolfgang Siegert and the public privacy contact is
 `mailto:WoSiegert@hotmail.com`.
 
-The approved initial infrastructure budget ceiling is USD 35 per month,
-excluding domain registration, taxes and exceptional traffic overage. Any
-configuration expected to exceed that ceiling requires a new human decision.
+The selected showcase infrastructure has a USD 0 monthly baseline within the
+Render and Neon free-tier limits. Any paid upgrade or enabled overage requires
+a new human decision.
 
 The complementary deployment and operating boundary is defined in
 [`../engineering/production-operations.md`](../engineering/production-operations.md).
@@ -34,14 +34,14 @@ repository's MVP and architecture documents. The following parts of this
 contract remain requirements that must be implemented and verified before the
 public release:
 
-- the DigitalOcean Frankfurt production deployment and shared HTTPS origin,
+- the Render Frankfurt and Neon AWS Frankfurt production deployment with one
+  shared browser HTTPS origin,
 - automatic active-data expiry after 30 days,
-- the seven-day recovery-backup tail and conservative 38-day technical
-  deletion limit,
+- explicit free-tier availability, deletion and recovery limitations,
 - the expired local-only state and terminal synchronization behavior,
 - the seven-day data-bearing operational-log limit and the provider metadata
   exception,
-- the 24-hour RPO and RTO procedures,
+- cold-start and provider-suspension behavior,
 - the M4 browser verification matrix,
 - the canonical-domain deployment and portfolio entry.
 
@@ -115,9 +115,10 @@ IndexedDB.
 
 When a network connection is available, pending mutations are sent over HTTPS
 to the Laravel API and persisted in PostgreSQL. The approved M4 deployment
-target is DigitalOcean's Frankfurt region, with the frontend and API served
-from one shared HTTPS origin. That production deployment remains a release
-prerequisite until it has been implemented and verified.
+uses one free Render Docker service in Frankfurt for Nuxt and Laravel and Neon
+Free in AWS Frankfurt for PostgreSQL. Apache serves both applications from one
+browser HTTPS origin inside the combined container. That deployment remains a
+release prerequisite until implemented and verified.
 
 The server is authoritative for accepted mutations while the corresponding
 active server data exists. This authority does not make the portfolio demo a
@@ -146,25 +147,17 @@ browser does not change that server-side timestamp. Merely opening the
 application, viewing local data or attempting a mutation that the server does
 not accept does not extend retention.
 
-After expiry, normal API access to the identity and its data ends immediately.
-A daily cleanup must delete the Access Identity and all of its owned Groups,
-Participants, Expenses, Expense Shares and Settlements within the following 24
-hours. The cleanup must be cascading and must not leave independently usable
-financial records behind.
+Cleanup runs at container startup and daily while the free Render service is
+awake. It deletes the Access Identity and all owned records as a cascade. An
+idle free service is suspended, so physical deletion has no guaranteed deadline
+until the service wakes again. Only invented test data is permitted partly
+because this free showcase profile provides no fixed deletion horizon.
 
 ## Recovery Backups and Technical Deletion Limit
 
-Recovery backups may retain purged records for no more than seven additional
-days. They are used only for infrastructure recovery and are not available as
-a user restore mechanism.
-
-With daily cleanup, the conservative maximum technical retention period across
-the active database and recovery backups is therefore 38 days after the last
-successfully accepted mutation. Restoring a backup must reapply the active-data
-expiry rule before the restored service is made available.
-
-Public wording must distinguish the 30-day active-access period from the
-38-day conservative maximum technical deletion boundary.
+Neon Free's short restore history is best-effort provider functionality. It is
+not a user backup and JoinSplit promises no RPO, RTO, or maximum technical
+deletion date. Paid recovery guarantees are outside the initial showcase.
 
 ## Expired Local-Only State
 
@@ -219,17 +212,17 @@ local reset is deliberately limited to the current browser:
 
 The reset must never claim that server data has been erased. Once the old
 credential is removed, the server copy cannot be recovered or manually deleted
-through JoinSplit. Normal API access still ends after 30 days and the
-conservative technical deletion boundary remains 38 days after the last
-successfully accepted mutation.
+through JoinSplit. Server cleanup remains subject to the free-tier wake-up
+limitation described above.
 
 ## Logs
 
 Data-bearing application runtime, request, proxy, security and database logs
-may be retained for no more than seven days. DigitalOcean retains separate
-build and deployment logs and metadata for up to 90 days; those provider
-records must contain neither user data nor secrets and are not application
-runtime logs.
+may be retained for no more than seven days. Render build and deployment logs
+and provider metadata must contain neither user data nor secrets. The actual
+workspace retention must be verified before release; a provider default that
+exceeds this boundary blocks release unless data-bearing output is routed to a
+compliant destination.
 
 Logs must not contain:
 
@@ -242,21 +235,13 @@ Logs must not contain:
 
 Provider defaults must be verified against this contract before release.
 
-## Availability and Recovery Objectives
+## Availability and Recovery Boundary
 
-The portfolio demo has:
-
-- a recovery point objective (RPO) of 24 hours,
-- a recovery time objective (RTO) of 24 hours.
-
-Up to 24 hours of recently confirmed server mutations may therefore be lost
-after an infrastructure recovery. Recovery may take up to 24 hours. The local
-browser state is not a supported server-recovery source, because acknowledged
-pending mutations are removed and no full aggregate re-upload exists.
-
-These objectives are operational limits, not guarantees of uninterrupted
-availability or lossless financial record keeping. They reinforce the rule
-that only invented, non-sensitive test data may be used.
+Render suspends the free service after inactivity and the next request can take
+about a minute to wake it. Monthly provider limits can suspend the application.
+There is no availability SLA, RPO or RTO. The server copy and local browser
+state are not supported backups. These limitations reinforce the rule that only
+invented, non-sensitive test data may be used.
 
 ## M4 Browser Verification Matrix
 
@@ -316,16 +301,16 @@ The public release is permitted only after all of the following are confirmed:
   configuration,
 - the JoinSplit entry on `https://tiny-bits.org`,
 - the responsible operator and contact details,
-- a measured DigitalOcean configuration within the approved USD 35 monthly
-  infrastructure ceiling,
-- the DigitalOcean Frankfurt deployment and shared HTTPS origin,
-- the 30-day active-data cleanup,
-- the seven-day backup tail and conservative 38-day maximum technical deletion
-  boundary,
+- exactly one Render Free web service and one Neon Free project, with no paid
+  upgrade or overage enabled,
+- the Render Frankfurt and Neon AWS Frankfurt deployment with the shared
+  browser HTTPS origin,
+- startup and awake-time cleanup with its missing fixed deletion deadline
+  disclosed publicly,
 - the seven-day limit for data-bearing operational logs and the provider's
   data-free build/deployment log and metadata exception,
 - the local-reset warning and server-retention boundary,
 - the expired local-only user experience,
-- the 24-hour RPO and RTO procedures,
+- the cold-start, suspension and no-recovery-guarantee disclosure,
 - the M4 browser verification matrix,
 - public copy consistent with this contract.

@@ -20,11 +20,29 @@ export function productionConfigurationErrors(environment: Record<string, string
   const errors: string[] = []
   if (canonicalOrigin !== EXPECTED_ORIGIN) errors.push('JOIN_SPLIT_CANONICAL_ORIGIN')
   if (apiOrigin !== canonicalOrigin) errors.push('NUXT_PUBLIC_API_BASE')
+  if (environment.JOIN_SPLIT_COMBINED_SERVICE !== 'true'
+    && !internalHostPort(environment.JOIN_SPLIT_BACKEND_HOSTPORT)) errors.push('JOIN_SPLIT_BACKEND_HOSTPORT')
   if (environment.NODE_ENV !== 'production') errors.push('NODE_ENV')
   if (!configuredText(environment.NUXT_PUBLIC_OPERATOR_NAME)) errors.push('NUXT_PUBLIC_OPERATOR_NAME')
   if (!contactUrl(environment.NUXT_PUBLIC_PRIVACY_CONTACT_URL)) errors.push('NUXT_PUBLIC_PRIVACY_CONTACT_URL')
 
   return errors
+}
+
+export function backendProxyTarget(
+  environment: Record<string, string | undefined>,
+  pathAndQuery: string,
+): string {
+  const hostPort = environment.JOIN_SPLIT_BACKEND_HOSTPORT
+  if (!internalHostPort(hostPort) || !pathAndQuery.startsWith('/') || pathAndQuery.startsWith('//')) {
+    throw new Error('Invalid backend proxy target')
+  }
+
+  return `http://${hostPort}${pathAndQuery}`
+}
+
+function internalHostPort(value: string | undefined): boolean {
+  return Boolean(value && /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?:[1-9][0-9]{1,4}$/i.test(value))
 }
 
 function configuredText(value: string | undefined): boolean {

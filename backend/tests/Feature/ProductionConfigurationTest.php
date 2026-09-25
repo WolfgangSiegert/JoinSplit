@@ -12,7 +12,7 @@ function configureValidProduction(string $certificate): void
         'production.trusted_proxies' => 'REMOTE_ADDR',
         'cors.allowed_origins' => ['https://joinsplit.tiny-bits.org'],
         'database.default' => 'pgsql',
-        'database.connections.pgsql.url' => 'postgresql://user:secret@private-db.example:25060/joinsplit',
+        'database.connections.pgsql.url' => 'postgresql://user:secret@ep-example-pooler.eu-central-1.aws.neon.tech/joinsplit',
         'database.connections.pgsql.sslmode' => 'verify-full',
         'database.connections.pgsql.sslrootcert' => $certificate,
         'logging.default' => 'stderr',
@@ -34,7 +34,7 @@ it('accepts only the approved production boundary without exposing values', func
     unlink($certificate);
 });
 
-it('rejects debug, noncanonical origins, public database hosts, weak TLS and file logging', function () {
+it('rejects debug, noncanonical origins, non-Neon database hosts, weak TLS and file logging', function () {
     config([
         'app.env' => 'local',
         'app.debug' => true,

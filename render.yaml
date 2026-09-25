@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: joinsplit
+    runtime: docker
+    region: frankfurt
+    plan: free
+    branch: main
+    autoDeployTrigger: off
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    dockerCommand: sh bin/start-render-web
+    healthCheckPath: /up
+    domains:
+      - joinsplit.tiny-bits.org
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        value: https://joinsplit.tiny-bits.org
+      - key: APP_KEY
+        sync: false
+      - key: JOIN_SPLIT_VALIDATE_PRODUCTION
+        value: "true"
+      - key: JOIN_SPLIT_COMBINED_SERVICE
+        value: "true"
+      - key: JOIN_SPLIT_CANONICAL_ORIGIN
+        value: https://joinsplit.tiny-bits.org
+      - key: JOIN_SPLIT_CLIENT_ORIGIN
+        value: https://joinsplit.tiny-bits.org
+      - key: TRUSTED_PROXIES
+        value: REMOTE_ADDR
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        sync: false
+      - key: DB_SSLMODE
+        value: verify-full
+      - key: DB_SSLROOTCERT
+        value: /etc/ssl/certs/ca-certificates.crt
+      - key: CACHE_STORE
+        value: array
+      - key: SESSION_DRIVER
+        value: array
+      - key: NODE_ENV
+        value: production
+      - key: NUXT_PUBLIC_API_BASE
+        value: https://joinsplit.tiny-bits.org
+      - key: NUXT_PUBLIC_OPERATOR_NAME
+        value: Wolfgang Siegert
+      - key: NUXT_PUBLIC_PRIVACY_CONTACT_URL
+        value: mailto:WoSiegert@hotmail.com

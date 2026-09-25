@@ -1,0 +1,17 @@
+.git
+.github
+.do
+.DS_Store
+
+backend/.env
+backend/.env.*
+backend/vendor
+backend/storage/logs/*
+
+frontend/.env
+frontend/.env.*
+frontend/.nuxt
+frontend/.output
+frontend/node_modules
+frontend/test-results
+frontend/playwright-report

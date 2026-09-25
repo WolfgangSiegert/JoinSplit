@@ -113,8 +113,9 @@ are documented in the [public portfolio demo contract](docs/product/portfolio-de
 - **Frontend:** Nuxt 4, Vue 3, TypeScript strict, Pinia, Tailwind CSS 4, Nuxt UI
 - **Backend:** Laravel, PHP, PostgreSQL, Pest
 - **Quality:** Vitest, Playwright, axe-core
-- **Deployment target:** DigitalOcean App Platform and Managed PostgreSQL in
-  Frankfurt, behind one canonical HTTPS origin
+- **Showcase deployment target:** one free Render Docker web service in
+  Frankfurt and Neon Free PostgreSQL in AWS Frankfurt, behind one canonical
+  HTTPS origin
 
 ## Local development
 

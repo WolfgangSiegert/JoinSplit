@@ -34,7 +34,7 @@ class ProductionConfiguration
         if (config('database.default') !== 'pgsql') {
             $errors[] = 'DB_CONNECTION';
         }
-        if (! is_string($databaseHost) || ! str_starts_with($databaseHost, 'private-')) {
+        if (! is_string($databaseHost) || ! str_ends_with(strtolower($databaseHost), '.neon.tech')) {
             $errors[] = 'DB_URL';
         }
         if (config('database.connections.pgsql.sslmode') !== 'verify-full') {
