@@ -314,13 +314,17 @@ function downloadBlob(blob: Blob, filename: string): void {
                     <span><small>Zahlt</small><strong>{{ participantName(transfer.senderParticipantId) }}</strong><small v-if="participantIsInactive(transfer.senderParticipantId)">Inaktiv</small></span>
                   </div>
                   <div class="settlement-transfer__direction">
-                    <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--owes" />
-                    <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--warm" />
-                    <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-left" />
+                    <span class="settlement-transfer__caret-group settlement-transfer__caret-group--payer">
+                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--owes" />
+                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--warm" />
+                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-left" />
+                    </span>
                     <strong class="settlement-transfer__amount">{{ formatSettlementAmountMinor(BigInt(transfer.amountMinor)) }}</strong>
-                    <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-right" />
-                    <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--cool" />
-                    <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--receives" />
+                    <span class="settlement-transfer__caret-group settlement-transfer__caret-group--receiver">
+                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-right" />
+                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--cool" />
+                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--receives" />
+                    </span>
                   </div>
                   <div class="settlement-transfer__person settlement-transfer__person--receiver">
                     <ParticipantAvatar :name="participantName(transfer.receiverParticipantId)" :index="participantIndex(transfer.receiverParticipantId)" size="sm" />

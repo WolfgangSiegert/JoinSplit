@@ -52,6 +52,91 @@ final result: passed
 
 ---
 
+## Fine full-height settlement axis — 2026-09-25
+
+### Evidence
+
+- Annotated baseline: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-caret-groups.png`.
+- Browser-rendered implementation: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-fine-caret-span.png`.
+- Generated PNG overview: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-settlement-overview-fine-carets.png`.
+- Browser pixels and CSS viewport: 402 × 870 at device scale 1.
+- State: active group, dark theme, Klartext design, two proposed settlement payments.
+
+### Full-view and focused comparison
+
+The settlement row now uses a two-row card grid. The step number occupies the upper-left row, participants occupy the lower outer cells, and the complete payment axis spans both rows. This makes the caret-plus-amount element fill the vertical interval from the step row's top to the participant row's bottom.
+
+Each caret is a 0.5 px line treatment. The payer and receiver groups retain fixed internal spacing, but each complete group is centered in the available interval between its participant column and the padded central amount. The amount remains geometrically centered in the card.
+
+Measured on the first 402 px row: the axis is 74.88 px high; the amount center differs from the axis center by less than 1 px; the left and right group centers differ from their respective participant-to-amount interval centers by less than 1 px.
+
+### Required fidelity surfaces
+
+- Fonts and typography: amount hierarchy and tabular figures are unchanged; 0.65 rem horizontal padding adds the requested breathing room.
+- Spacing and layout rhythm: the central axis spans both grid rows, while the outer content preserves number-above-participant hierarchy.
+- Colors and tokens: the existing coral-to-blue-to-mint sequence is preserved at reduced visual weight.
+- Image and asset fidelity: browser and canvas export use the same 0.5 px line treatment; no placeholder imagery was introduced.
+- Copy and content: no labels, names, amounts, actions, or explanatory text changed.
+
+### Findings and comparison history
+
+- No actionable P0, P1, or P2 issue remains at 402 px.
+- The 0.5 px strokes are intentionally subtle, especially in the light PNG export. This is the requested line weight rather than an accidental contrast loss.
+
+### Verification
+
+- Browser rendering and geometric bounds checked at 402 × 870.
+- Frozen PNG overview generated and inspected.
+- Typecheck passed.
+- 234 unit tests passed.
+- Production build passed.
+
+final result: passed
+
+---
+
+## Fixed settlement caret groups — 2026-09-25
+
+### Evidence
+
+- Source visual truth and annotated baseline: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-implementation-caret-v6-unboxed.png`, supplemented by the user's browser annotation on the first transfer row.
+- Browser-rendered implementation: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-caret-groups.png`.
+- Generated PNG overview: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-settlement-overview-caret-groups.png`.
+- Implementation pixels and CSS viewport: 402 × 870 at device scale 1.
+- State: active group, dark theme, Klartext design, two proposed settlement payments.
+
+### Full-view and focused comparison
+
+The updated rows preserve the existing participant and amount hierarchy while using the transfer-row height more deliberately. Each side is now a single fixed three-caret group with a constant 0.18 rem internal gap. Both groups and the central amount share one vertical center line. The carets are taller, visually thinner, and end in a short flat tip rather than a sharp point.
+
+The focused 402 px comparison confirms that `8,80 €` and `66,40 €` stay centrally anchored while the two groups remain symmetric. The PNG export reproduces the same grouped rhythm and blunt, narrow caret treatment.
+
+### Required fidelity surfaces
+
+- Fonts and typography: the amount remains the strongest row label, uses tabular numerals, and stays on one line.
+- Spacing and layout rhythm: fixed intra-group spacing replaces distribution across the entire middle track; equal flexible tracks keep the amount centered.
+- Colors and tokens: the existing coral-to-blue-to-mint sequence is unchanged.
+- Image and asset fidelity: no raster placeholder was introduced; the existing transfer visualization and its canvas export were updated together.
+- Copy and content: payer, recipient, amount, step number, notice, and CTA copy are unchanged.
+
+### Comparison history
+
+1. First grouped pass exposed a P2 at 402 px: the longer `66,40 €` row pushed the receiver group toward the participant label, and `Noor` wrapped.
+2. Rebalanced the three flow columns, reduced only the avatar/name gap, and set transfer-row avatars to 40 px.
+3. Post-fix measurements show all participant names at exactly one 24 px line, a 188.85 px direction track, fixed 40.72 px caret groups, and no overlap for either amount.
+
+### Verification
+
+- Browser rendering checked at 402 × 870.
+- Frozen PNG overview generated and inspected.
+- Typecheck passed.
+- 234 unit tests passed.
+- Production build passed.
+
+final result: passed
+
+---
+
 ## Settlement direction carets — selected six-caret revision — 2026-09-25
 
 ### Evidence

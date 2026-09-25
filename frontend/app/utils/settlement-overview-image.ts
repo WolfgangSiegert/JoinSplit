@@ -160,18 +160,18 @@ function drawTransferCard(
   context.font = '700 25px "Avenir Next", "Segoe UI", sans-serif'
   context.fillText(fitText(context, transfer.sender, 180), PADDING + 78, y + 67)
 
-  const caretY = y + 42
-  drawTransferCaret(context, 338, caretY, '#b95f52')
+  const caretY = y + 36
+  drawTransferCaret(context, 352, caretY, '#b95f52')
   drawTransferCaret(context, 380, caretY, '#7d7294')
-  drawTransferCaret(context, 422, caretY, '#4f72b0')
-  drawTransferCaret(context, 636, caretY, '#4d88a3')
+  drawTransferCaret(context, 408, caretY, '#4f72b0')
+  drawTransferCaret(context, 650, caretY, '#4d88a3')
   drawTransferCaret(context, 678, caretY, '#5b83a8')
-  drawTransferCaret(context, 720, caretY, '#3d8064')
+  drawTransferCaret(context, 706, caretY, '#3d8064')
 
   context.textAlign = 'center'
   context.fillStyle = INK
-  context.font = '800 32px "Avenir Next", "Segoe UI", sans-serif'
-  context.fillText(transfer.amount, WIDTH / 2, y + 69)
+  context.font = '800 30px "Avenir Next", "Segoe UI", sans-serif'
+  context.fillText(transfer.amount, WIDTH / 2, y + 72)
   context.textAlign = 'right'
   context.font = '700 25px "Avenir Next", "Segoe UI", sans-serif'
   context.fillText(fitText(context, transfer.receiver, 180), WIDTH - PADDING - 26, y + 67)
@@ -188,14 +188,13 @@ function drawTransferCaret(
   context.translate(x, y)
   context.beginPath()
   context.moveTo(0, 0)
-  context.lineTo(8, 0)
-  context.lineTo(22, 14)
-  context.lineTo(8, 28)
-  context.lineTo(0, 28)
-  context.lineTo(14, 14)
-  context.closePath()
-  context.fillStyle = color
-  context.fill()
+  context.lineTo(10, 20)
+  context.lineTo(0, 40)
+  context.strokeStyle = color
+  context.lineWidth = 0.5
+  context.lineCap = 'butt'
+  context.lineJoin = 'bevel'
+  context.stroke()
   context.restore()
 }
 
