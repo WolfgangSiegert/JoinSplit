@@ -2,6 +2,12 @@
 import { resetDurableState } from '~/persistence/database'
 
 const settingsStore = useSettingsStore()
+const savingAppearance = ref(false)
+const appearancePersistenceError = ref('')
+const visibleColorModeOverride = ref<'system' | 'light' | 'dark' | null>(null)
+const visibleColorMode = computed(() => visibleColorModeOverride.value ?? settingsStore.colorMode)
+const visibleDesignOverride = ref<'2' | '3' | null>(null)
+const visibleDesign = computed(() => visibleDesignOverride.value ?? settingsStore.visualDesign)
 const savingDefault = ref(false)
 const defaultPersistenceError = ref('')
 const visibleDefaultOverride = ref<boolean | null>(null)
@@ -14,12 +20,46 @@ const visibleStrategyOverride = ref<'deterministic' | 'minimum-transfer' | null>
 const visibleStrategy = computed(() =>
   visibleStrategyOverride.value ?? settingsStore.settlementProposalStrategy,
 )
-const savingSettings = computed(() => savingDefault.value || savingStrategy.value)
+const savingSettings = computed(() => savingAppearance.value || savingDefault.value || savingStrategy.value)
 const resetDialog = ref<HTMLDialogElement | null>(null)
 const resetTrigger = ref<HTMLButtonElement | null>(null)
 const resetConfirm = ref<HTMLButtonElement | null>(null)
 const resetting = ref(false)
 const resetError = ref('')
+
+async function changeColorMode(event: Event): Promise<void> {
+  const value = (event.target as HTMLInputElement).value
+  if (value !== 'system' && value !== 'light' && value !== 'dark') return
+
+  visibleColorModeOverride.value = value
+  savingAppearance.value = true
+  appearancePersistenceError.value = ''
+  try {
+    await settingsStore.setColorMode(value)
+  } catch {
+    appearancePersistenceError.value = 'Das Farbschema konnte nicht lokal gespeichert werden.'
+  } finally {
+    visibleColorModeOverride.value = null
+    savingAppearance.value = false
+  }
+}
+
+async function changeVisualDesign(event: Event): Promise<void> {
+  const value = (event.target as HTMLInputElement).value
+  if (value !== '2' && value !== '3') return
+
+  visibleDesignOverride.value = value
+  savingAppearance.value = true
+  appearancePersistenceError.value = ''
+  try {
+    await settingsStore.setVisualDesign(value)
+  } catch {
+    appearancePersistenceError.value = 'Das Design konnte nicht lokal gespeichert werden.'
+  } finally {
+    visibleDesignOverride.value = null
+    savingAppearance.value = false
+  }
+}
 
 async function changeDefault(event: Event): Promise<void> {
   const value = (event.target as HTMLInputElement).checked
@@ -88,11 +128,50 @@ async function confirmReset(): Promise<void> {
       <NuxtLink to="/" class="secondary-link -ml-4 mb-3">← Gruppen</NuxtLink>
 
       <header>
-        <p class="text-sm font-semibold tracking-wide text-brand-700">JoinSplit</p>
-        <h1 class="mt-2 text-3xl font-semibold text-brand-900">Einstellungen</h1>
+        <h1 class="text-3xl font-semibold text-brand-900">Einstellungen</h1>
       </header>
 
-      <section class="card mt-7 p-5" aria-labelledby="group-defaults">
+      <section class="card mt-7 p-5" aria-labelledby="appearance-settings">
+        <h2 id="appearance-settings" class="text-lg font-semibold">Erscheinungsbild</h2>
+
+        <fieldset class="mt-5">
+          <legend class="font-semibold">Farbschema</legend>
+          <div class="appearance-options mt-2 grid grid-cols-3 gap-2">
+            <label v-for="option in [{ value: 'system', label: 'System' }, { value: 'light', label: 'Hell' }, { value: 'dark', label: 'Dunkel' }]" :key="option.value" class="appearance-option">
+              <input
+                type="radio"
+                name="color-mode"
+                :value="option.value"
+                :checked="visibleColorMode === option.value"
+                :disabled="savingSettings"
+                @change="changeColorMode"
+              >
+              <span>{{ option.label }}</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="mt-6">
+          <legend class="font-semibold">Designsprache</legend>
+          <div class="appearance-options mt-2 grid gap-2 sm:grid-cols-2">
+            <label class="appearance-option appearance-option--descriptive">
+              <input type="radio" name="visual-design" value="2" :checked="visibleDesign === '2'" :disabled="savingSettings" @change="changeVisualDesign">
+              <span><strong>Miteinander</strong><small>Warm, rund und personenorientiert</small></span>
+            </label>
+            <label class="appearance-option appearance-option--descriptive">
+              <input type="radio" name="visual-design" value="3" :checked="visibleDesign === '3'" :disabled="savingSettings" @change="changeVisualDesign">
+              <span><strong>Klartext</strong><small>Kompakt, kantig und statement-artig</small></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <p class="mt-3 text-sm text-gray-600">Beide Einstellungen gelten für dieses Gerät und ändern keine Gruppendaten.</p>
+        <p v-if="appearancePersistenceError" class="error-text mt-3 text-sm" role="alert">
+          {{ appearancePersistenceError }}
+        </p>
+      </section>
+
+      <section class="card mt-5 p-5" aria-labelledby="group-defaults">
         <h2 id="group-defaults" class="text-lg font-semibold">Neue Gruppen</h2>
         <label class="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-lg">
           <input

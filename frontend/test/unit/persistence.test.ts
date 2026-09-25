@@ -50,7 +50,12 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
     pendingMutations: [pendingMutation],
     expenses: [],
     settlements: [],
-    settings: { addSelfAsParticipantByDefault: false, settlementProposalStrategy: 'deterministic' },
+    settings: {
+      addSelfAsParticipantByDefault: false,
+      settlementProposalStrategy: 'deterministic',
+      colorMode: 'dark',
+      visualDesign: '3',
+    },
     ...overrides,
   }
 }
@@ -73,6 +78,8 @@ describe('durable state validation and bootstrap', () => {
     expect(useGroupsStore().createGroupSync[GROUP_ID]).toEqual({ state: 'pending', error: null })
     expect(useSettingsStore().addSelfAsParticipantByDefault).toBe(false)
     expect(useSettingsStore().settlementProposalStrategy).toBe('deterministic')
+    expect(useSettingsStore().colorMode).toBe('dark')
+    expect(useSettingsStore().visualDesign).toBe('3')
     expect(persistIdentity).not.toHaveBeenCalled()
   })
 

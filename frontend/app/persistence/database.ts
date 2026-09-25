@@ -17,6 +17,8 @@ export interface DurableAccessIdentity {
 export interface DurableSettings {
   readonly addSelfAsParticipantByDefault: boolean
   readonly settlementProposalStrategy: 'deterministic' | 'minimum-transfer'
+  readonly colorMode: 'system' | 'light' | 'dark'
+  readonly visualDesign: '2' | '3'
 }
 interface AccessIdentityRecord extends DurableAccessIdentity { readonly key: typeof ACCESS_IDENTITY_KEY }
 interface SettingsRecord extends DurableSettings { readonly key: typeof SETTINGS_KEY }
@@ -132,7 +134,10 @@ export async function loadDurableState(): Promise<DurableState> {
   await tx.done
   if (identities.length > 1 || settingsRecords.length > 1) throw new Error('Invalid persistence singleton records')
   const identity = identities[0]
-  const settings = settingsRecords[0]
+  const settings = settingsRecords[0] as (SettingsRecord & {
+    colorMode?: DurableSettings['colorMode']
+    visualDesign?: DurableSettings['visualDesign']
+  }) | undefined
   const participantOrder = new Map(participants.map(participant => [participant.id, participant.order]))
   return {
     accessIdentity: identity ? {
@@ -153,6 +158,8 @@ export async function loadDurableState(): Promise<DurableState> {
     settings: settings ? {
       addSelfAsParticipantByDefault: settings.addSelfAsParticipantByDefault,
       settlementProposalStrategy: settings.settlementProposalStrategy,
+      colorMode: settings.colorMode === 'light' || settings.colorMode === 'dark' ? settings.colorMode : 'system',
+      visualDesign: settings.visualDesign === '3' ? '3' : '2',
     } : null,
   }
 }

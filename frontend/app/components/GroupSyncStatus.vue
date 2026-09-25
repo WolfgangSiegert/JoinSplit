@@ -3,9 +3,11 @@ const props = withDefaults(defineProps<{
   groupId: string
   showSynced?: boolean
   pendingDeletion?: boolean
+  compact?: boolean
 }>(), {
   showSynced: false,
   pendingDeletion: false,
+  compact: false,
 })
 
 const groupId = computed(() => props.groupId)
@@ -32,23 +34,40 @@ const message = computed(() => {
 const canRetry = computed(() => visibleState.value === 'failed'
   && syncState.value?.error?.retryable === true)
 const statusClass = computed(() => {
-  if (visibleState.value === 'failed') return 'bg-red-50 text-red-950'
-  if (visibleState.value === 'offline') return 'bg-gray-100 text-gray-800'
-  if (visibleState.value === 'synced') return 'bg-brand-50 text-brand-900'
-  return 'bg-amber-50 text-amber-950'
+  if (visibleState.value === 'failed') return 'border-red-200 bg-red-50 text-red-950'
+  if (visibleState.value === 'offline') return 'border-gray-300 bg-gray-100 text-gray-800'
+  if (visibleState.value === 'synced') return 'border-emerald-200 bg-emerald-50 text-emerald-950'
+  return 'border-amber-300 bg-amber-50 text-amber-950'
+})
+
+const stateLabel = computed(() => {
+  if (visibleState.value === 'failed') return 'Fehler'
+  if (visibleState.value === 'offline') return 'Offline'
+  if (visibleState.value === 'synced') return 'Aktuell'
+  if (visibleState.value === 'syncing') return 'Wird synchronisiert'
+  return 'Ausstehend'
 })
 </script>
 
 <template>
   <div
     v-if="message"
-    class="rounded-lg p-3"
-    :class="statusClass"
+    :data-state="visibleState"
+    :class="[
+      props.compact && visibleState === 'synced' ? 'inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-sm font-bold' : 'status-panel',
+      statusClass,
+    ]"
     role="status"
     aria-live="polite"
     aria-atomic="true"
   >
-    <p>{{ message }}</p>
+    <template v-if="props.compact && visibleState === 'synced'">
+      <span>Synchronisiert</span>
+    </template>
+    <template v-else>
+      <p class="text-xs font-extrabold uppercase tracking-wider">{{ stateLabel }}</p>
+      <p class="mt-1 text-sm font-medium">{{ message }}</p>
+    </template>
     <button
       v-if="canRetry"
       type="button"

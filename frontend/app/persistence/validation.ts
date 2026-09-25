@@ -84,7 +84,9 @@ export function validateDurableState(value: DurableState): DurableState {
     || !value.expenses.every(expense)
     || !value.settlements.every(durableSettlement)
     || (value.settings !== null && (typeof value.settings.addSelfAsParticipantByDefault !== 'boolean'
-      || (value.settings.settlementProposalStrategy !== 'deterministic' && value.settings.settlementProposalStrategy !== 'minimum-transfer')))) throw new Error('Invalid persisted state shape')
+      || (value.settings.settlementProposalStrategy !== 'deterministic' && value.settings.settlementProposalStrategy !== 'minimum-transfer')
+      || (value.settings.colorMode !== 'system' && value.settings.colorMode !== 'light' && value.settings.colorMode !== 'dark')
+      || (value.settings.visualDesign !== '2' && value.settings.visualDesign !== '3')))) throw new Error('Invalid persisted state shape')
 
   const groupIds = new Set(value.groups.map(item => item.id)); const participantIds = new Set(value.participants.map(item => item.id))
   const expenseIds = new Set(value.expenses.map(item => item.id))

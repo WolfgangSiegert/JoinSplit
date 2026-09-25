@@ -127,8 +127,9 @@ async function cancelRename(id: string): Promise<void> {
     <div v-if="group" class="page-content">
       <NuxtLink :to="`/groups/${group.id}`" class="secondary-link -ml-4 mb-3">← Gruppe</NuxtLink>
       <header>
-        <p class="text-sm font-semibold tracking-wide text-brand-700">{{ group.name }}</p>
-        <h1 class="mt-2 text-3xl font-semibold text-brand-900">Teilnehmer</h1>
+        <p class="eyebrow">{{ group.name }}</p>
+        <h1 class="mt-2 text-4xl font-bold text-brand-900">Personen</h1>
+        <p class="mt-2 text-ink-700">Identitäten bleiben über Ausgaben und Salden hinweg klar erkennbar.</p>
       </header>
 
       <GroupAreaNavigation :group-id="group.id" />
@@ -154,10 +155,11 @@ async function cancelRename(id: string): Promise<void> {
       <p v-if="statusIsError" class="error-text mt-4" role="alert">{{ status }}</p>
       <p v-else class="sr-only" role="status" aria-live="polite">{{ status }}</p>
       <p v-if="!participants.length" class="card mt-6 p-5 text-center">Noch keine Teilnehmer.</p>
-      <ul v-else class="mt-6 space-y-3" aria-label="Teilnehmerliste" :aria-busy="Boolean(busyAction)">
-        <li v-for="participant in participants" :key="participant.id" class="card p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div><p class="font-semibold">{{ participant.name }}</p><p class="text-sm text-gray-600">{{ participant.status === 'active' ? 'Aktiv' : 'Inaktiv' }}</p></div>
+      <ul v-else class="ledger-list mt-6" aria-label="Teilnehmerliste" :aria-busy="Boolean(busyAction)">
+        <li v-for="(participant, index) in participants" :key="participant.id" class="py-4">
+          <div class="flex items-center gap-3">
+            <ParticipantAvatar :name="participant.name" :index="index" size="lg" />
+            <div><p class="font-bold">{{ participant.name }}</p><p class="text-sm text-ink-700">{{ participant.status === 'active' ? 'Aktiv' : 'Inaktiv' }}</p></div>
           </div>
           <form v-if="group.status === 'active' && editingId === participant.id" class="mt-3" :aria-busy="busyAction === `rename:${participant.id}`" @submit.prevent="submitRename(participant.id)">
             <label :for="`rename-${participant.id}`" class="font-semibold">Neuer Name</label>

@@ -14,30 +14,30 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
   <main class="page-shell">
     <div class="page-content">
       <header class="mb-8">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <p class="text-sm font-semibold tracking-wide text-brand-700">JoinSplit</p>
+        <div class="flex flex-wrap items-center justify-end gap-2">
           <nav class="flex flex-wrap justify-end" aria-label="Allgemeine Navigation">
             <NuxtLink to="/demo" class="secondary-link">Demo & Daten</NuxtLink>
             <NuxtLink to="/settings" class="secondary-link -mr-4">Einstellungen</NuxtLink>
           </nav>
         </div>
-        <h1 class="mt-2 text-3xl font-semibold text-brand-900">Deine Gruppen</h1>
-        <p class="mt-2 text-gray-600">Gemeinsame Ausgaben im Blick.</p>
+        <h1 class="mt-5 text-4xl font-bold text-brand-900">Deine Gruppen</h1>
+        <p class="mt-2 text-lg text-ink-700">Gemeinsame Ausgaben, klar und menschlich.</p>
       </header>
 
       <p v-if="route.query.deleted === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Gruppe lokal zur endgültigen Löschung vorgemerkt.</p>
       <p v-if="route.query.reset === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Lokale Daten wurden zurückgesetzt. Eine neue Browser-Identität wurde erstellt.</p>
 
       <section v-if="activeGroups.length" aria-labelledby="active-groups">
-        <h2 id="active-groups" class="text-lg font-semibold">Aktive Gruppen</h2>
-        <ul class="mt-3 space-y-3">
-          <li v-for="group in activeGroups" :key="group.id" class="card">
+        <h2 id="active-groups" class="eyebrow">Aktive Gruppen</h2>
+        <ul class="ledger-list mt-3">
+          <li v-for="(group, index) in activeGroups" :key="group.id">
             <NuxtLink
               :to="`/groups/${group.id}`"
-              class="flex min-h-14 items-center justify-between rounded-2xl px-4 py-3 font-semibold"
+              class="ledger-row font-semibold"
             >
-              <span>{{ group.name }}</span>
-              <span aria-hidden="true">→</span>
+              <ParticipantAvatar :name="group.name" :index="index" size="lg" />
+              <span class="min-w-0 flex-1"><span class="block break-words font-bold">{{ group.name }}</span><span class="mt-1 block text-sm font-medium text-ink-700">Aktiv · {{ group.currency }}</span></span>
+              <span class="text-xl" aria-hidden="true">›</span>
             </NuxtLink>
           </li>
         </ul>
@@ -75,7 +75,7 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
         </ul>
       </section>
 
-      <NuxtLink to="/groups/new" class="primary-button mt-6 w-full">Neue Gruppe</NuxtLink>
+      <NuxtLink to="/groups/new" class="primary-button mt-7 w-full">Neue Gruppe starten</NuxtLink>
     </div>
   </main>
 </template>

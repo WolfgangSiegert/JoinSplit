@@ -5,18 +5,18 @@ const route = useRoute()
 const areas = computed(() => [
   { label: 'Ausgaben', to: `/groups/${props.groupId}`, current: route.path === `/groups/${props.groupId}` },
   { label: 'Salden', to: `/groups/${props.groupId}/balances`, current: route.path.startsWith(`/groups/${props.groupId}/balances`) || route.path.startsWith(`/groups/${props.groupId}/settlements`) },
-  { label: 'Teilnehmer verwalten', to: `/groups/${props.groupId}/participants`, current: route.path === `/groups/${props.groupId}/participants` },
+  { label: 'Personen', to: `/groups/${props.groupId}/participants`, current: route.path === `/groups/${props.groupId}/participants` },
 ])
 </script>
 
 <template>
-  <nav class="mt-6" aria-label="Gruppenbereiche">
-    <ul class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+  <nav class="group-area-navigation mt-6 overflow-x-auto rounded-2xl bg-white/65 p-1" aria-label="Gruppenbereiche">
+    <ul class="grid min-w-[20rem] grid-cols-3 gap-1">
       <li v-for="area in areas" :key="area.to">
         <NuxtLink
           :to="area.to"
-          class="secondary-button h-full w-full text-center"
-          :class="area.current ? 'bg-brand-50' : ''"
+          class="flex min-h-12 w-full items-center justify-center rounded-xl px-2 text-center text-sm font-bold text-ink-700 transition-colors"
+          :class="area.current ? 'bg-brand-50 text-brand-700 shadow-sm' : 'hover:bg-white hover:text-ink-900'"
           :aria-current="area.current ? 'page' : undefined"
         >
           {{ area.label }}

@@ -242,6 +242,7 @@ test('switching strategy shows the exact proposal without changing financial sta
   const transfers = proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' }).getByRole('listitem')
   await expect(transfers).toHaveCount(3)
 
+  await proposal.locator('summary').click()
   await proposal.getByLabel('Strategie').selectOption('minimum-transfer')
   await expect(transfers).toHaveCount(2)
   await expect(transfers.nth(0)).toContainText('Debtor A zahlt Creditor B')
@@ -274,6 +275,7 @@ test('keeps an unavailable persisted exact strategy visible and recovers below t
   await expect(storedFinancialMutationCounts(page)).resolves.toEqual({ settlements: 0, pendingMutations: 0 })
   await expectNoAxeViolations(page)
 
+  await proposal.locator('summary').click()
   await strategy.selectOption('deterministic')
   await expect(strategy).toHaveValue('deterministic')
   await expect(proposal).toContainText('bei 13 offenen Salden deaktiviert')
