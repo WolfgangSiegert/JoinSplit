@@ -14,6 +14,7 @@ class ProductionConfiguration
         $appOrigin = $this->origin((string) config('app.url'));
         $databaseUrl = (string) config('database.connections.pgsql.url');
         $databaseHost = parse_url($databaseUrl, PHP_URL_HOST);
+        $databaseSslMode = $this->databaseSslMode($databaseUrl);
         $rootCertificate = config('database.connections.pgsql.sslrootcert');
 
         if (config('app.env') !== 'production') {
@@ -37,7 +38,7 @@ class ProductionConfiguration
         if (! is_string($databaseHost) || ! str_ends_with(strtolower($databaseHost), '.neon.tech')) {
             $errors[] = 'DB_URL';
         }
-        if (config('database.connections.pgsql.sslmode') !== 'verify-full') {
+        if ($databaseSslMode !== 'verify-full') {
             $errors[] = 'DB_SSLMODE';
         }
         if (! is_string($rootCertificate) || ! str_starts_with($rootCertificate, '/') || ! is_readable($rootCertificate)) {
@@ -72,5 +73,17 @@ class ProductionConfiguration
         $port = isset($parts['port']) ? ':'.$parts['port'] : '';
 
         return strtolower($parts['scheme'].'://'.$parts['host'].$port);
+    }
+
+    private function databaseSslMode(string $databaseUrl): mixed
+    {
+        $query = parse_url($databaseUrl, PHP_URL_QUERY);
+        if (! is_string($query) || $query === '') {
+            return config('database.connections.pgsql.sslmode');
+        }
+
+        parse_str($query, $options);
+
+        return $options['sslmode'] ?? config('database.connections.pgsql.sslmode');
     }
 }

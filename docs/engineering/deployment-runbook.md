@@ -59,8 +59,10 @@ Before creating resources, confirm:
 2. Select the Free plan. Accept that it provides only the provider's short
    restore history and no portfolio recovery guarantee.
 3. Keep the generated production role and database dedicated to JoinSplit.
-4. Copy the pooled connection string once into a password manager. Do not send
-   it through chat or commit it.
+4. Copy the pooled connection URL once into a password manager. Store only the
+   `postgresql://...` URL, without a surrounding `psql` command or quotes, and
+   replace Neon's `sslmode=require` query value with `sslmode=verify-full`.
+   Do not send the resulting URL through chat or commit it.
 5. Confirm that the hostname ends in `.neon.tech` and the connection uses TLS.
 6. Do not create development or CI databases in the production project.
 
@@ -92,7 +94,8 @@ not green.
 4. Enter that value as the service's `APP_KEY`. A plain Render-generated Base64
    value is not a valid substitute because it lacks Laravel's `base64:` key
    encoding.
-5. Enter the Neon connection string as `DB_URL` when prompted.
+5. Enter the prepared Neon connection URL as `DB_URL` when prompted. Startup
+   rejects a URL-level `sslmode` that weakens `verify-full`.
 6. Apply the Blueprint only after the cost summary matches the approved plans.
 7. Trigger the deploy. Container startup validates configuration, runs
    idempotent migrations and performs retention cleanup before serving traffic.
