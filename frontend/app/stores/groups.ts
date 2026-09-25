@@ -6,7 +6,7 @@ import type { Settlement } from '../domain/settlement'
 
 export type MutationSyncErrorKind =
   | 'network' | 'unauthorized' | 'conflict' | 'validation' | 'server'
-  | 'unexpected' | 'reconciliation' | 'identity' | 'persistence'
+  | 'unexpected' | 'reconciliation' | 'identity' | 'persistence' | 'expired' | 'rate-limited'
 
 export interface MutationSyncError {
   readonly kind: MutationSyncErrorKind

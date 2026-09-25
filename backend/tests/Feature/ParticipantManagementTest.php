@@ -21,6 +21,8 @@ function js16Headers(string $id = JS16_ACCESS, string $credential = JS16_CREDENT
 
 function js16CreateGroup(): void
 {
+    registerAccessIdentityForTest(JS16_ACCESS, JS16_CREDENTIAL);
+    registerAccessIdentityForTest(JS16_OTHER_ACCESS, JS16_OTHER_CREDENTIAL);
     test()->withHeaders(js16Headers())->postJson('/api/groups', [
         'groupId' => JS16_GROUP, 'name' => 'Reise', 'currency' => 'EUR', 'actorId' => JS16_ACCESS,
         'initialParticipant' => ['participantId' => JS16_PARTICIPANT, 'name' => 'Alice'],

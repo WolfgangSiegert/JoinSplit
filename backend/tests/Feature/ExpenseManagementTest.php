@@ -42,6 +42,8 @@ function js17CreateGroup(
     string $accessId = JS17_ACCESS,
     string $credential = JS17_CREDENTIAL,
 ): void {
+    registerAccessIdentityForTest($accessId, $credential);
+    registerAccessIdentityForTest(JS17_OTHER_ACCESS, JS17_OTHER_CREDENTIAL);
     test()->withHeaders(js17Headers($accessId, $credential))->postJson('/api/groups', [
         'groupId' => $groupId,
         'name' => 'Reise',

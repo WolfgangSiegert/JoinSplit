@@ -39,7 +39,7 @@ async function focusWithKeyboard(page: Page, locator: Locator, maximumTabs = 10)
 
 async function durableSnapshot(page: Page): Promise<DurableSnapshot> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 4)
+    const request = indexedDB.open('joinsplit', 5)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -182,6 +182,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   ])
   expect(responses.map(response => response.status())).toEqual([201, 201, 200, 201, 200, 204])
   expect(apiRequests.map(request => `${request.method()} ${new URL(request.url()).pathname}`)).toEqual([
+    'POST /api/access-identities',
     'POST /api/groups',
     `POST /api/groups/${groupId}/participants`,
     expect.stringMatching(new RegExp(`^PATCH /api/groups/${groupId}/participants/[0-9a-f-]+$`)),

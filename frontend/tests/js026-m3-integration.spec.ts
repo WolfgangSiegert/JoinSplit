@@ -7,7 +7,7 @@ interface DurableState {
 
 async function durableState(page: Page): Promise<DurableState> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 4)
+    const request = indexedDB.open('joinsplit', 5)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -116,6 +116,7 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await expect.poll(async () => (await durableState(page)).pending).toEqual([])
 
   expect(apiRequests.map(request => `${request.method()} ${new URL(request.url()).pathname}`)).toEqual([
+    'POST /api/access-identities',
     'POST /api/groups',
     `POST /api/groups/${groupId}/participants`,
     `POST /api/groups/${groupId}/expenses`,
@@ -123,7 +124,7 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
     `POST /api/groups/${groupId}/settlements`,
     `PATCH /api/groups/${groupId}`,
   ])
-  expect(apiResponses.map(response => response.status())).toEqual([201, 201, 201, 200, 201, 200])
+  expect(apiResponses.map(response => response.status())).toEqual([201, 201, 201, 201, 200, 201, 200])
 
   await page.goto(`/groups/${groupId}/balances`)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('+3,00 €')

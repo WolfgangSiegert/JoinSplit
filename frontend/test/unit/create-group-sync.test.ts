@@ -177,6 +177,8 @@ describe('Create Group synchronization', () => {
 
   test.each([
     [401, 'unauthorized', false],
+    [410, 'expired', false],
+    [429, 'rate-limited', true],
     [409, 'conflict', false],
     [422, 'validation', false],
     [503, 'server', true],

@@ -35,7 +35,12 @@ function postCreateGroup(
     array $payload,
     string $identityId = ACCESS_ID,
     string $credential = CREDENTIAL,
+    bool $register = true,
 ) {
+    if ($register && ! AccessIdentity::query()->whereKey(strtolower($identityId))->exists()) {
+        registerAccessIdentityForTest($identityId, $credential);
+    }
+
     return test()->withHeaders([
         'X-Access-Identity-ID' => $identityId,
         'Authorization' => "Bearer {$credential}",
@@ -43,8 +48,11 @@ function postCreateGroup(
     ])->postJson('/api/groups', $payload);
 }
 
-it('registers an unknown identity and verifies an identical retry without rotating its digest', function () {
-    postCreateGroup(createGroupPayload())->assertCreated();
+it('requires explicit registration and verifies an identical registration retry without rotating its digest', function () {
+    postCreateGroup(createGroupPayload(), register: false)
+        ->assertGone()
+        ->assertExactJson(['message' => 'Access identity is no longer available.']);
+    registerAccessIdentityForTest(ACCESS_ID, CREDENTIAL);
 
     $identity = AccessIdentity::findOrFail(ACCESS_ID);
     $originalDigest = $identity->credential_digest;
@@ -52,31 +60,32 @@ it('registers an unknown identity and verifies an identical retry without rotati
     expect($originalDigest)->toBe(hash('sha256', hex2bin(CREDENTIAL)))
         ->not->toBe(CREDENTIAL);
 
-    postCreateGroup(createGroupPayload())->assertOk();
+    registerAccessIdentityForTest(ACCESS_ID, CREDENTIAL);
+    postCreateGroup(createGroupPayload())->assertCreated();
 
     expect($identity->fresh()->credential_digest)->toBe($originalDigest)
         ->and(AccessIdentity::count())->toBe(1);
 });
 
 it('rejects a different credential for a known identity without replacing the digest', function () {
-    postCreateGroup(createGroupPayload())->assertCreated();
+    registerAccessIdentityForTest(ACCESS_ID, CREDENTIAL);
     $digest = AccessIdentity::findOrFail(ACCESS_ID)->credential_digest;
 
-    postCreateGroup(
-        createGroupPayload(['groupId' => OTHER_GROUP_ID]),
-        ACCESS_ID,
-        OTHER_CREDENTIAL,
-    )->assertUnauthorized()
+    test()->withHeaders([
+        'X-Access-Identity-ID' => ACCESS_ID,
+        'Authorization' => 'Bearer '.OTHER_CREDENTIAL,
+        'Accept' => 'application/json',
+    ])->postJson('/api/access-identities')->assertUnauthorized()
         ->assertExactJson(['message' => 'Access identity authentication failed.']);
 
     expect(AccessIdentity::findOrFail(ACCESS_ID)->credential_digest)->toBe($digest)
-        ->and(Group::count())->toBe(1);
+        ->and(Group::count())->toBe(0);
 });
 
 it('requires a valid version 4 identity and a 32-byte lowercase hexadecimal bearer credential', function () {
-    postCreateGroup(createGroupPayload(), 'not-a-uuid')->assertUnauthorized();
-    postCreateGroup(createGroupPayload(), ACCESS_ID, strtoupper(CREDENTIAL))->assertUnauthorized();
-    postCreateGroup(createGroupPayload(), ACCESS_ID, 'abcd')->assertUnauthorized();
+    postCreateGroup(createGroupPayload(), 'not-a-uuid', CREDENTIAL, false)->assertUnauthorized();
+    postCreateGroup(createGroupPayload(), ACCESS_ID, strtoupper(CREDENTIAL), false)->assertUnauthorized();
+    postCreateGroup(createGroupPayload(), ACCESS_ID, 'abcd', false)->assertUnauthorized();
 
     expect(AccessIdentity::count())->toBe(0);
 });
@@ -296,7 +305,7 @@ it('does not leave domain data after failed group creation', function () {
 
     expect(Group::count())->toBe(0)
         ->and(Participant::count())->toBe(0)
-        ->and(AccessIdentity::count())->toBe(0);
+        ->and(AccessIdentity::count())->toBe(1);
 });
 
 it('never serializes the credential or its digest', function () {

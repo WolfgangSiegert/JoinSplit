@@ -211,7 +211,7 @@ describe('local Create Group workflow', () => {
   })
 
   test('does not expose partial Pinia state when durable creation fails', async () => {
-    useAccessIdentityStore().hydrate({ id: ACTOR_ID, credential: '0123456789abcdef'.repeat(4) })
+    useAccessIdentityStore().hydrate({ id: ACTOR_ID, credential: '0123456789abcdef'.repeat(4), synchronizationStatus: 'registered' })
     const store = useGroupsStore()
     const { createGroup } = useCreateGroup({
       persistCreation: vi.fn(async () => { throw new Error('transaction failed') }),
@@ -224,7 +224,7 @@ describe('local Create Group workflow', () => {
   })
 
   test('updates Pinia only after durable creation completes', async () => {
-    useAccessIdentityStore().hydrate({ id: ACTOR_ID, credential: '0123456789abcdef'.repeat(4) })
+    useAccessIdentityStore().hydrate({ id: ACTOR_ID, credential: '0123456789abcdef'.repeat(4), synchronizationStatus: 'registered' })
     const store = useGroupsStore()
     let release!: () => void
     const persistence = new Promise<void>(resolve => { release = resolve })

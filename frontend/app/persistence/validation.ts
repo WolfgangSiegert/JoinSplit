@@ -76,7 +76,10 @@ function expense(value: unknown): value is Expense {
 
 export function validateDurableState(value: DurableState): DurableState {
   const identity = value.accessIdentity
-  if (identity !== null && (!uuid(identity.id) || !CREDENTIAL.test(identity.credential))) throw new Error('Invalid persisted access identity')
+  if (identity !== null && (!uuid(identity.id) || !CREDENTIAL.test(identity.credential)
+    || !['never-synchronized', 'registered', 'expired-local-only'].includes(identity.synchronizationStatus))) {
+    throw new Error('Invalid persisted access identity')
+  }
   if (!value.groups.every(group) || !value.participants.every(participant) || !value.pendingMutations.every(mutation)
     || !value.expenses.every(expense)
     || !value.settlements.every(durableSettlement)

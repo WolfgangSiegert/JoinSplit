@@ -5,6 +5,7 @@ import { synchronizeExpenseMutation } from '../services/expense-sync'
 import { synchronizeSettlementMutation } from '../services/settlement-sync'
 import { synchronizeGroupLifecycleMutation } from '../services/group-lifecycle-sync'
 import type { PendingMutation } from '../domain/pending-mutation'
+import { ensureAccessIdentityRegistered, markAccessIdentityExpired } from '../services/access-identity-registration'
 
 function unreachableMutation(mutation: never): never { throw new Error(`Unsupported pending mutation: ${String(mutation)}`) }
 
@@ -17,30 +18,50 @@ export function usePendingCreateGroupSync() {
   let running = false
 
   async function synchronizeMutation(mutation: PendingMutation) {
+    const registration = await ensureAccessIdentityRegistered({
+      apiBase: config.public.apiBase,
+      identity: identityStore,
+      online: online.value,
+    })
+    if (registration.outcome === 'failed') {
+      groupsStore.failMutationSync(mutation.id, registration.error)
+      return registration
+    }
+
     const options = { mutationId: mutation.id, apiBase: config.public.apiBase, identity: identityStore, groupsStore, online: online.value }
+    let result
     switch (mutation.type) {
       case 'CreateGroup':
-        return synchronizeCreateGroup({ groupId: mutation.groupId, apiBase: config.public.apiBase, identity: identityStore, groupsStore, online: online.value })
+        result = await synchronizeCreateGroup({ groupId: mutation.groupId, apiBase: config.public.apiBase, identity: identityStore, groupsStore, online: online.value })
+        break
       case 'CreateExpense':
       case 'UpdateExpense':
       case 'DeleteExpense':
-        return synchronizeExpenseMutation(options)
+        result = await synchronizeExpenseMutation(options)
+        break
       case 'CreateSettlement':
       case 'UpdateSettlement':
       case 'DeleteSettlement':
-        return synchronizeSettlementMutation(options)
+        result = await synchronizeSettlementMutation(options)
+        break
       case 'AddParticipant':
       case 'RenameParticipant':
       case 'DeactivateParticipant':
       case 'DeleteParticipant':
-        return synchronizeParticipantMutation(options)
+        result = await synchronizeParticipantMutation(options)
+        break
       case 'ArchiveGroup':
       case 'ReactivateGroup':
       case 'DeleteGroup':
-        return synchronizeGroupLifecycleMutation(options)
+        result = await synchronizeGroupLifecycleMutation(options)
+        break
       default:
         return unreachableMutation(mutation)
     }
+    if (result.outcome === 'failed' && result.error.kind === 'expired') {
+      try { await markAccessIdentityExpired({ identity: identityStore }) } catch { /* terminal in memory */ }
+    }
+    return result
   }
 
   async function synchronizePending(): Promise<void> {

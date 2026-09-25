@@ -230,13 +230,16 @@ After the server copy becomes unavailable:
 - the client does not silently generate new IDs or upload the expired Group as
   a new Group.
 
-The client interprets this result as ended synchronization only when its local
+The API uses generic `410 Gone` for an ordinary mutation whose syntactically
+valid Access Identity is no longer present. The client interprets this result
+as ended synchronization only when its local
 state records a prior successful synchronization for that identity. Every
 Group under that local identity becomes terminal local-only state. The
 supported client sends registration only for a fresh identity that has never
 synchronized and does not re-register an expired identity or synchronize newly
-created Groups under it. The exact API status and client presentation remain
-implementation decisions.
+created Groups under it. Missing or malformed credentials and credential
+mismatches use generic `401` responses instead. Public-facing presentation of
+the terminal state remains part of the disclosure work.
 
 After physical cleanup, the server has no retirement record and cannot
 distinguish the old random identity ID from another unseen ID. M4 intentionally
@@ -244,6 +247,17 @@ adds no permanent revocation ledger. Non-re-registration is therefore enforced
 by the supported client protocol, not promised as protection against modified
 clients or direct API submissions. The explicit registration endpoint remains
 rate-limited and ordinary mutation endpoints never register unknown identities.
+
+The initial public-demo limits are deterministic fixed windows:
+
+- identity registration: thirty requests per minute per source IP,
+- Group creation: ten requests per minute per source IP and Access Identity,
+- all other authenticated mutations: sixty requests per minute per source IP
+  and Access Identity.
+
+Exceeding a limit returns a generic `429` response and never logs credentials
+or request bodies. Changing these limits requires measured operational evidence;
+it is configuration tuning, not a product-scope expansion.
 
 ### Local reset
 

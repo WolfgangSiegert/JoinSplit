@@ -22,7 +22,7 @@ async function seedSettlementState(
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   await page.evaluate(async ({ groupId, debtorId, creditorId, expenseId, settlementId, archived, inactiveDebtor, includeSettlement }) => {
-    const request = indexedDB.open('joinsplit', 4)
+    const request = indexedDB.open('joinsplit', 5)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
@@ -56,7 +56,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   await page.evaluate(async ({ groupId, debtorId, creditorId, expenseId }) => {
-    const request = indexedDB.open('joinsplit', 4)
+    const request = indexedDB.open('joinsplit', 5)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
@@ -102,7 +102,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   await page.getByRole('button', { name: 'Endgültig löschen' }).click()
   await expect(page.getByText('Noch keine Zahlungen erfasst.')).toBeVisible()
   const mutationTypes = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 4)
+    const request = indexedDB.open('joinsplit', 5)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
     const records = await new Promise<Array<{ type: string; createdOrder: number }>>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
@@ -219,7 +219,7 @@ test('long participant names reflow on Settlement list and detail at 320px', asy
   await seedSettlementState(page, { settlement: true })
   const longName = 'TeilnehmernameOhneTrennzeichen'.repeat(3)
   await page.evaluate(async ({ debtorId, creditorId, longName }) => {
-    const request = indexedDB.open('joinsplit', 4)
+    const request = indexedDB.open('joinsplit', 5)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const tx = db.transaction('participants', 'readwrite')
     const store = tx.objectStore('participants')

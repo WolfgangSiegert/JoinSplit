@@ -9,20 +9,29 @@ function createCredential(): string {
 export interface AccessIdentity {
   readonly id: string
   readonly credential: string
+  readonly synchronizationStatus: AccessIdentitySynchronizationStatus
 }
 
+export type AccessIdentitySynchronizationStatus = 'never-synchronized' | 'registered' | 'expired-local-only'
+
 export function generateAccessIdentity(): AccessIdentity {
-  return { id: crypto.randomUUID(), credential: createCredential() }
+  return { id: crypto.randomUUID(), credential: createCredential(), synchronizationStatus: 'never-synchronized' }
 }
 
 export const useAccessIdentityStore = defineStore('accessIdentity', () => {
   const accessIdentityId = ref<string | null>(null)
   const credential = ref<string | null>(null)
+  const synchronizationStatus = ref<AccessIdentitySynchronizationStatus>('never-synchronized')
 
   function hydrate(identity: AccessIdentity): void {
     accessIdentityId.value = identity.id
     credential.value = identity.credential
+    synchronizationStatus.value = identity.synchronizationStatus
   }
 
-  return { accessIdentityId, credential, hydrate }
+  function markSynchronizationStatus(status: AccessIdentitySynchronizationStatus): void {
+    synchronizationStatus.value = status
+  }
+
+  return { accessIdentityId, credential, synchronizationStatus, hydrate, markSynchronizationStatus }
 })

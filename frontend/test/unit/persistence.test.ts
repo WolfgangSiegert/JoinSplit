@@ -30,7 +30,7 @@ const pendingMutation: PendingCreateGroupMutation = {
 
 function durableState(overrides: Partial<DurableState> = {}): DurableState {
   return {
-    accessIdentity: { id: ACTOR_ID, credential: CREDENTIAL },
+    accessIdentity: { id: ACTOR_ID, credential: CREDENTIAL, synchronizationStatus: 'registered' },
     groups: [{
       id: GROUP_ID,
       name: 'Wochenende',
@@ -160,7 +160,7 @@ describe('durable state validation and bootstrap', () => {
 
   test('fails safely without hydrating malformed persisted state', async () => {
     const malformed = durableState({
-      accessIdentity: { id: ACTOR_ID, credential: 'not-a-credential' },
+      accessIdentity: { id: ACTOR_ID, credential: 'not-a-credential', synchronizationStatus: 'registered' },
     })
     await useApplicationLifecycleStore().initialize({
       load: vi.fn(async () => malformed),

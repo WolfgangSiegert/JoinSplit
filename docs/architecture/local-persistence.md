@@ -296,15 +296,16 @@ Online:
 bestehende Mutation darf erneut synchronisiert werden.
 
 Ein nachgewiesener Ablauf der zeitlich begrenzten M4-Serverkopie ist dagegen
-kein temporärer Sync-Fehler. Die dafür geplante Implementierung persistiert
-auf der Access Identity, ob sie jemals erfolgreich synchronisiert wurde, sowie
-einen terminalen `expired-local-only`-Zustand. Der unterstützte Client verwendet
-den Registrierungsweg nur für eine frische, noch nie synchronisierte Identity.
+kein temporärer Sync-Fehler. Schema v5 persistiert auf der Access Identity den
+Synchronisationszustand `never-synchronized`, `registered` oder terminal
+`expired-local-only`. Der unterstützte Client verwendet den Registrierungsweg
+nur für eine frische, noch nie synchronisierte Identity.
 Der terminale Zustand beendet betroffene Retry-Einträge und verhindert im
 Client eine automatische Re-Registrierung oder Rekonstruktion der Serverkopie.
 Die lokalen Domain-Daten bleiben bis zu einem ausdrücklich bestätigten lokalen
 Reset erhalten. Dieses Verhalten ist Bestandteil des freigegebenen
-M4-Zielvertrags und noch nicht im Schema v4 implementiert.
+M4-Zielvertrags. Bestehende Schema-v4-Identitäten werden beim Upgrade
+konservativ als `registered` übernommen und deshalb nie still re-registriert.
 
 Dabei werden nicht neu erzeugt:
 

@@ -28,6 +28,8 @@ function js25Headers(
 
 function js25CreateGroup(): void
 {
+    registerAccessIdentityForTest(JS25_ACCESS, JS25_CREDENTIAL);
+    registerAccessIdentityForTest(JS25_OTHER_ACCESS, JS25_OTHER_CREDENTIAL);
     test()->withHeaders(js25Headers())->postJson('/api/groups', [
         'groupId' => JS25_GROUP,
         'name' => 'Reise',

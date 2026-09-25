@@ -93,6 +93,14 @@ Der gespeicherte Digest ist kein vom Client verwendbares Ersatz-Credential.
 
 ## Registration Semantics
 
+Die Registrierung ist eine ausdrückliche Operation über
+`POST /api/access-identities`. Gewöhnliche Group-, Participant-, Expense-,
+Settlement- und Lifecycle-Mutationen authentifizieren ausschließlich eine
+bestehende Access Identity und legen niemals implizit eine neue an. Eine
+syntaktisch gültige, aber unbekannte Identity erhält auf diesen Mutationsrouten
+die stabile generische Antwort `410 Gone`. Fehlende oder ungültige Credentials
+und Credential-Konflikte bleiben `401 Unauthorized`.
+
 Die erste Registrierung ist idempotent und gegen konkurrierende Requests
 abgesichert:
 

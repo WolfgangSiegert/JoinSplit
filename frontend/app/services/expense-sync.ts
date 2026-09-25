@@ -60,7 +60,9 @@ export async function synchronizeExpenseMutation(options: Options): Promise<Expe
     || (mutation.type === 'UpdateExpense' && response.status === 200)) {
     try { result = sameExpense(await response.json(), mutation.payload.expense) ? { outcome: 'synced', status: response.status } : failure('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Ausgabe.', false) }
     catch { result = failure('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Ausgabe.', false) }
-  } else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Ausgabe konnte für diese Gruppe nicht bestätigt werden.', false)
+  } else if (response.status === 410) result = failure('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
+  else if (response.status === 429) result = failure('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
+  else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Ausgabe konnte für diese Gruppe nicht bestätigt werden.', false)
   else if (response.status === 409) result = failure('conflict', 'Die Ausgabe steht im Konflikt mit dem Serverstand. Lokal wurde nichts überschrieben.', false)
   else if (response.status === 422) result = failure('validation', 'Der Server hat die lokale Ausgabe abgelehnt.', false)
   else if (response.status >= 500) result = failure('server', 'Der Server konnte die Ausgabe nicht bestätigen.', true)

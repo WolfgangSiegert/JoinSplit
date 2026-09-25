@@ -128,6 +128,16 @@ async function sendPendingCreateGroup(
       false,
     )
   }
+  if (response.status === 410) {
+    return failure(
+      'expired',
+      'Die Server-Aufbewahrung ist beendet. Die Gruppe bleibt nur lokal verfügbar.',
+      false,
+    )
+  }
+  if (response.status === 429) {
+    return failure('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
+  }
   if (response.status === 409) {
     return failure(
       'conflict',

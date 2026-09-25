@@ -78,7 +78,9 @@ export async function synchronizeGroupLifecycleMutation(options: Options): Promi
     } catch {
       result = failure('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Gruppenänderung.', false)
     }
-  } else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Gruppenänderung konnte nicht bestätigt werden.', false)
+  } else if (response.status === 410) result = failure('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
+  else if (response.status === 429) result = failure('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
+  else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Gruppenänderung konnte nicht bestätigt werden.', false)
   else if (response.status === 409) result = failure('conflict', 'Die Gruppenänderung steht im Konflikt mit dem Serverstand.', false)
   else if (response.status === 422) result = failure('validation', 'Der Server hat die Gruppenänderung abgelehnt.', false)
   else if (response.status >= 500) result = failure('server', 'Der Server konnte die Gruppenänderung nicht bestätigen.', true)

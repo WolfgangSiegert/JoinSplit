@@ -10,9 +10,14 @@ class AccessIdentity extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['id', 'credential_digest'];
+    protected $fillable = ['id', 'credential_digest', 'last_mutated_at'];
 
     protected $hidden = ['credential_digest'];
+
+    protected function casts(): array
+    {
+        return ['last_mutated_at' => 'datetime'];
+    }
 
     public function groups(): HasMany
     {

@@ -33,6 +33,8 @@ function js21Headers(string $id = JS21_ACCESS, string $credential = JS21_CREDENT
 
 function js21CreateGroup(bool $withExpense = true): void
 {
+    registerAccessIdentityForTest(JS21_ACCESS, JS21_CREDENTIAL);
+    registerAccessIdentityForTest(JS21_OTHER_ACCESS, JS21_OTHER_CREDENTIAL);
     test()->withHeaders(js21Headers())->postJson('/api/groups', [
         'groupId' => JS21_GROUP,
         'name' => 'Reise',

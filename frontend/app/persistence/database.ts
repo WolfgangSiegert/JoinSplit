@@ -5,11 +5,15 @@ import type { Expense, ExpenseShare } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 
 export const DATABASE_NAME = 'joinsplit'
-export const DATABASE_VERSION = 4
+export const DATABASE_VERSION = 5
 const ACCESS_IDENTITY_KEY = 'current'
 const SETTINGS_KEY = 'preferences'
 
-export interface DurableAccessIdentity { readonly id: string; readonly credential: string }
+export interface DurableAccessIdentity {
+  readonly id: string
+  readonly credential: string
+  readonly synchronizationStatus: 'never-synchronized' | 'registered' | 'expired-local-only'
+}
 export interface DurableSettings {
   readonly addSelfAsParticipantByDefault: boolean
   readonly settlementProposalStrategy: 'deterministic' | 'minimum-transfer'
@@ -103,6 +107,15 @@ function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
           return cursor.continue().then(migrate)
         })
       }
+      if (oldVersion < 5) {
+        const identities = transaction.objectStore('accessIdentity')
+        void identities.openCursor().then(function migrate(cursor): Promise<void> | void {
+          if (!cursor) return
+          const value = cursor.value as AccessIdentityRecord & { synchronizationStatus?: DurableAccessIdentity['synchronizationStatus'] }
+          if (!value.synchronizationStatus) cursor.update({ ...value, synchronizationStatus: 'registered' })
+          return cursor.continue().then(migrate)
+        })
+      }
     },
   })
   return databasePromise
@@ -122,7 +135,11 @@ export async function loadDurableState(): Promise<DurableState> {
   const settings = settingsRecords[0]
   const participantOrder = new Map(participants.map(participant => [participant.id, participant.order]))
   return {
-    accessIdentity: identity ? { id: identity.id, credential: identity.credential } : null,
+    accessIdentity: identity ? {
+      id: identity.id,
+      credential: identity.credential,
+      synchronizationStatus: identity.synchronizationStatus,
+    } : null,
     groups, participants, pendingMutations,
     expenses: expenseRecords.map(expense => ({
       ...expense,

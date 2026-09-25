@@ -11,6 +11,7 @@ const laravelTestEnvironment = {
   APP_ENV: 'testing',
   DB_CONNECTION: 'pgsql',
   DB_HOST: '127.0.0.1',
+  JOIN_SPLIT_CLIENT_ORIGIN: 'http://127.0.0.1:3100',
   DB_PORT: '5432',
   DB_DATABASE: 'joinsplit_test',
   DB_USERNAME: 'joinsplit_test',

@@ -25,7 +25,7 @@ async function seedBalanceState(
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
 
   await page.evaluate(async ({ groupId, aliceId, bobId, carolId, expenseId, participants, expenses, archived }) => {
-    const request = indexedDB.open('joinsplit', 4)
+    const request = indexedDB.open('joinsplit', 5)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)

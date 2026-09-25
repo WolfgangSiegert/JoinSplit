@@ -61,7 +61,9 @@ export async function synchronizeSettlementMutation(options: Options): Promise<S
   else if ((mutation.type === 'CreateSettlement' && (response.status === 200 || response.status === 201)) || (mutation.type === 'UpdateSettlement' && response.status === 200)) {
     try { result = sameSettlement(await response.json(), mutation.payload.settlement) ? { outcome: 'synced', status: response.status } : failure('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Zahlung.', false) }
     catch { result = failure('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Zahlung.', false) }
-  } else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Zahlung konnte für diese Gruppe nicht bestätigt werden.', false)
+  } else if (response.status === 410) result = failure('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
+  else if (response.status === 429) result = failure('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
+  else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Zahlung konnte für diese Gruppe nicht bestätigt werden.', false)
   else if (response.status === 409) result = failure('conflict', 'Die Zahlung steht im Konflikt mit dem Serverstand. Lokal wurde nichts überschrieben.', false)
   else if (response.status === 422) result = failure('validation', 'Der Server hat die lokale Zahlung abgelehnt.', false)
   else if (response.status >= 500) result = failure('server', 'Der Server konnte die Zahlung nicht bestätigen.', true)
