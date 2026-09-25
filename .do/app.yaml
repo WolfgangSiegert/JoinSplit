@@ -1,0 +1,259 @@
+name: joinsplit
+region: fra
+features:
+  - buildpack-stack=ubuntu-22
+
+domains:
+  - domain: joinsplit.tiny-bits.org
+    type: PRIMARY
+    zone: tiny-bits.org
+    minimum_tls_version: "1.3"
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+databases:
+  - name: joinsplit-db
+    engine: PG
+    version: "18"
+    production: true
+    cluster_name: CHANGE_ME_EXISTING_POSTGRESQL_CLUSTER
+    db_name: joinsplit
+    db_user: joinsplit_app
+
+services:
+  - name: frontend
+    environment_slug: node-js
+    source_dir: frontend
+    github:
+      repo: WolfgangSiegert/JoinSplit
+      branch: main
+      deploy_on_push: false
+    run_command: node .output/server/index.mjs
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+        type: GENERAL
+      - key: HOST
+        value: 0.0.0.0
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JOIN_SPLIT_VALIDATE_PRODUCTION
+        value: "true"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JOIN_SPLIT_CANONICAL_ORIGIN
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+      - key: NUXT_PUBLIC_API_BASE
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 5
+    liveness_health_check:
+      http_path: /health
+      initial_delay_seconds: 15
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 6
+
+  - name: backend
+    environment_slug: php
+    source_dir: backend
+    github:
+      repo: WolfgangSiegert/JoinSplit
+      branch: main
+      deploy_on_push: false
+    run_command: bin/with-production-database-ca heroku-php-apache2 public/
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: APP_ENV
+        value: production
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_DEBUG
+        value: "false"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_URL
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_KEY
+        value: CHANGE_ME_APP_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: JOIN_SPLIT_VALIDATE_PRODUCTION
+        value: "true"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JOIN_SPLIT_CANONICAL_ORIGIN
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JOIN_SPLIT_CLIENT_ORIGIN
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+      - key: TRUSTED_PROXIES
+        value: REMOTE_ADDR
+        scope: RUN_TIME
+        type: GENERAL
+      - key: LOG_CHANNEL
+        value: stderr
+        scope: RUN_TIME
+        type: GENERAL
+      - key: LOG_LEVEL
+        value: warning
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_CONNECTION
+        value: pgsql
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_URL
+        value: ${joinsplit-db.DATABASE_PRIVATE_URL}
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_SSLMODE
+        value: verify-full
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_SSLROOTCERT
+        value: /tmp/joinsplit-postgresql-ca.crt
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_CA_CERT_BASE64
+        value: CHANGE_ME_BASE64_STANDARD_EDITION_CA
+        scope: RUN_TIME
+        type: SECRET
+      - key: CACHE_STORE
+        value: file
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SESSION_DRIVER
+        value: file
+        scope: RUN_TIME
+        type: GENERAL
+    health_check:
+      http_path: /ready
+      initial_delay_seconds: 15
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 5
+    liveness_health_check:
+      http_path: /up
+      initial_delay_seconds: 15
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 6
+
+jobs:
+  - name: migrate
+    kind: PRE_DEPLOY
+    environment_slug: php
+    source_dir: backend
+    github:
+      repo: WolfgangSiegert/JoinSplit
+      branch: main
+      deploy_on_push: false
+    run_command: bin/with-production-database-ca sh -c 'php artisan app:validate-production-config && php artisan migrate --force'
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: APP_ENV
+        value: production
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_DEBUG
+        value: "false"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_URL
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_KEY
+        value: CHANGE_ME_APP_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: JOIN_SPLIT_CANONICAL_ORIGIN
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JOIN_SPLIT_CLIENT_ORIGIN
+        value: https://joinsplit.tiny-bits.org
+        scope: RUN_TIME
+        type: GENERAL
+      - key: TRUSTED_PROXIES
+        value: REMOTE_ADDR
+        scope: RUN_TIME
+        type: GENERAL
+      - key: LOG_CHANNEL
+        value: stderr
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_CONNECTION
+        value: pgsql
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_URL
+        value: ${joinsplit-db.DATABASE_PRIVATE_URL}
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_SSLMODE
+        value: verify-full
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_SSLROOTCERT
+        value: /tmp/joinsplit-postgresql-ca.crt
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_CA_CERT_BASE64
+        value: CHANGE_ME_BASE64_STANDARD_EDITION_CA
+        scope: RUN_TIME
+        type: SECRET
+
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /api
+      component:
+        name: backend
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /up
+      component:
+        name: backend
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /ready
+      component:
+        name: backend
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /
+      component:
+        name: frontend
+        preserve_path_prefix: true

@@ -82,9 +82,19 @@ async function durableInitialParticipantDefault(page: Page): Promise<boolean | n
 }
 
 test('the ready Group List is accessible', async ({ page }) => {
-  await page.goto('/')
+  const response = await page.goto('/')
+  expect(response?.headers()['content-security-policy']).toContain("default-src 'self'")
+  expect(response?.headers()['strict-transport-security']).toBe('max-age=31536000; includeSubDomains')
+  expect(response?.headers()['x-content-type-options']).toBe('nosniff')
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   await expectNoAxeViolations(page)
+})
+
+test('the frontend liveness endpoint is independent of application state', async ({ request }) => {
+  const response = await request.get('/health')
+
+  expect(response.ok()).toBe(true)
+  await expect(response.json()).resolves.toEqual({ status: 'ok' })
 })
 
 test('the durable global setting controls the next form default after reload', async ({ page }) => {

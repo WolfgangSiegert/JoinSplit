@@ -9,10 +9,11 @@ current production readiness.
 The complementary product and public-claim boundary is defined in
 [`../product/portfolio-demo.md`](../product/portfolio-demo.md).
 
-The deployment configuration, readiness endpoint, retention cleanup and
-operational procedures described here do not exist yet. Every requirement
-marked as required below must be implemented and verified before public
-release.
+The versioned deployment boundary, readiness endpoint and operational procedure
+are implemented by JS-029. The committed App Platform file is a deliberately
+blocked template, not deployment authorization; see
+[deployment-runbook.md](deployment-runbook.md). Retention cleanup and its
+operational verification remain required before public release.
 
 The canonical application domain is `https://joinsplit.tiny-bits.org`. The
 named human release operator remains a required pre-release input.

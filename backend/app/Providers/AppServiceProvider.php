@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\ProductionConfiguration;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -22,6 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (filter_var(config('production.validate'), FILTER_VALIDATE_BOOL)) {
+            app(ProductionConfiguration::class)->ensureValid();
+        }
+
         RateLimiter::for('identity-registration', fn (Request $request) => Limit::perMinute(30)
             ->by('identity-registration:'.$request->ip())
             ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));

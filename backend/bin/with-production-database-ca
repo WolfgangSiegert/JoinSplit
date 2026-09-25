@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+
+: "${DB_CA_CERT_BASE64:?DB_CA_CERT_BASE64 is required}"
+: "${DB_SSLROOTCERT:?DB_SSLROOTCERT is required}"
+
+case "$DB_SSLROOTCERT" in
+  /*) ;;
+  *) echo "DB_SSLROOTCERT must be an absolute path" >&2; exit 1 ;;
+esac
+
+umask 077
+printf '%s' "$DB_CA_CERT_BASE64" | base64 --decode > "$DB_SSLROOTCERT"
+exec "$@"
