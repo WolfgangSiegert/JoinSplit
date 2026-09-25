@@ -12,9 +12,9 @@ place for sensitive personal or financial information.
 
 The canonical public application domain is
 `https://joinsplit.tiny-bits.org`. The release is also presented from the
-portfolio at `https://tiny-bits.org`. The responsible operator's contact
-details must be confirmed before release; until they are available, the public
-release is not complete.
+portfolio at `https://tiny-bits.org`. The approved responsible operator is
+Wolfgang Siegert and the public privacy contact is
+`mailto:WoSiegert@hotmail.com`.
 
 The approved initial infrastructure budget ceiling is USD 35 per month,
 excluding domain registration, taxes and exceptional traffic overage. Any
@@ -39,12 +39,17 @@ public release:
 - the seven-day recovery-backup tail and conservative 38-day technical
   deletion limit,
 - the expired local-only state and terminal synchronization behavior,
-- the explicit local-reset boundary,
 - the seven-day data-bearing operational-log limit and the provider metadata
   exception,
 - the 24-hour RPO and RTO procedures,
 - the M4 browser verification matrix,
-- the public warning, operator contact, canonical domain and portfolio entry.
+- the canonical-domain deployment and portfolio entry.
+
+The public test-data warning, detailed disclosure view and explicit local-reset
+boundary are implemented by JS-030. The approved public operator is Wolfgang
+Siegert and the privacy contact is `mailto:WoSiegert@hotmail.com`. Production
+startup rejects missing or placeholder operator and privacy-contact
+configuration.
 
 Later sections use "must" for these release requirements. They describe the
 required state before publication, not necessarily current behavior.

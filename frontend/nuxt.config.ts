@@ -7,6 +7,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: 'http://127.0.0.1:8000',
+      operatorName: 'Wolfgang Siegert',
+      privacyContactUrl: 'mailto:WoSiegert@hotmail.com',
     },
   },
   typescript: {

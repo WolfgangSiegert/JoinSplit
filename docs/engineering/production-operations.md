@@ -16,7 +16,9 @@ blocked template, not deployment authorization; see
 operational verification remain required before public release.
 
 The canonical application domain is `https://joinsplit.tiny-bits.org`. The
-named human release operator remains a required pre-release input.
+approved public operator is Wolfgang Siegert and the privacy contact is
+`mailto:WoSiegert@hotmail.com`. The named human release and incident operator
+and the private alert destination remain separate required pre-release inputs.
 
 ## Release profile
 
@@ -350,10 +352,8 @@ test alert before public release.
 
 ## Required pre-release inputs
 
-The following values are intentionally not invented in this document and must
-be supplied before implementation can be accepted:
+The following operational values are intentionally not inferred from the
+public contact and must be supplied before production deployment:
 
-- the canonical production domain,
 - the named human release and incident operator,
-- the operator's alert destination,
-- the public operator and privacy contact details.
+- the operator's alert destination.

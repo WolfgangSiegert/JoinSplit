@@ -256,3 +256,22 @@ export async function removePendingMutation(mutationId: string): Promise<void> {
 export async function persistSettings(settings: DurableSettings): Promise<void> {
   const db = await database(); await db.put('settings', { key: SETTINGS_KEY, ...settings })
 }
+
+export async function resetDurableState(): Promise<void> {
+  const db = await database()
+  const tx = db.transaction(
+    ['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'],
+    'readwrite',
+  )
+  await Promise.all([
+    tx.objectStore('accessIdentity').clear(),
+    tx.objectStore('groups').clear(),
+    tx.objectStore('participants').clear(),
+    tx.objectStore('pendingMutations').clear(),
+    tx.objectStore('settings').clear(),
+    tx.objectStore('expenses').clear(),
+    tx.objectStore('expenseShares').clear(),
+    tx.objectStore('settlements').clear(),
+  ])
+  await tx.done
+}

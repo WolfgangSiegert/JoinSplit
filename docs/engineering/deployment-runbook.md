@@ -39,7 +39,6 @@ Record these values in the private release record, never in Git:
 
 - named release and incident operator,
 - alert destination,
-- public operator and privacy contact,
 - approved commit and successful CI run URL,
 - existing Managed PostgreSQL cluster name,
 - production APP_KEY,
@@ -48,9 +47,11 @@ Record these values in the private release record, never in Git:
 - measured frontend and backend peak memory,
 - expected monthly cost.
 
-Replace both APP_KEY placeholders, both CA placeholders, and the PostgreSQL
-cluster placeholder in a private working copy. Do not print or check in the
-rendered spec. Configure deployment and domain alerts to the approved
+The approved public operator name (`Wolfgang Siegert`) and privacy contact
+(`mailto:WoSiegert@hotmail.com`) are intentionally committed as public runtime
+configuration. Replace both APP_KEY placeholders, both CA placeholders and the
+PostgreSQL cluster placeholder in a private working copy. Do not print or check
+in the rendered spec. Configure deployment and domain alerts to the approved
 destination in DigitalOcean before production traffic is enabled.
 
 ## Database preparation

@@ -51,6 +51,14 @@ services:
         value: https://joinsplit.tiny-bits.org
         scope: RUN_TIME
         type: GENERAL
+      - key: NUXT_PUBLIC_OPERATOR_NAME
+        value: Wolfgang Siegert
+        scope: RUN_TIME
+        type: GENERAL
+      - key: NUXT_PUBLIC_PRIVACY_CONTACT_URL
+        value: mailto:WoSiegert@hotmail.com
+        scope: RUN_TIME
+        type: GENERAL
       - key: NUXT_PUBLIC_API_BASE
         value: https://joinsplit.tiny-bits.org
         scope: RUN_TIME

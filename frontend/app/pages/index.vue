@@ -14,15 +14,19 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
   <main class="page-shell">
     <div class="page-content">
       <header class="mb-8">
-        <div class="flex items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
           <p class="text-sm font-semibold tracking-wide text-brand-700">JoinSplit</p>
-          <NuxtLink to="/settings" class="secondary-link -mr-4">Einstellungen</NuxtLink>
+          <nav class="flex flex-wrap justify-end" aria-label="Allgemeine Navigation">
+            <NuxtLink to="/demo" class="secondary-link">Demo & Daten</NuxtLink>
+            <NuxtLink to="/settings" class="secondary-link -mr-4">Einstellungen</NuxtLink>
+          </nav>
         </div>
         <h1 class="mt-2 text-3xl font-semibold text-brand-900">Deine Gruppen</h1>
         <p class="mt-2 text-gray-600">Gemeinsame Ausgaben im Blick.</p>
       </header>
 
       <p v-if="route.query.deleted === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Gruppe lokal zur endgültigen Löschung vorgemerkt.</p>
+      <p v-if="route.query.reset === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Lokale Daten wurden zurückgesetzt. Eine neue Browser-Identität wurde erstellt.</p>
 
       <section v-if="activeGroups.length" aria-labelledby="active-groups">
         <h2 id="active-groups" class="text-lg font-semibold">Aktive Gruppen</h2>

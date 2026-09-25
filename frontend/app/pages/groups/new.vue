@@ -64,6 +64,8 @@ async function submit(): Promise<void> {
         <p class="mt-2 text-gray-600">Die Gruppe steht direkt auf diesem Gerät bereit.</p>
       </header>
 
+      <PublicDemoNotice class="mt-7" />
+
       <form class="card mt-7 space-y-6 p-5" novalidate @submit.prevent="submit">
         <div>
           <label for="group-name" class="mb-2 block font-semibold">Gruppenname</label>
