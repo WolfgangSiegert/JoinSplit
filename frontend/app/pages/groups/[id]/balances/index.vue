@@ -186,6 +186,7 @@ function downloadBlob(blob: Blob, filename: string): void {
         <p class="eyebrow">{{ group.name }}</p>
         <h1 class="mt-2 text-4xl font-bold text-ink-900">Salden</h1>
         <p class="mt-2 text-ink-700">Wer bekommt noch Geld, wer zahlt noch?</p>
+        <p class="mt-2 text-sm text-ink-700">Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.</p>
       </header>
 
       <GroupAreaNavigation :group-id="group.id" />

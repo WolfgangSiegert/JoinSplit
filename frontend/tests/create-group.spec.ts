@@ -99,7 +99,7 @@ test('the frontend liveness endpoint is independent of application state', async
 
 test('the durable global setting controls the next form default after reload', async ({ page }) => {
   await openCreateGroup(page)
-  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await page.getByRole('link', { name: 'Einstellungen' }).click()
   const setting = page.getByRole('checkbox', {
     name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
@@ -111,7 +111,7 @@ test('the durable global setting controls the next form default after reload', a
   await expect(
     page.getByRole('checkbox', { name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen' }),
   ).not.toBeChecked()
-  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await page.getByRole('link', { name: 'Neue Gruppe' }).click()
 
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).not.toBeChecked()
@@ -140,7 +140,7 @@ test('a failed durable settings write restores the visible and effective value',
   )
   await expect(setting).toBeChecked()
 
-  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await page.getByRole('link', { name: 'Neue Gruppe' }).click()
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).toBeChecked()
 })
@@ -210,7 +210,7 @@ test('local creation navigates immediately, then the real API confirms the same 
   releaseRequest()
   const serverResponse = await serverResponsePromise
   expect(serverResponse.status()).toBe(201)
-  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
   expect(JSON.parse(capturedRequest!.body).groupId).toBe(groupId)
   const snapshotBeforeReload = await durableSnapshot(page)
   const participantId = snapshotBeforeReload.participants[0]?.id
@@ -232,7 +232,7 @@ test('local creation navigates immediately, then the real API confirms the same 
     laterIdentityId = (await route.request().allHeaders())['x-access-identity-id'] ?? ''
     await route.continue()
   })
-  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await page.getByRole('link', { name: 'Neue Gruppe' }).click()
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Zweite Gruppe')
@@ -255,7 +255,7 @@ test('local creation navigates immediately, then the real API confirms the same 
   expect(retryResponse.status()).toBe(200)
   expect((await retryResponse.json()).data.group.id).toBe(groupId)
 
-  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await expect(page.getByRole('link', { name: /Wochenendtrip/ })).toHaveCount(1)
 })
 
@@ -279,9 +279,9 @@ test('creation without a participant succeeds and offline is distinct from pendi
   )
   await context.setOffline(false)
   await reconnectResponse
-  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await expect(page.getByRole('link', { name: /Ohne Teilnehmer/ })).toHaveCount(1)
 })
 
@@ -314,7 +314,7 @@ test('a failed request keeps the local group and retries the identical operation
   await retry.click()
   await successResponse
 
-  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
   expect(requestBodies).toHaveLength(2)
   expect(requestBodies[1]).toBe(requestBodies[0])
   const groupId = new URL(page.url()).pathname.split('/').at(-1)
@@ -355,7 +355,7 @@ test('network-blocked creation survives reload and resumes the same mutation wit
   const requestBody = response.request().postDataJSON()
   expect(requestBody.groupId).toBe(groupId)
   expect(requestBody.initialParticipant.participantId).toBe(participantId)
-  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
+  await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
   expect((await durableSnapshot(page)).pendingGroupIds).toEqual([])
 
   await page.reload()
@@ -380,11 +380,14 @@ test('network-blocked creation survives reload and resumes the same mutation wit
 })
 
 test('the server-rendered hydration state is blocked and accessible', async ({ page }) => {
-  await page.route('**/_nuxt/**', route => route.fulfill({
-    status: 200,
-    contentType: 'application/javascript',
-    body: '',
-  }))
+  await page.route('**/_nuxt/**', (route) => {
+    if (route.request().resourceType() !== 'script') return route.continue()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: '',
+    })
+  })
   await page.goto('/')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten werden geladen' })).toBeVisible()
@@ -627,14 +630,14 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.getByLabel('Gruppenname').fill('Ausgaben-Test')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
-  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Personen' }).click()
   const addBob = page.waitForResponse(response => response.url().endsWith('/participants') && response.request().method() === 'POST' && response.status() === 201)
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await addBob
   await page.getByRole('link', { name: '← Gruppe' }).click()
-  await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await page.getByRole('link', { name: 'Ausgabe hinzufügen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Ausgabe erfassen' })).toBeFocused()
   await page.getByLabel('Beschreibung').fill('Abendessen')
   await page.getByLabel('Betrag in Euro').fill('10,01')
@@ -663,7 +666,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.reload()
   await expect(page.getByText('10,01 €')).toBeVisible()
   await page.getByRole('link', { name: /Ausgaben/ }).click()
-  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await page.getByRole('link', { name: 'Personen' }).click()
   const deactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
   await page.getByRole('button', { name: 'Bob deaktivieren' }).click()
   await deactivate
@@ -713,7 +716,7 @@ test('a failed Expense delete stays actionable and ignores repeated activation',
   await page.getByLabel('Gruppenname').fill('Delete-Härtung')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await page.getByRole('link', { name: 'Ausgabe hinzufügen' }).click()
   await page.getByLabel('Beschreibung').fill('Fehlerhafte Löschung')
   await page.getByLabel('Betrag in Euro').fill('8,40')
   await page.getByRole('button', { name: 'Ausgabe speichern' }).click()
@@ -743,8 +746,8 @@ test('Participant persistence failures are visibly and safely reported', async (
   await page.getByLabel('Gruppenname').fill('Persistenz-Test')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
-  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Personen' }).click()
   await page.evaluate(() => {
     const originalAdd = IDBObjectStore.prototype.add
     IDBObjectStore.prototype.add = function (...args) {
@@ -766,10 +769,10 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.getByLabel('Gruppenname').fill('Teilnehmer-Test')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await expect(page.getByText('Synchronisiert. Die Gruppe wurde vom Server bestätigt.')).toBeVisible()
-  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Personen' }).click()
   await expect(page).toHaveURL(/\/participants$/)
-  await expect(page.getByRole('heading', { name: 'Teilnehmer', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Personen', exact: true })).toBeVisible()
   await expect(page.getByText('Alice', { exact: true })).toBeVisible()
   await expectNoAxeViolations(page)
 

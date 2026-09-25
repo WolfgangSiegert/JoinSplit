@@ -94,7 +94,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   await expect(page.getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')).toBeVisible()
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await page.getByRole('link', { name: 'Personen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
@@ -104,7 +104,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   await expect(page.getByText('Bobby', { exact: true })).toBeVisible()
 
   await page.getByRole('link', { name: 'Ausgaben' }).click()
-  await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await page.getByRole('link', { name: 'Ausgabe hinzufügen' }).click()
   await page.getByLabel('Beschreibung').fill('Offline-Abendessen')
   await page.getByLabel('Betrag in Euro').fill('10,01')
   await page.getByLabel('Bezahlt von').selectOption({ label: 'Alice' })
@@ -241,7 +241,7 @@ test('the mobile core flow stays accessible and free of horizontal overflow', as
   await expectNoAxeViolations(page)
   await expectNoHorizontalOverflow(page)
 
-  const createExpenseLink = page.getByRole('link', { name: 'Ausgabe erfassen' })
+  const createExpenseLink = page.getByRole('link', { name: 'Ausgabe hinzufügen' })
   await expectMinimumTargetSize(createExpenseLink)
   await createExpenseLink.click()
   await page.getByLabel('Beschreibung').fill('Frühstück')
@@ -281,7 +281,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await page.waitForURL(url => /^\/groups\/[0-9a-f-]{36}$/.test(url.pathname))
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await page.getByRole('link', { name: 'Personen' }).click()
   const participantPosts: Request[] = []
   page.on('request', (request) => {
     if (request.url().endsWith('/participants') && request.method() === 'POST') {
@@ -303,7 +303,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await expect(page.getByLabel('Teilnehmer hinzufügen')).toBeFocused()
 
   await page.getByRole('link', { name: 'Ausgaben' }).click()
-  await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await page.getByRole('link', { name: 'Ausgabe hinzufügen' }).click()
   const inlineParticipantPosts: Request[] = []
   page.on('request', (request) => {
     if (request.url().endsWith('/participants') && request.method() === 'POST') {

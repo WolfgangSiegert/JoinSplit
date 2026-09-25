@@ -149,13 +149,13 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'CRUD-Balance' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Teilnehmer verwalten' }).click()
+  await page.getByRole('link', { name: 'Personen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Ausgaben' }).click()
 
-  await page.getByRole('link', { name: 'Ausgabe erfassen' }).click()
+  await page.getByRole('link', { name: 'Ausgabe hinzufügen' }).click()
   await page.getByLabel('Beschreibung').fill('Abendessen')
   await page.getByLabel('Betrag in Euro').fill('10,01')
   await page.getByLabel('Bezahlt von').selectOption({ label: 'Alice' })

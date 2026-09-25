@@ -73,7 +73,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   }, { groupId: GROUP_ID, debtorId: DEBTOR_ID, creditorId: CREDITOR_ID, expenseId: EXPENSE_ID })
 
   await page.goto(`/groups/${GROUP_ID}/balances`)
-  await page.getByRole('link', { name: 'Erfasste Zahlungen verwalten' }).click()
+  await page.getByRole('link', { name: 'Zahlungen' }).click()
   await page.getByRole('link', { name: 'Zahlung erfassen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Zahlung erfassen' })).toBeFocused()
   await page.getByLabel('Gezahlt von').selectOption(DEBTOR_ID)
@@ -87,7 +87,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   await expect(page.getByText('−6,00 €', { exact: true })).toBeVisible()
   await expect(page.getByText('+6,00 €', { exact: true })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Erfasste Zahlungen verwalten' }).click()
+  await page.getByRole('link', { name: 'Zahlungen' }).click()
   await page.getByRole('link', { name: /Dora → Chris/ }).click()
   await page.getByRole('button', { name: 'Bearbeiten' }).click()
   await expect(page.getByLabel('Gezahlt von')).toBeFocused()
