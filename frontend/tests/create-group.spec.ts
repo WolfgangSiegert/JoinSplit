@@ -87,6 +87,10 @@ test('the ready Group List is accessible', async ({ page }) => {
   expect(response?.headers()['strict-transport-security']).toBe('max-age=31536000; includeSubDomains')
   expect(response?.headers()['x-content-type-options']).toBe('nosniff')
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
+  await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Von der ersten Ausgabe zum klaren Ausgleich' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Neue Gruppe starten' })).toContainText('Erste Gruppe starten')
   await expectNoAxeViolations(page)
 })
 

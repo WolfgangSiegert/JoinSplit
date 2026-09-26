@@ -8,20 +8,36 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
   mutation,
   group: groupsStore.findStoredGroup(mutation.groupId),
 })).filter(item => item.group))
+const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroups.value.length && !pendingDeletions.value.length)
 </script>
 
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <header class="mb-8">
+      <header :class="isFreshStart ? 'landing-header' : 'mb-8'">
         <div class="flex flex-wrap items-center justify-end gap-2">
           <nav class="flex flex-wrap justify-end" aria-label="Allgemeine Navigation">
             <NuxtLink to="/demo" class="secondary-link">Demo & Daten</NuxtLink>
             <NuxtLink to="/settings" class="secondary-link -mr-4">Einstellungen</NuxtLink>
           </nav>
         </div>
-        <h1 class="mt-5 text-4xl font-bold text-brand-900">Deine Gruppen</h1>
-        <p class="mt-2 text-lg text-ink-700">Gemeinsame Ausgaben, klar und menschlich.</p>
+        <template v-if="isFreshStart">
+          <div class="landing-hero">
+            <p class="eyebrow">Gemeinsame Ausgaben. Klar geregelt.</p>
+            <h1 class="landing-hero__title">Deine Gruppen</h1>
+            <p class="landing-hero__lead">Mehr zusammen erleben. Weniger rechnen.</p>
+            <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
+            <div class="landing-hero__actions">
+              <NuxtLink to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten">Erste Gruppe starten</NuxtLink>
+              <a href="#so-funktionierts" class="secondary-button">So funktioniert es</a>
+            </div>
+          </div>
+          <JoinSplitOverviewGraphic />
+        </template>
+        <template v-else>
+          <h1 class="mt-5 text-4xl font-bold text-brand-900">Deine Gruppen</h1>
+          <p class="mt-2 text-lg text-ink-700">Gemeinsame Ausgaben, klar und menschlich.</p>
+        </template>
       </header>
 
       <p v-if="route.query.deleted === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Gruppe lokal zur endgültigen Löschung vorgemerkt.</p>
@@ -43,9 +59,15 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
         </ul>
       </section>
 
-      <section v-if="!activeGroups.length && !archivedGroups.length && !pendingDeletions.length" class="card px-5 py-7 text-center" aria-labelledby="empty-groups">
-        <h2 id="empty-groups" class="text-xl font-semibold">Noch keine Gruppe</h2>
-        <p class="mt-2 text-gray-600">Starte eine Gruppe, um gemeinsame Ausgaben zu verwalten.</p>
+      <section v-if="isFreshStart" id="so-funktionierts" class="landing-guide" aria-labelledby="landing-guide-title">
+        <p class="eyebrow">In drei Schritten</p>
+        <h2 id="landing-guide-title" class="mt-2 text-2xl font-bold">Von der ersten Ausgabe zum klaren Ausgleich</h2>
+        <ol class="landing-guide__list">
+          <li><strong>Gruppe anlegen</strong><span>Mit erfundenen Namen starten und Personen jederzeit ergänzen.</span></li>
+          <li><strong>Ausgaben erfassen</strong><span>Betrag und zahlende Person wählen – JoinSplit verteilt auf Cent genau.</span></li>
+          <li><strong>Salden ausgleichen</strong><span>Offene Beträge sehen und tatsächliche Zahlungen dokumentieren.</span></li>
+        </ol>
+        <p class="landing-guide__note">Ohne Registrierung. Die Daten bleiben in diesem Browser verfügbar und werden bei Verbindung mit der Demo synchronisiert.</p>
       </section>
 
       <section v-if="archivedGroups.length" class="mt-6" aria-labelledby="archived-groups-title">
@@ -75,7 +97,7 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
         </ul>
       </section>
 
-      <NuxtLink to="/groups/new" class="primary-button mt-7 w-full">Neue Gruppe starten</NuxtLink>
+      <NuxtLink v-if="!isFreshStart" to="/groups/new" class="primary-button mt-7 w-full">Neue Gruppe starten</NuxtLink>
     </div>
   </main>
 </template>
