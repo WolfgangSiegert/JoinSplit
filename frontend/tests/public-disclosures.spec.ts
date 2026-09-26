@@ -133,6 +133,7 @@ test('local reset requires explicit confirmation and replaces the browser identi
   expect(replacementIdentityId).not.toBe(previousIdentityId)
   expect(await localRecordCounts(page)).toEqual({ groups: 0, pendingMutations: 0 })
   expect(deletionRequests).toEqual([])
-  await expect(page.getByRole('heading', { level: 2, name: 'Noch keine Gruppe' })).toBeVisible()
+  await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Neue Gruppe starten' })).toContainText('Erste Gruppe starten')
   await expectNoAxeViolations(page)
 })
