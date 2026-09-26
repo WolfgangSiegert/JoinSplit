@@ -4,15 +4,15 @@ JoinSplit is a mobile-first, local-first web application for small groups that
 need to record shared expenses, split them evenly, understand balances, and
 derive settlement payments without creating user accounts.
 
-> **Release status:** M4 web portfolio release candidate. The canonical demo
-> target is [joinsplit.tiny-bits.org](https://joinsplit.tiny-bits.org), but this
-> README does not claim that the deployment is live before the production
-> verification in JS-032 is complete.
+> **Release status:** M4 public beta showcase. The live canonical demo is
+> [joinsplit.tiny-bits.org](https://joinsplit.tiny-bits.org). The visible Beta
+> label marks the intentionally reduced showcase acceptance and must not be
+> interpreted as a Production-Readiness claim.
 
 The public release is a portfolio demo for fictional, non-sensitive test data,
 not a production financial service or durable record-keeping system. Read the
 [demo and data-handling contract](docs/product/portfolio-demo.md) before using
-the release candidate.
+the beta demo.
 
 ## Product walkthrough
 
@@ -91,7 +91,10 @@ The repository verifies the application with:
 - explicit 320 px reflow, keyboard, focus, offline, reload, and retry coverage.
 
 These checks provide engineering evidence; they are not a claim of formal WCAG
-certification. Manual release QA remains part of M4.
+certification. M4 uses a reduced beta-showcase gate: one completed reference
+workflow, automated cross-engine shell checks, the Chromium application suite,
+automated accessibility checks, and 320 px reflow. The full real-browser and
+device matrix remains explicitly deferred until a Production-Readiness review.
 
 ## Honest limitations
 

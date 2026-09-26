@@ -28,12 +28,12 @@ delivery verification is deferred until Production-Readiness review
 
 | Field | Value | Evidence/status |
 | --- | --- | --- |
-| Git commit | `fbaa8ce74546ed195fdbf9d9229744ab93ad9d1d` | consolidated runtime release verified on Render; this evidence document may be newer than the deployed runtime |
-| Commit subject | `fix: preserve accessible back navigation labels` | includes visual navigation commit `770ae2f` and logging fix `12a6c60`; verified from Git and Render |
-| CI run | [GitHub Actions 36246922975](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36246922975) | PASS in 3m08s, including Vitest, strict TypeScript, Nuxt build, Pest, PostgreSQL and all Playwright tests |
+| Git commit | `267cf8f41b2f34bd466509ad9d95093a50378507` | immutable beta-showcase runtime verified on Render; this evidence document may be newer than the deployed runtime |
+| Commit subject | `feat: label public showcase as beta` | includes the consolidated visual navigation, accessible back-navigation and privacy-preserving logging fixes |
+| CI run | [GitHub Actions 36248377721](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36248377721) | PASS in 2m58s, including Vitest, strict TypeScript, Nuxt build, Pest, PostgreSQL and all Playwright tests |
 | Render service | `srv-darf6v7avr4c73ee3k40` | PASS on 2026-09-26: Frankfurt, Free and Blueprint-managed |
-| Render deploy | `dep-dart0o17lnhs73ennoj0` | PASS: live manual deploy observed on 2026-09-26 at 16:03 CEST; duration 1m15s |
-| Neon project | `joinsplit-production` | AWS Frankfurt and Free reported; final dated account check pending |
+| Render deploy | `dep-dartcp59fdbs73b0bbug` | PASS: live manual deploy of `267cf8f` observed on 2026-09-26; started at 16:27 CEST, duration 1m18s |
+| Neon project | `joinsplit-production` | PASS for beta showcase: supplied console evidence shows AWS Frankfurt and Free; a fresh capacity/billing check is deferred |
 | Automatic deploy | Off | PASS rechecked in Render at `2026-09-26T13:24Z`; manual deployment remains required |
 
 ## 2. Deployment and migration
@@ -60,9 +60,9 @@ scheduler.
 | TLS certificate | valid hostname and trusted chain | PASS at `2026-09-26T13:24:25Z` through successful canonical HTTPS requests |
 | HTTP to HTTPS | canonical HTTPS | PASS at `2026-09-26T13:24:25Z`: HTTP 301 to `https://joinsplit.tiny-bits.org/` |
 | Render hostname | redirects to canonical origin | PASS at `2026-09-26T13:24:25Z`: HTTP 308 via `curl` |
-| `/` | application shell | PASS after the consolidated deploy at 2026-09-26 16:03 CEST: HTTP 200 and visual browser smoke successful |
-| `/up` | HTTP 200 liveness response | PASS after the consolidated deploy; Render also records repeated successful platform health checks |
-| `/ready` | HTTP 200 with minimal readiness response | PASS after the consolidated deploy |
+| `/` | application shell | PASS after beta deploy `dep-dartcp59fdbs73b0bbug`: HTTP 200, visible `Beta-Version` label and visual browser smoke successful |
+| `/up` | HTTP 200 liveness response | PASS after the beta deploy; Render also records repeated successful platform health checks |
+| `/ready` | HTTP 200 with minimal readiness response | PASS after the beta deploy with `{"status":"ready"}` |
 | Separate public Laravel origin | none | PASS in the reviewed deployment configuration |
 
 ## 4. Bounded production smoke
@@ -119,6 +119,10 @@ public shell and disclosure navigation. Together with the completed manual
 reference flow and Chromium application suite, it satisfies the reduced
 showcase gate; it does not satisfy the later real-device matrix.
 
+The final beta-labelled shell was also inspected at 320 x 800 CSS pixels after
+deploy `dep-dartcp59fdbs73b0bbug`: the badge remained visible and the document
+width matched the viewport width, with no horizontal overflow.
+
 | Playwright engine | Reported browser identity | Result |
 | --- | --- | --- |
 | Chromium | HeadlessChrome 153.0.8010.12 | PASS: `/` HTTP 200, no horizontal overflow, `/demo` navigation and heading correct, no console errors |
@@ -154,7 +158,8 @@ manufacture a test alert.
 
 | Check | Result |
 | --- | --- |
-| README remains a release-candidate statement until approval | PASS |
+| README identifies the live deployment as a public beta showcase | PASS |
+| Global application header exposes an accessible Beta label | PASS after deploy `dep-dartcp59fdbs73b0bbug` |
 | Portfolio entry links only to canonical HTTPS origin | PASS on 2026-09-26: `https://tiny-bits.org` shows the JoinSplit card, image and canonical HTTPS link; GitHub source link also works |
 | Free-tier and cold-start limitation disclosed | PASS in the production disclosure copy; cold-start measurement remains open |
 | Retention, deletion and recovery boundary disclosed | PASS in the production disclosure and Local Reset copy |
