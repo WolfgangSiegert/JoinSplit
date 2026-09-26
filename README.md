@@ -5,8 +5,9 @@ need to record shared expenses, split them evenly, understand balances, and
 derive settlement payments without creating user accounts.
 
 > **Release status:** M6 public beta showcase with optional Account access and
-> a bounded PWA app shell. Production installation checks remain documented as
-> pending. The live canonical demo is
+> a bounded PWA app shell. Production installation, offline-relaunch and
+> explicit-update checks passed for the documented Chrome desktop and Android
+> test matrix. The live canonical demo is
 > [joinsplit.tiny-bits.org](https://joinsplit.tiny-bits.org). The visible Beta
 > label marks the intentionally reduced showcase acceptance and must not be
 > interpreted as a Production-Readiness claim.

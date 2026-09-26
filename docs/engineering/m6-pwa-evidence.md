@@ -13,7 +13,11 @@ live deploy in 1m18s after production configuration validation, no pending
 migrations and successful process startup. The desktop installation and
 offline/reconnect path passed on macOS and Chrome as recorded below. Android
 installation and offline relaunch also passed. A genuine production update
-transition remains open.
+transition from that installed desktop version to commit
+`46b561a541b6a9c9d30347d9b6db26ac6559b8e5` passed as recorded below. The
+candidate passed GitHub CI run
+[36273886723](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36273886723)
+and Render deploy `dep-das3qs0jo6nc73a3j4rg` completed live in 1m19s.
 
 ## Automated candidate evidence
 
@@ -26,7 +30,7 @@ transition remains open.
 | Waiting update does not reload | PASS locally | `frontend/tests/pwa-update-lifecycle.spec.ts` |
 | Explicit update preserves IndexedDB pending work | PASS locally | `frontend/tests/pwa-update-lifecycle.spec.ts` |
 | Install fallback, accessibility and 320 px reflow | PASS locally | `frontend/tests/pwa-experience.spec.ts` |
-| Full application regression | PASS locally and in CI | 254 Vitest tests and 62 Playwright tests passed locally; CI run 36270897874 passed |
+| Full application regression | PASS locally and in CI | 254 Vitest tests and 62 Playwright tests passed locally for the original candidate; CI runs 36270897874 and 36273886723 passed |
 
 ## Manual installation evidence
 
@@ -43,6 +47,13 @@ transition remains open.
 | Canonical manifest identity and root scope | PASS | Production manifest declares stable `/` id, start URL and scope, standalone display and approved icon set |
 | Production offline relaunch with fictional data | PASS, human-reported | Group `PWA Offline Test` with fictional Participants survived two offline launches; offline-added `Milo Test` synchronized after reconnect and remained present exactly once |
 | API and Account data absent from Cache Storage | PASS for deployed routing policy; manual browser inspection PENDING | Deployed Service Worker routes `/api/**`, `/ready`, `/health` and `/up` through `NetworkOnly`; CI exercises Cache Storage behavior |
-| Update from deployed version to candidate | PENDING | Deployment succeeded, but no suitable browser with a captured pre-deploy Service Worker state was available for a genuine production update observation |
+| Update from deployed version to candidate | PASS, human-reported | The already installed desktop PWA detected deploy `dep-das3qs0jo6nc73a3j4rg`, remained on the current version until explicit activation, then retained `PWA Offline Test`, `Ava Test` and `Milo Test` without duplicates |
+
+The first controlled rebuild, Render deploy `dep-das3l0m0tbcc73dmk400` from
+documentation-only commit `7f67efa`, reproduced the existing Service Worker
+byte-for-byte and was therefore not counted as update evidence. The accepted
+candidate changed the served Service Worker SHA-256 from
+`188bc0ea0600f3ba62d46574101491683df0e9c30e21d2b32ef0ae4b290b4dc4` to
+`3f06290cb82bbc0dd9eae20e5a5d75f84bd4dec353a33db0749f927eec52b91f`.
 
 No `PENDING` row may be reported as passed by inference from local automation.
