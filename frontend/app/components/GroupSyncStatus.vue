@@ -74,7 +74,7 @@ const stateLabel = computed(() => {
       class="secondary-button mt-3"
       @click="attemptSync"
     >
-      Synchronisierung erneut versuchen
+      <AppIcon name="refresh" />Synchronisierung erneut versuchen
     </button>
   </div>
 </template>

@@ -181,7 +181,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3">← Gruppen</NuxtLink>
+      <NuxtLink to="/" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
       <header>
         <p class="eyebrow">{{ group.name }}</p>
         <h1 class="mt-2 text-4xl font-bold text-ink-900">Salden</h1>
@@ -194,11 +194,11 @@ function downloadBlob(blob: Blob, filename: string): void {
       <GroupSyncStatus :group-id="group.id" class="mt-6" />
 
       <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <NuxtLink :to="`/groups/${group.id}/settlements`" class="secondary-button w-full">Zahlungen</NuxtLink>
-        <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full">Persönlichen Stand teilen</NuxtLink>
-        <button type="button" class="secondary-button w-full" :disabled="sharingOverview" @click="createOverviewImage">
-          <UIcon name="i-lucide-image" class="size-5" aria-hidden="true" />
-          {{ sharingOverview ? 'Bild wird erstellt …' : overviewImageUrl ? 'Bild aktualisieren' : 'Übersicht als Bild' }}
+        <NuxtLink :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
+        <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full text-center"><AppIcon name="share" />Persönlichen Stand teilen</NuxtLink>
+        <button type="button" class="secondary-button w-full text-center" :disabled="sharingOverview" @click="createOverviewImage">
+          <AppIcon name="image" />
+          <span>{{ sharingOverview ? 'Bild wird erstellt …' : overviewImageUrl ? 'Bild aktualisieren' : 'Übersicht als Bild' }}</span>
         </button>
       </div>
       <p
@@ -223,6 +223,7 @@ function downloadBlob(blob: Blob, filename: string): void {
         </p>
         <div class="mt-4 grid gap-2 sm:grid-cols-2">
           <button type="button" class="primary-button" @click="shareOrDownloadOverviewImage">
+            <AppIcon name="share" />
             {{ overviewCanShare ? 'Bild teilen' : 'PNG herunterladen' }}
           </button>
           <button type="button" class="secondary-button" @click="closeOverviewImage">Vorschau schließen</button>
@@ -281,7 +282,7 @@ function downloadBlob(blob: Blob, filename: string): void {
           </div>
 
           <p class="settlement-proposal__notice mt-4">
-            <UIcon name="i-lucide-info" class="size-5 shrink-0" aria-hidden="true" />
+            <AppIcon name="info" class="size-5" />
             <span><strong>Noch nicht verbucht.</strong> Der Vorschlag ist nur eine Rechenhilfe und keine erfasste Zahlung. Erfasste Zahlungen erscheinen unter „Zahlungen“.</span>
           </p>
 
@@ -294,7 +295,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 
           <template v-else-if="visibleProposal.status === 'success'">
             <p v-if="visibleProposal.transfers.length === 0" class="settlement-proposal__balanced mt-4" role="status">
-              <UIcon name="i-lucide-circle-check" class="size-6 shrink-0" aria-hidden="true" />
+              <AppIcon name="check" class="size-6" />
               <span><strong>Alles ausgeglichen.</strong> Es ist keine Ausgleichszahlung nötig.</span>
             </p>
             <ol v-else class="settlement-transfer-list mt-4" aria-label="Vorgeschlagene Zahlungen">
@@ -316,15 +317,15 @@ function downloadBlob(blob: Blob, filename: string): void {
                   </div>
                   <div class="settlement-transfer__direction">
                     <span class="settlement-transfer__caret-group settlement-transfer__caret-group--payer">
-                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--owes" />
-                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--warm" />
-                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-left" />
+                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--owes" />
+                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--warm" />
+                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-left" />
                     </span>
                     <strong class="settlement-transfer__amount">{{ formatSettlementAmountMinor(BigInt(transfer.amountMinor)) }}</strong>
                     <span class="settlement-transfer__caret-group settlement-transfer__caret-group--receiver">
-                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-right" />
-                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--cool" />
-                      <UIcon name="i-lucide-chevron-right" class="settlement-transfer__caret settlement-transfer__caret--receives" />
+                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-right" />
+                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--cool" />
+                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--receives" />
                     </span>
                   </div>
                   <div class="settlement-transfer__person settlement-transfer__person--receiver">
@@ -335,6 +336,7 @@ function downloadBlob(blob: Blob, filename: string): void {
               </li>
             </ol>
             <NuxtLink v-if="visibleProposal.transfers.length && group.status === 'active'" :to="`/groups/${group.id}/settlements/new`" class="primary-button mt-4 w-full">
+              <AppIcon name="plus" />
               Zahlung erfassen
             </NuxtLink>
           </template>
@@ -347,7 +349,7 @@ function downloadBlob(blob: Blob, filename: string): void {
           <details class="settlement-strategy mt-4">
             <summary>
               <span><small>Berechnung</small><strong>{{ visibleStrategyLabel }}</strong></span>
-              <UIcon name="i-lucide-chevron-down" class="size-5" aria-hidden="true" />
+              <AppIcon name="chevron-down" class="size-5" />
             </summary>
             <div class="settlement-strategy__content">
               <label for="balance-settlement-strategy" class="block font-medium">Strategie</label>

@@ -17,8 +17,8 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
       <header :class="isFreshStart ? 'landing-header' : 'mb-8'">
         <div class="flex flex-wrap items-center justify-end gap-2">
           <nav class="flex flex-wrap justify-end" aria-label="Allgemeine Navigation">
-            <NuxtLink to="/demo" class="secondary-link">Demo & Daten</NuxtLink>
-            <NuxtLink to="/settings" class="secondary-link -mr-4">Einstellungen</NuxtLink>
+            <NuxtLink to="/demo" class="secondary-link"><AppIcon name="database" />Demo & Daten</NuxtLink>
+            <NuxtLink to="/settings" class="secondary-link -mr-4"><AppIcon name="settings" />Einstellungen</NuxtLink>
           </nav>
         </div>
         <template v-if="isFreshStart">
@@ -28,8 +28,8 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
             <p class="landing-hero__lead">Mehr zusammen erleben. Weniger rechnen.</p>
             <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
             <div class="landing-hero__actions">
-              <NuxtLink to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten">Erste Gruppe starten</NuxtLink>
-              <a href="#so-funktionierts" class="secondary-button">So funktioniert es</a>
+              <NuxtLink to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten"><AppIcon name="plus" />Erste Gruppe starten</NuxtLink>
+              <a href="#so-funktionierts" class="secondary-button"><AppIcon name="info" />So funktioniert es</a>
             </div>
           </div>
           <JoinSplitOverviewGraphic />
@@ -97,7 +97,7 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
         </ul>
       </section>
 
-      <NuxtLink v-if="!isFreshStart" to="/groups/new" class="primary-button mt-7 w-full">Neue Gruppe starten</NuxtLink>
+      <NuxtLink v-if="!isFreshStart" to="/groups/new" class="primary-button mt-7 w-full"><AppIcon name="plus" />Neue Gruppe starten</NuxtLink>
     </div>
   </main>
 </template>

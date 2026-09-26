@@ -125,7 +125,7 @@ async function cancelRename(id: string): Promise<void> {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink :to="`/groups/${group.id}`" class="secondary-link -ml-4 mb-3">← Gruppe</NuxtLink>
+      <NuxtLink :to="`/groups/${group.id}`" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppe</NuxtLink>
       <header>
         <p class="eyebrow">{{ group.name }}</p>
         <h1 class="mt-2 text-4xl font-bold text-brand-900">Personen</h1>
@@ -149,7 +149,7 @@ async function cancelRename(id: string): Promise<void> {
           <p class="mt-1">Der Name „{{ duplicateWarning.name }}“ wird in dieser Gruppe bereits verwendet.</p>
           <button ref="duplicateConfirmButton" type="button" class="secondary-button mt-3" :disabled="Boolean(busyAction)" @click="submitAdd(true)">Trotzdem hinzufügen</button>
         </div>
-        <button type="submit" class="primary-button mt-3 w-full" :disabled="Boolean(busyAction)">{{ busyAction === 'add' ? 'Wird hinzugefügt …' : 'Hinzufügen' }}</button>
+        <button type="submit" class="primary-button mt-3 w-full" :disabled="Boolean(busyAction)"><AppIcon name="plus" />{{ busyAction === 'add' ? 'Wird hinzugefügt …' : 'Hinzufügen' }}</button>
       </form>
 
       <p v-if="statusIsError" class="error-text mt-4" role="alert">{{ status }}</p>
@@ -170,12 +170,12 @@ async function cancelRename(id: string): Promise<void> {
               <p class="mt-1">Der Name „{{ duplicateWarning.name }}“ wird in dieser Gruppe bereits verwendet.</p>
               <button :ref="(element) => { if (element) duplicateRenameConfirmByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="secondary-button mt-3" :disabled="Boolean(busyAction)" @click="submitRename(participant.id, true)">Trotzdem umbenennen</button>
             </div>
-            <div class="mt-3 flex gap-2"><button class="primary-button" type="submit" :disabled="Boolean(busyAction)">{{ busyAction === `rename:${participant.id}` ? 'Wird gespeichert …' : 'Speichern' }}</button><button class="secondary-button" type="button" :disabled="Boolean(busyAction)" @click="cancelRename(participant.id)">Abbrechen</button></div>
+            <div class="mt-3 flex gap-2"><button class="primary-button" type="submit" :disabled="Boolean(busyAction)"><AppIcon name="save" />{{ busyAction === `rename:${participant.id}` ? 'Wird gespeichert …' : 'Speichern' }}</button><button class="secondary-button" type="button" :disabled="Boolean(busyAction)" @click="cancelRename(participant.id)">Abbrechen</button></div>
           </form>
           <div v-else-if="group.status === 'active'" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <button :ref="(element) => { if (element) renameTriggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} umbenennen`" @click="startRename(participant.id, participant.name)">Umbenennen</button>
-            <button v-if="participant.status === 'active'" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} deaktivieren`" @click="submitDeactivate(participant.id, participant.name)">{{ busyAction === `deactivate:${participant.id}` ? 'Wird deaktiviert …' : 'Deaktivieren' }}</button>
-            <button v-if="!hasFinancialReferences(participant.id)" :ref="(element) => { if (element) triggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="danger-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} löschen`" @click="askDelete(participant.id, $event.currentTarget as HTMLButtonElement)">Löschen</button>
+            <button :ref="(element) => { if (element) renameTriggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} umbenennen`" @click="startRename(participant.id, participant.name)"><AppIcon name="pencil" />Umbenennen</button>
+            <button v-if="participant.status === 'active'" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} deaktivieren`" @click="submitDeactivate(participant.id, participant.name)"><AppIcon name="user-minus" />{{ busyAction === `deactivate:${participant.id}` ? 'Wird deaktiviert …' : 'Deaktivieren' }}</button>
+            <button v-if="!hasFinancialReferences(participant.id)" :ref="(element) => { if (element) triggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="danger-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} löschen`" @click="askDelete(participant.id, $event.currentTarget as HTMLButtonElement)"><AppIcon name="trash" />Löschen</button>
           </div>
           <p v-if="group.status === 'active' && hasFinancialReferences(participant.id) && participant.status === 'active'" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Finanzdaten nicht gelöscht werden. Deaktiviere die Person, damit sie für neue Ausgaben nicht mehr auswählbar ist.</p>
           <p v-else-if="group.status === 'active' && hasFinancialReferences(participant.id)" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Finanzdaten nicht gelöscht werden und bleibt für den finanziellen Verlauf erhalten.</p>

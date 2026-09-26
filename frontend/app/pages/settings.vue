@@ -125,7 +125,7 @@ async function confirmReset(): Promise<void> {
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3">← Gruppen</NuxtLink>
+      <NuxtLink to="/" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
 
       <header>
         <h1 class="text-3xl font-semibold text-brand-900">Einstellungen</h1>
@@ -210,11 +210,12 @@ async function confirmReset(): Promise<void> {
           Bereits synchronisierte Serverkopien werden dadurch nicht gelöscht.
         </p>
         <button ref="resetTrigger" type="button" class="danger-button mt-4 w-full" @click="openResetDialog">
+          <AppIcon name="trash" />
           Lokale Daten zurücksetzen
         </button>
       </section>
 
-      <NuxtLink to="/demo" class="secondary-link mt-5 -ml-4">Demo- und Datenhinweise</NuxtLink>
+      <NuxtLink to="/demo" class="secondary-link mt-5 -ml-4"><AppIcon name="info" />Demo- und Datenhinweise</NuxtLink>
 
       <dialog
         ref="resetDialog"

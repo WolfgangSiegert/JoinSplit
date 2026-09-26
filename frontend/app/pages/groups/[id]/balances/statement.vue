@@ -108,7 +108,7 @@ async function shareSnapshot(): Promise<void> {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink :to="`/groups/${group.id}/balances`" class="secondary-link -ml-4 mb-3">← Salden</NuxtLink>
+      <NuxtLink :to="`/groups/${group.id}/balances`" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Salden</NuxtLink>
       <header>
         <p class="break-words text-sm font-semibold tracking-wide text-brand-700">{{ group.name }}</p>
         <h1 class="mt-2 text-3xl font-semibold text-brand-900">Persönlichen Stand teilen</h1>
@@ -137,7 +137,7 @@ async function shareSnapshot(): Promise<void> {
             class="primary-button mt-5 w-full"
             :disabled="!selectedParticipantId"
             @click="createSnapshot"
-          >Vorschau erzeugen</button>
+          ><AppIcon name="refresh" />Vorschau erzeugen</button>
         </template>
         <p v-else class="mt-3 text-gray-600">Für diese Gruppe sind keine Teilnehmer vorhanden.</p>
       </section>
@@ -145,7 +145,7 @@ async function shareSnapshot(): Promise<void> {
       <section v-else class="mt-6" aria-labelledby="statement-preview-title">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 id="statement-preview-title" ref="previewTitle" tabindex="-1" class="text-xl font-semibold">Vorschau</h2>
-          <button type="button" class="secondary-button" @click="startNewSnapshot">Neue Vorschau erzeugen</button>
+          <button type="button" class="secondary-button" @click="startNewSnapshot"><AppIcon name="refresh" />Neue Vorschau erzeugen</button>
         </div>
         <p class="mt-3 text-sm text-gray-600">
           Diese Vorschau ist eingefroren. Spätere lokale Änderungen verändern ihren Inhalt nicht.
@@ -161,8 +161,8 @@ async function shareSnapshot(): Promise<void> {
           readonly
         />
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <button type="button" class="primary-button" @click="copySnapshot">Text kopieren</button>
-          <button v-if="shareSupported" type="button" class="secondary-button" @click="shareSnapshot">Systemdialog öffnen</button>
+          <button type="button" class="primary-button" @click="copySnapshot"><AppIcon name="copy" />Text kopieren</button>
+          <button v-if="shareSupported" type="button" class="secondary-button" @click="shareSnapshot"><AppIcon name="share" />Systemdialog öffnen</button>
         </div>
         <p v-if="!shareSupported" class="mt-3 text-sm text-gray-600">
           Systemteilen ist auf diesem Gerät nicht verfügbar. Der Text kann kopiert oder manuell markiert werden.

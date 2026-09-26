@@ -3,9 +3,9 @@ const props = defineProps<{ groupId: string }>()
 const route = useRoute()
 
 const areas = computed(() => [
-  { label: 'Ausgaben', to: `/groups/${props.groupId}`, current: route.path === `/groups/${props.groupId}` },
-  { label: 'Salden', to: `/groups/${props.groupId}/balances`, current: route.path.startsWith(`/groups/${props.groupId}/balances`) || route.path.startsWith(`/groups/${props.groupId}/settlements`) },
-  { label: 'Personen', to: `/groups/${props.groupId}/participants`, current: route.path === `/groups/${props.groupId}/participants` },
+  { label: 'Ausgaben', icon: 'receipt' as const, to: `/groups/${props.groupId}`, current: route.path === `/groups/${props.groupId}` },
+  { label: 'Salden', icon: 'scale' as const, to: `/groups/${props.groupId}/balances`, current: route.path.startsWith(`/groups/${props.groupId}/balances`) || route.path.startsWith(`/groups/${props.groupId}/settlements`) },
+  { label: 'Personen', icon: 'users' as const, to: `/groups/${props.groupId}/participants`, current: route.path === `/groups/${props.groupId}/participants` },
 ])
 </script>
 
@@ -15,11 +15,12 @@ const areas = computed(() => [
       <li v-for="area in areas" :key="area.to">
         <NuxtLink
           :to="area.to"
-          class="flex min-h-12 w-full items-center justify-center rounded-xl px-2 text-center text-sm font-bold text-ink-700 transition-colors"
+          class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-2 text-center text-sm font-bold text-ink-700 transition-colors"
           :class="area.current ? 'bg-brand-50 text-brand-700 shadow-sm' : 'hover:bg-white hover:text-ink-900'"
           :aria-current="area.current ? 'page' : undefined"
         >
-          {{ area.label }}
+          <AppIcon :name="area.icon" />
+          <span>{{ area.label }}</span>
         </NuxtLink>
       </li>
     </ul>

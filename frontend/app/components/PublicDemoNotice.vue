@@ -8,6 +8,7 @@
       sensible Daten oder dauerhafte Aufbewahrung bestimmt.
     </p>
     <NuxtLink to="/demo" class="secondary-link mt-3 -ml-4">
+      <AppIcon name="info" />
       Demo- und Datenhinweise
     </NuxtLink>
   </aside>

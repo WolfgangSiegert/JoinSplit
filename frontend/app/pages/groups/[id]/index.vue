@@ -110,7 +110,7 @@ onMounted(async () => {
   <main class="page-shell">
     <div v-if="group" class="page-content">
       <div class="flex items-center justify-between gap-3">
-        <NuxtLink to="/" class="secondary-link -ml-4">← Gruppen</NuxtLink>
+        <NuxtLink to="/" class="secondary-link -ml-4"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
         <GroupSyncStatus :group-id="group.id" show-synced compact />
       </div>
 
@@ -184,21 +184,22 @@ onMounted(async () => {
         </ul>
       </section>
 
-      <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button sticky bottom-4 z-10 mt-6 w-full">Ausgabe hinzufügen</NuxtLink>
+      <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button sticky bottom-4 z-10 mt-6 w-full"><AppIcon name="plus" />Ausgabe hinzufügen</NuxtLink>
 
       <section class="card mt-7 p-5" aria-labelledby="group-lifecycle-title">
         <h2 id="group-lifecycle-title" class="text-xl font-semibold">Gruppe verwalten</h2>
         <p v-if="lifecycleError && !requestedAction" class="error-text mt-3" role="alert">{{ lifecycleError }}</p>
         <button v-if="group.status === 'archived'" id="group-reactivate-button" type="button" class="primary-button mt-4 w-full" :disabled="lifecycleBusy" @click="reactivateGroup">
+          <AppIcon name="rotate-ccw" />
           {{ lifecycleBusy ? 'Wird reaktiviert …' : 'Gruppe reaktivieren' }}
         </button>
         <template v-else-if="group.hasFinancialHistory">
           <p class="mt-2 text-sm text-gray-600">Die Historie bleibt beim Archivieren vollständig lesbar.</p>
-          <button id="group-archive-button" ref="lifecycleTrigger" type="button" class="secondary-button mt-4 w-full" :disabled="lifecycleBusy" @click="askLifecycle('archive', $event.currentTarget as HTMLButtonElement)">Gruppe archivieren</button>
+          <button id="group-archive-button" ref="lifecycleTrigger" type="button" class="secondary-button mt-4 w-full" :disabled="lifecycleBusy" @click="askLifecycle('archive', $event.currentTarget as HTMLButtonElement)"><AppIcon name="archive" />Gruppe archivieren</button>
         </template>
         <template v-else>
           <p v-if="pendingCount" class="mt-2 text-sm text-gray-600">Die Gruppe kann erst endgültig gelöscht werden, wenn {{ pendingCount }} ausstehende {{ pendingCount === 1 ? 'Änderung' : 'Änderungen' }} synchronisiert wurden.</p>
-          <button v-else ref="lifecycleTrigger" type="button" class="danger-button mt-4 w-full" :disabled="lifecycleBusy" @click="askLifecycle('delete', $event.currentTarget as HTMLButtonElement)">Gruppe endgültig löschen</button>
+          <button v-else ref="lifecycleTrigger" type="button" class="danger-button mt-4 w-full" :disabled="lifecycleBusy" @click="askLifecycle('delete', $event.currentTarget as HTMLButtonElement)"><AppIcon name="trash" />Gruppe endgültig löschen</button>
         </template>
       </section>
 

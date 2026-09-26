@@ -8,7 +8,7 @@ const contactIsConfigured = computed(() => operatorName.value !== '' && privacyC
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3">← Gruppen</NuxtLink>
+      <NuxtLink to="/" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
 
       <header>
         <p class="text-sm font-semibold tracking-wide text-brand-700">Öffentliche Portfolio-Demo</p>
@@ -84,6 +84,7 @@ const contactIsConfigured = computed(() => operatorName.value !== '' && privacyC
           Aufbewahrung gebunden. Ohne den alten Zugangsschlüssel sind sie nicht wiederherstellbar.
         </p>
         <NuxtLink to="/settings#local-reset" class="secondary-link mt-3 -ml-4">
+          <AppIcon name="settings" />
           Zu den Reset-Einstellungen
         </NuxtLink>
       </section>

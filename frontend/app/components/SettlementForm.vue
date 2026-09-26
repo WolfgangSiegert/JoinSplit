@@ -86,6 +86,6 @@ async function cancelConfirmation(): Promise<void> {
       <div class="mt-3 grid gap-2 sm:grid-cols-2"><button type="button" class="secondary-button" :disabled="submitting" @click="cancelConfirmation">Abbrechen</button><button ref="confirmButton" type="button" class="primary-button" :disabled="submitting" @click="submit(true)">Trotzdem speichern</button></div>
     </section>
     <p v-if="status" class="error-text" role="alert">{{ status }}</p>
-    <button v-if="!confirmationReasons.length" ref="submitButton" type="submit" class="primary-button w-full" :disabled="submitting">{{ settlement ? 'Änderungen speichern' : 'Zahlung speichern' }}</button>
+    <button v-if="!confirmationReasons.length" ref="submitButton" type="submit" class="primary-button w-full" :disabled="submitting"><AppIcon name="save" />{{ settlement ? 'Änderungen speichern' : 'Zahlung speichern' }}</button>
   </form>
 </template>
