@@ -7,7 +7,7 @@ interface DurableState {
 
 async function durableState(page: Page): Promise<DurableState> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)

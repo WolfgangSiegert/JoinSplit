@@ -1,5 +1,6 @@
 import type { PendingArchiveGroup, PendingDeleteGroup, PendingReactivateGroup } from '../domain/pending-mutation'
-import { acknowledgeGroupDelete, removePendingMutation } from '../persistence/database'
+import { acknowledgeAccountGroupDelete, acknowledgeAccountMutation, acknowledgeGroupDelete, removePendingMutation } from '../persistence/database'
+import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
 
 type GroupLifecycleMutation = PendingArchiveGroup | PendingReactivateGroup | PendingDeleteGroup
@@ -42,24 +43,24 @@ export async function synchronizeGroupLifecycleMutation(options: Options): Promi
   const started = options.groupsStore.beginMutationSync(pending.id)
   if (!started || (started.type !== 'ArchiveGroup' && started.type !== 'ReactivateGroup' && started.type !== 'DeleteGroup')) return { outcome: 'busy' }
   const mutation: GroupLifecycleMutation = started
-  if (!options.identity.accessIdentityId || !options.identity.credential) {
+  if (!options.identity.accessIdentityId) {
     const result = failure('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)
     if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)
     return result
   }
 
-  const url = `${options.apiBase.replace(/\/$/u, '')}/api/groups/${mutation.groupId}`
   let response: Response
   try {
-    response = await (options.fetcher ?? globalThis.fetch)(url, {
+    const fetcher = options.fetcher ?? globalThis.fetch
+    const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
+    const url = `${context.urlPrefix}/groups/${mutation.groupId}`
+    response = await fetcher(url, {
       method: mutation.type === 'DeleteGroup' ? 'DELETE' : 'PATCH',
-      headers: {
-        Accept: 'application/json', 'Content-Type': 'application/json',
-        'X-Access-Identity-ID': options.identity.accessIdentityId,
-        Authorization: `Bearer ${options.identity.credential}`,
-      },
+      headers: context.headers,
+      credentials: context.credentials,
       ...(mutation.type === 'DeleteGroup' ? {} : { body: JSON.stringify(mutation.payload) }),
     })
+    if (context.accountMode) await applyAccountMutationResponse(response, mutation, options.groupsStore)
   } catch {
     const result = failure('network', 'Der Server ist derzeit nicht erreichbar. Die Gruppenänderung bleibt lokal gespeichert.', true)
     if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)
@@ -91,10 +92,17 @@ export async function synchronizeGroupLifecycleMutation(options: Options): Promi
       if (mutation.type === 'DeleteGroup') {
         const group = options.groupsStore.findStoredGroup(mutation.groupId)
         if (!group) throw new Error('Group deletion tombstone missing')
-        await (options.acknowledgeDelete ?? ((groupId, mutationId) => acknowledgeGroupDelete(group, mutationId)))(mutation.groupId, mutation.id)
+        if (options.acknowledgeDelete) await options.acknowledgeDelete(mutation.groupId, mutation.id)
+        else if (!options.identity.credential) await acknowledgeAccountGroupDelete(group, mutation.id)
+        else await acknowledgeGroupDelete(group, mutation.id)
         options.groupsStore.commitGroupDeleteAcknowledgement(mutation.groupId, mutation.id)
       } else {
-        await (options.acknowledgeStatus ?? removePendingMutation)(mutation.id)
+        if (options.acknowledgeStatus) await options.acknowledgeStatus(mutation.id)
+        else if (!options.identity.credential) {
+          const revision = options.groupsStore.groupRevisions[mutation.groupId]
+          if (typeof revision !== 'number' || !Number.isSafeInteger(revision)) throw new Error('Account revision missing')
+          await acknowledgeAccountMutation(mutation.id, mutation.groupId, revision)
+        } else await removePendingMutation(mutation.id)
         options.groupsStore.confirmMutationSync(mutation.id)
       }
     } catch {

@@ -10,8 +10,11 @@ return [
         'Authorization',
         'Content-Type',
         'X-Access-Identity-ID',
+        'X-CSRF-TOKEN',
+        'X-Group-Revision',
+        'X-Mutation-ID',
     ],
-    'exposed_headers' => [],
+    'exposed_headers' => ['X-Group-Revision'],
     'max_age' => 0,
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 ];

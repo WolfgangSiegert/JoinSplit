@@ -4,7 +4,8 @@ import {
   type CreateGroupSyncError,
   type PendingCreateGroupMutation,
 } from '../stores/groups'
-import { removePendingMutation } from '../persistence/database'
+import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
+import { accountMutationContext, applyAccountMutationResponse, type AccountMutationContext } from './account-mutation'
 
 interface AccessIdentityForSync {
   readonly accessIdentityId: string | null
@@ -67,29 +68,22 @@ function responseMatchesPayload(responseBody: unknown, payload: Readonly<CreateG
     && participant.order === 0
 }
 
-function endpoint(apiBase: string): string {
-  return `${apiBase.replace(/\/$/u, '')}/api/groups`
-}
-
 async function sendPendingCreateGroup(
   mutation: Readonly<PendingCreateGroupMutation>,
-  identity: { readonly accessIdentityId: string; readonly credential: string },
-  apiBase: string,
+  context: AccountMutationContext,
   fetcher: typeof fetch,
+  groupsStore: ReturnType<typeof useGroupsStore>,
 ): Promise<CreateGroupSyncResult> {
   let response: Response
 
   try {
-    response = await fetcher(endpoint(apiBase), {
+    response = await fetcher(`${context.urlPrefix}/groups`, {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'X-Access-Identity-ID': identity.accessIdentityId,
-        Authorization: `Bearer ${identity.credential}`,
-      },
+      headers: context.headers,
+      credentials: context.credentials,
       body: JSON.stringify(mutation.payload),
     })
+    if (context.accountMode) await applyAccountMutationResponse(response, mutation, groupsStore)
   } catch {
     return failure(
       'network',
@@ -182,7 +176,7 @@ export async function synchronizeCreateGroup(
   if (!mutation || mutation.type !== 'CreateGroup') return { outcome: 'busy' }
 
   const { accessIdentityId, credential } = options.identity
-  if (!accessIdentityId || !credential || mutation.payload.actorId !== accessIdentityId) {
+  if (!accessIdentityId || mutation.payload.actorId !== accessIdentityId) {
     const result = failure(
       'identity',
       'Die lokale Zugriffsidentität ist nicht verfügbar. Die Gruppe bleibt lokal erhalten.',
@@ -194,16 +188,23 @@ export async function synchronizeCreateGroup(
     return result
   }
 
-  const result = await sendPendingCreateGroup(
-    mutation,
-    { accessIdentityId, credential },
-    options.apiBase,
-    options.fetcher ?? globalThis.fetch,
-  )
+  const fetcher = options.fetcher ?? globalThis.fetch
+  let result: CreateGroupSyncResult
+  try {
+    const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
+    result = await sendPendingCreateGroup(mutation, context, fetcher, options.groupsStore)
+  } catch {
+    result = failure('network', 'Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.', true)
+  }
 
   if (result.outcome === 'synced') {
     try {
-      await (options.acknowledge ?? removePendingMutation)(mutation.id)
+      if (options.acknowledge) await options.acknowledge(mutation.id)
+      else if (!credential) {
+        const revision = options.groupsStore.groupRevisions[mutation.groupId]
+        if (typeof revision !== 'number' || !Number.isSafeInteger(revision)) throw new Error('Account revision missing')
+        await acknowledgeAccountMutation(mutation.id, mutation.groupId, revision)
+      } else await removePendingMutation(mutation.id)
       options.groupsStore.confirmMutationSync(mutation.id)
     } catch {
       const persistenceFailure = failure(

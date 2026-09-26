@@ -6,8 +6,10 @@ This is the accepted JS-035 decision package for **M5 – Accounts & Multi-Devic
 Access**. It records the approved product direction and the binding lean
 technical contract for JS-036 through JS-042.
 
-Nothing in this document is implemented merely because it is described here.
-The deployed `v0.1.0-beta.1` release remains the accountless M4 beta showcase.
+JS-036 through JS-042 implement this contract in the repository. The deployed
+`v0.1.0-beta.1` release remains the accountless M4 beta showcase until the M5
+commit has passed CI and is deliberately deployed; repository completion alone
+does not change the public release claim.
 
 ## Goal
 

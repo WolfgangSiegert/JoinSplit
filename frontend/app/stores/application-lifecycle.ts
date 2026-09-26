@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { generateAccessIdentity, useAccessIdentityStore } from './access-identity'
 import { useGroupsStore } from './groups'
 import { useSettingsStore } from './settings'
+import { useAccountStore } from './account'
 import {
   loadDurableState,
   persistAccessIdentity,
@@ -37,12 +38,15 @@ export const useApplicationLifecycleStore = defineStore('applicationLifecycle', 
       }
 
       useAccessIdentityStore().hydrate(identity)
+      useAccountStore().hydrate(durableState.accountWorkspace ?? null)
       useGroupsStore().hydrate({
         groups: durableState.groups,
         participants: durableState.participants,
         expenses: durableState.expenses,
         settlements: durableState.settlements.map(restoreSettlement),
         pendingMutations: durableState.pendingMutations.map(restorePendingMutation),
+        groupRevisions: durableState.accountWorkspace?.groupRevisions,
+        conflictedGroupIds: durableState.accountWorkspace?.conflictedGroupIds,
       })
       useSettingsStore().hydrate(durableState.settings)
       state.value = 'ready'

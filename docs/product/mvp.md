@@ -305,8 +305,7 @@ verknüpft; nie synchronisierte oder abgelaufene lokale Groups verwenden einen
 idempotenten authentifizierten Import. Account und Participant bleiben
 unterschiedliche Konzepte.
 
-Der verbindliche Entscheidungsstand und die noch menschlich zu bestätigenden
-Detailentscheidungen stehen in
+Der verbindliche, freigegebene Entscheidungsstand steht in
 [`account-data-adoption.md`](../architecture/account-data-adoption.md).
 
 ### Additional Split Methods

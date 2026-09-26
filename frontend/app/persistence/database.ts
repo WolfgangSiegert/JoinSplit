@@ -5,14 +5,27 @@ import type { Expense, ExpenseShare } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 
 export const DATABASE_NAME = 'joinsplit'
-export const DATABASE_VERSION = 5
+export const DATABASE_VERSION = 7
 const ACCESS_IDENTITY_KEY = 'current'
+const ACCOUNT_WORKSPACE_KEY = 'current'
+const ACCOUNT_ADOPTION_KEY = 'current'
 const SETTINGS_KEY = 'preferences'
 
 export interface DurableAccessIdentity {
   readonly id: string
-  readonly credential: string
-  readonly synchronizationStatus: 'never-synchronized' | 'registered' | 'expired-local-only'
+  readonly credential: string | null
+  readonly synchronizationStatus: 'never-synchronized' | 'registered' | 'expired-local-only' | 'account-linked'
+}
+export interface DurableAccountWorkspace {
+  readonly accountId: string
+  readonly email: string
+  readonly accessIdentityIds: readonly string[]
+  readonly groupRevisions: Readonly<Record<string, number>>
+  readonly conflictedGroupIds: readonly string[]
+}
+export interface DurableAdoptionAttempt {
+  readonly adoptionId: string
+  readonly imports: readonly { readonly groupId: string; readonly importId: string; readonly snapshot: unknown }[]
 }
 export interface DurableSettings {
   readonly addSelfAsParticipantByDefault: boolean
@@ -21,9 +34,13 @@ export interface DurableSettings {
   readonly visualDesign: '2' | '3'
 }
 interface AccessIdentityRecord extends DurableAccessIdentity { readonly key: typeof ACCESS_IDENTITY_KEY }
+interface AccountWorkspaceRecord extends DurableAccountWorkspace { readonly key: typeof ACCOUNT_WORKSPACE_KEY }
+interface AccountAdoptionRecord extends DurableAdoptionAttempt { readonly key: typeof ACCOUNT_ADOPTION_KEY }
 interface SettingsRecord extends DurableSettings { readonly key: typeof SETTINGS_KEY }
 interface JoinSplitDatabase extends DBSchema {
   accessIdentity: { key: string; value: AccessIdentityRecord }
+  accountWorkspace: { key: string; value: AccountWorkspaceRecord }
+  accountAdoption: { key: string; value: AccountAdoptionRecord }
   groups: { key: string; value: Group }
   participants: { key: string; value: Participant }
   pendingMutations: { key: string; value: PendingMutation }
@@ -53,6 +70,7 @@ export function migrateLegacyCreateGroupRecords(
 
 export interface DurableState {
   readonly accessIdentity: DurableAccessIdentity | null
+  readonly accountWorkspace?: DurableAccountWorkspace | null
   readonly groups: Group[]
   readonly participants: Participant[]
   readonly pendingMutations: PendingMutation[]
@@ -118,6 +136,8 @@ function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
           return cursor.continue().then(migrate)
         })
       }
+      if (oldVersion < 6) db.createObjectStore('accountWorkspace', { keyPath: 'key' })
+      if (oldVersion < 7) db.createObjectStore('accountAdoption', { keyPath: 'key' })
     },
   })
   return databasePromise
@@ -125,14 +145,14 @@ function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
 
 export async function loadDurableState(): Promise<DurableState> {
   const db = await database()
-  const tx = db.transaction(['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'], 'readonly')
-  const [identities, groups, participants, pendingMutations, settingsRecords, expenseRecords, expenseShares, settlements] = await Promise.all([
-    tx.objectStore('accessIdentity').getAll(), tx.objectStore('groups').getAll(),
+  const tx = db.transaction(['accessIdentity', 'accountWorkspace', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'], 'readonly')
+  const [identities, accountWorkspaces, groups, participants, pendingMutations, settingsRecords, expenseRecords, expenseShares, settlements] = await Promise.all([
+    tx.objectStore('accessIdentity').getAll(), tx.objectStore('accountWorkspace').getAll(), tx.objectStore('groups').getAll(),
     tx.objectStore('participants').getAll(), tx.objectStore('pendingMutations').getAll(),
     tx.objectStore('settings').getAll(), tx.objectStore('expenses').getAll(), tx.objectStore('expenseShares').getAll(), tx.objectStore('settlements').getAll(),
   ])
   await tx.done
-  if (identities.length > 1 || settingsRecords.length > 1) throw new Error('Invalid persistence singleton records')
+  if (identities.length > 1 || accountWorkspaces.length > 1 || settingsRecords.length > 1) throw new Error('Invalid persistence singleton records')
   const identity = identities[0]
   const settings = settingsRecords[0] as (SettingsRecord & {
     colorMode?: DurableSettings['colorMode']
@@ -144,6 +164,13 @@ export async function loadDurableState(): Promise<DurableState> {
       id: identity.id,
       credential: identity.credential,
       synchronizationStatus: identity.synchronizationStatus,
+    } : null,
+    accountWorkspace: accountWorkspaces[0] ? {
+      accountId: accountWorkspaces[0].accountId,
+      email: accountWorkspaces[0].email,
+      accessIdentityIds: [...accountWorkspaces[0].accessIdentityIds],
+      groupRevisions: { ...accountWorkspaces[0].groupRevisions },
+      conflictedGroupIds: [...accountWorkspaces[0].conflictedGroupIds],
     } : null,
     groups, participants, pendingMutations,
     expenses: expenseRecords.map(expense => ({
@@ -206,6 +233,57 @@ export async function persistAccessIdentity(identity: DurableAccessIdentity): Pr
   const db = await database(); await db.put('accessIdentity', { key: ACCESS_IDENTITY_KEY, ...identity })
 }
 
+export async function persistAccountWorkspace(workspace: DurableAccountWorkspace): Promise<void> {
+  const db = await database(); await db.put('accountWorkspace', { key: ACCOUNT_WORKSPACE_KEY, ...workspace })
+}
+
+export async function loadAdoptionAttempt(): Promise<DurableAdoptionAttempt | null> {
+  const db = await database(); const record = await db.get('accountAdoption', ACCOUNT_ADOPTION_KEY)
+  return record ? { adoptionId: record.adoptionId, imports: record.imports.map(item => ({ ...item })) } : null
+}
+
+export async function persistAdoptionAttempt(attempt: DurableAdoptionAttempt): Promise<void> {
+  const db = await database(); await db.put('accountAdoption', { key: ACCOUNT_ADOPTION_KEY, ...attempt })
+}
+
+export async function clearAdoptionAttempt(): Promise<void> {
+  const db = await database(); await db.delete('accountAdoption', ACCOUNT_ADOPTION_KEY)
+}
+
+export interface AccountHydration {
+  readonly identity: DurableAccessIdentity
+  readonly workspace: DurableAccountWorkspace
+  readonly groups: readonly Group[]
+  readonly participants: readonly Participant[]
+  readonly expenses: readonly Expense[]
+  readonly settlements: readonly DurableSettlementSnapshot[]
+}
+
+export async function replaceWithAccountHydration(hydration: AccountHydration): Promise<void> {
+  const db = await database()
+  const stores = ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const
+  const tx = db.transaction(stores, 'readwrite')
+  await Promise.all(stores.map(store => tx.objectStore(store).clear()))
+  await tx.objectStore('accessIdentity').put({ key: ACCESS_IDENTITY_KEY, ...hydration.identity })
+  await tx.objectStore('accountWorkspace').put({ key: ACCOUNT_WORKSPACE_KEY, ...hydration.workspace })
+  for (const group of hydration.groups) await tx.objectStore('groups').put(group)
+  for (const participant of hydration.participants) await tx.objectStore('participants').put(participant)
+  for (const expense of hydration.expenses) {
+    await tx.objectStore('expenses').put(expenseRecord(expense))
+    for (const share of expense.shares) await tx.objectStore('expenseShares').put({ expenseId: expense.id, ...share })
+  }
+  for (const settlement of hydration.settlements) await tx.objectStore('settlements').put(settlement)
+  await tx.done
+}
+
+export async function clearAccountLocalData(): Promise<void> {
+  const db = await database()
+  const stores = ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const
+  const tx = db.transaction(stores, 'readwrite')
+  await Promise.all(stores.map(store => tx.objectStore(store).clear()))
+  await tx.done
+}
+
 export async function persistGroupCreation(creation: PreparedGroupCreation, mutation: PendingCreateGroup): Promise<void> {
   const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations'], 'readwrite')
   await Promise.all([tx.objectStore('groups').add(creation.group), creation.participant
@@ -246,11 +324,46 @@ export async function persistGroupDeleteRequest(mutation: PendingDeleteGroup): P
 }
 
 export async function acknowledgeGroupDelete(group: Group, mutationId: string): Promise<void> {
-  const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations'], 'readwrite')
+  const db = await database(); const tx = db.transaction(['groups', 'participants', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'], 'readwrite')
+  const expenses = (await tx.objectStore('expenses').getAll()).filter(expense => expense.groupId === group.id)
+  const expenseIds = new Set(expenses.map(expense => expense.id))
+  const shares = (await tx.objectStore('expenseShares').getAll()).filter(share => expenseIds.has(share.expenseId))
+  const settlements = (await tx.objectStore('settlements').getAll()).filter(settlement => settlement.groupId === group.id)
   await Promise.all([
     tx.objectStore('groups').delete(group.id),
     ...group.participantIds.map(participantId => tx.objectStore('participants').delete(participantId)),
+    ...expenses.map(expense => tx.objectStore('expenses').delete(expense.id)),
+    ...shares.map(share => tx.objectStore('expenseShares').delete([share.expenseId, share.participantId])),
+    ...settlements.map(settlement => tx.objectStore('settlements').delete(settlement.id)),
     tx.objectStore('pendingMutations').delete(mutationId),
+  ])
+  await tx.done
+}
+
+export async function acknowledgeAccountGroupDelete(group: Group, mutationId: string): Promise<void> {
+  const db = await database()
+  const stores = ['groups', 'participants', 'pendingMutations', 'expenses', 'expenseShares', 'settlements', 'accountWorkspace'] as const
+  const tx = db.transaction(stores, 'readwrite')
+  const workspace = await tx.objectStore('accountWorkspace').get(ACCOUNT_WORKSPACE_KEY)
+  if (!workspace) throw new Error('Account workspace is missing')
+  const expenses = (await tx.objectStore('expenses').getAll()).filter(expense => expense.groupId === group.id)
+  const expenseIds = new Set(expenses.map(expense => expense.id))
+  const shares = (await tx.objectStore('expenseShares').getAll()).filter(share => expenseIds.has(share.expenseId))
+  const settlements = (await tx.objectStore('settlements').getAll()).filter(settlement => settlement.groupId === group.id)
+  const groupRevisions = { ...workspace.groupRevisions }
+  delete groupRevisions[group.id]
+  await Promise.all([
+    tx.objectStore('groups').delete(group.id),
+    ...group.participantIds.map(participantId => tx.objectStore('participants').delete(participantId)),
+    ...expenses.map(expense => tx.objectStore('expenses').delete(expense.id)),
+    ...shares.map(share => tx.objectStore('expenseShares').delete([share.expenseId, share.participantId])),
+    ...settlements.map(settlement => tx.objectStore('settlements').delete(settlement.id)),
+    tx.objectStore('pendingMutations').delete(mutationId),
+    tx.objectStore('accountWorkspace').put({
+      ...workspace,
+      groupRevisions,
+      conflictedGroupIds: workspace.conflictedGroupIds.filter(id => id !== group.id),
+    }),
   ])
   await tx.done
 }
@@ -260,6 +373,29 @@ export async function removePendingMutation(mutationId: string): Promise<void> {
   await tx.store.delete(mutationId); await tx.done
 }
 
+export async function acknowledgeAccountMutation(mutationId: string, groupId: string, revision: number): Promise<void> {
+  const db = await database(); const tx = db.transaction(['pendingMutations', 'accountWorkspace'], 'readwrite')
+  const workspace = await tx.objectStore('accountWorkspace').get(ACCOUNT_WORKSPACE_KEY)
+  if (!workspace) throw new Error('Account workspace is missing')
+  await tx.objectStore('pendingMutations').delete(mutationId)
+  await tx.objectStore('accountWorkspace').put({
+    ...workspace,
+    groupRevisions: { ...workspace.groupRevisions, [groupId]: revision },
+    conflictedGroupIds: workspace.conflictedGroupIds.filter(id => id !== groupId),
+  })
+  await tx.done
+}
+
+export async function persistAccountConflict(groupId: string): Promise<void> {
+  const db = await database(); const tx = db.transaction('accountWorkspace', 'readwrite')
+  const workspace = await tx.store.get(ACCOUNT_WORKSPACE_KEY)
+  if (!workspace) throw new Error('Account workspace is missing')
+  if (!workspace.conflictedGroupIds.includes(groupId)) {
+    await tx.store.put({ ...workspace, conflictedGroupIds: [...workspace.conflictedGroupIds, groupId] })
+  }
+  await tx.done
+}
+
 export async function persistSettings(settings: DurableSettings): Promise<void> {
   const db = await database(); await db.put('settings', { key: SETTINGS_KEY, ...settings })
 }
@@ -267,11 +403,13 @@ export async function persistSettings(settings: DurableSettings): Promise<void> 
 export async function resetDurableState(): Promise<void> {
   const db = await database()
   const tx = db.transaction(
-    ['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'],
+    ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'],
     'readwrite',
   )
   await Promise.all([
     tx.objectStore('accessIdentity').clear(),
+    tx.objectStore('accountWorkspace').clear(),
+    tx.objectStore('accountAdoption').clear(),
     tx.objectStore('groups').clear(),
     tx.objectStore('participants').clear(),
     tx.objectStore('pendingMutations').clear(),

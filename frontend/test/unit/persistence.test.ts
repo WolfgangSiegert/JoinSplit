@@ -63,6 +63,21 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
 beforeEach(() => setActivePinia(createPinia()))
 
 describe('durable state validation and bootstrap', () => {
+  test('accepts a server-generated Account UUID while keeping the device identity account-linked', () => {
+    const state = durableState({
+      accessIdentity: { id: ACTOR_ID, credential: null, synchronizationStatus: 'account-linked' },
+      accountWorkspace: {
+        accountId: '0199b5df-31d8-7a82-8d6f-8f5315277712',
+        email: 'owner@example.test',
+        accessIdentityIds: [ACTOR_ID],
+        groupRevisions: { [GROUP_ID]: 1 },
+        conflictedGroupIds: [],
+      },
+    })
+
+    expect(validateDurableState(state)).toBe(state)
+  })
+
   test('hydrates identity, domain state, pending runtime state, and settings', async () => {
     const persistIdentity = vi.fn(async () => {})
     await useApplicationLifecycleStore().initialize({

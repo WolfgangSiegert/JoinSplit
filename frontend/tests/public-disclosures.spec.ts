@@ -11,7 +11,7 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
 
 async function currentIdentityId(page: Page): Promise<string | null> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -28,7 +28,7 @@ async function currentIdentityId(page: Page): Promise<string | null> {
 
 async function seedPendingLocalGroup(page: Page, ownerAccessIdentityId: string): Promise<void> {
   await page.evaluate(async ({ ownerAccessIdentityId }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -61,7 +61,7 @@ async function seedPendingLocalGroup(page: Page, ownerAccessIdentityId: string):
 
 async function localRecordCounts(page: Page): Promise<{ groups: number; pendingMutations: number }> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)

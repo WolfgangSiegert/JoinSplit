@@ -24,7 +24,7 @@ async function openCreateGroup(page: Page): Promise<void> {
 
 async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -62,7 +62,7 @@ async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
 
 async function durableInitialParticipantDefault(page: Page): Promise<boolean | null> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -405,7 +405,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await page.goto('/')
   await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toBeVisible()
   await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -430,7 +430,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten nicht verfügbar' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toHaveCount(0)
   const malformedStillExists = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -448,7 +448,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await expectNoAxeViolations(page)
 })
 
-test('v1 pending CreateGroup data upgrades atomically through v5', async ({ page }) => {
+test('v1 pending CreateGroup data upgrades atomically through v7', async ({ page }) => {
   await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -482,22 +482,22 @@ test('v1 pending CreateGroup data upgrades atomically through v5', async ({ page
   await page.reload()
   await expect(page.getByRole('link', { name: /Migration/ })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
     const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
     const version = db.version; db.close(); return { version, records }
   })
-  expect(upgraded.version).toBe(5)
+  expect(upgraded.version).toBe(7)
   expect(upgraded.records).toHaveLength(1)
   expect(upgraded.records[0]).toMatchObject({ type: 'CreateGroup', createdOrder: 0, groupId: '22222222-2222-4222-8222-222222222222' })
   expect(upgraded.records[0]?.id).toMatch(/^[0-9a-f-]{36}$/)
 })
 
-test('a fresh database is created directly at schema v5', async ({ page }) => {
+test('a fresh database is created directly at schema v7', async ({ page }) => {
   await page.goto('/')
   const schema = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
     })
@@ -505,11 +505,11 @@ test('a fresh database is created directly at schema v5', async ({ page }) => {
     db.close()
     return result
   })
-  expect(schema.version).toBe(5)
-  expect(schema.stores).toEqual(expect.arrayContaining(['accessIdentity', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements']))
+  expect(schema.version).toBe(7)
+  expect(schema.stores).toEqual(expect.arrayContaining(['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements']))
 })
 
-test('v3 settings upgrade to v5 preserves existing preferences and adds the Settlement default', async ({ page }) => {
+test('v3 settings upgrade to v7 preserves existing preferences and adds the Settlement default', async ({ page }) => {
   await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -541,19 +541,19 @@ test('v3 settings upgrade to v5 preserves existing preferences and adds the Sett
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const settingsRequest = db.transaction('settings').objectStore('settings').get('preferences')
     const settings = await new Promise<Record<string, unknown>>((resolve, reject) => { settingsRequest.onsuccess = () => resolve(settingsRequest.result); settingsRequest.onerror = () => reject(settingsRequest.error) })
     const result = { version: db.version, stores: [...db.objectStoreNames], settings }
     db.close(); return result
   })
-  expect(upgraded.version).toBe(5)
+  expect(upgraded.version).toBe(7)
   expect(upgraded.stores).toContain('settlements')
   expect(upgraded.settings).toEqual({ key: 'preferences', addSelfAsParticipantByDefault: false, settlementProposalStrategy: 'deterministic' })
 })
 
-test('v2 durable state upgrades to v5 without losing existing records', async ({ page }) => {
+test('v2 durable state upgrades to v7 without losing existing records', async ({ page }) => {
   await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -582,14 +582,14 @@ test('v2 durable state upgrades to v5 without losing existing records', async ({
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
     const result = { version: db.version, stores: [...db.objectStoreNames], identityId: identity.id }
     db.close(); return result
   })
-  expect(upgraded).toMatchObject({ version: 5, identityId: '11111111-1111-4111-8111-111111111111' })
+  expect(upgraded).toMatchObject({ version: 7, identityId: '11111111-1111-4111-8111-111111111111' })
   expect(upgraded.stores).toEqual(expect.arrayContaining(['expenses', 'expenseShares', 'settlements']))
 })
 
@@ -601,7 +601,7 @@ test('Expense shares reload in stable Participant order despite opposing UUID or
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   await page.evaluate(async ({ groupId, expenseId, stableFirst, stableSecond }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
@@ -814,7 +814,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await expect(page.getByRole('button', { name: 'Bobby umbenennen' })).toBeFocused()
   await expectNoAxeViolations(page)
   await expect.poll(async () => page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
     const records = await new Promise<unknown[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
@@ -856,7 +856,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.reload()
   await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
   const orders = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('participants').objectStore('participants').getAll()
     const records = await new Promise<Array<{ name: string; order: number }>>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })

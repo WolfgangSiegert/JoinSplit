@@ -1,6 +1,7 @@
 import type { PendingCreateSettlement, PendingDeleteSettlement, PendingUpdateSettlement } from '../domain/pending-mutation'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
-import { removePendingMutation } from '../persistence/database'
+import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
+import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { durableSettlement } from '../persistence/validation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
 
@@ -35,22 +36,25 @@ export async function synchronizeSettlementMutation(options: Options): Promise<S
   if (options.groupsStore.mutationSync[pending.id]?.state === 'syncing') return { outcome: 'busy' }
   const mutation = options.groupsStore.beginMutationSync(pending.id) as SettlementMutation | null
   if (!mutation) return { outcome: 'busy' }
-  if (!options.identity.accessIdentityId || !options.identity.credential) {
+  if (!options.identity.accessIdentityId) {
     const result = failure('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)
     if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)
     return result
   }
-  const base = options.apiBase.replace(/\/$/u, '')
-  const collection = `${base}/api/groups/${mutation.groupId}/settlements`
-  const url = mutation.type === 'CreateSettlement' ? collection : `${collection}/${mutation.payload.settlement.id}`
-  const body = requestBody(mutation)
   let response: Response
   try {
-    response = await (options.fetcher ?? globalThis.fetch)(url, {
+    const fetcher = options.fetcher ?? globalThis.fetch
+    const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
+    const collection = `${context.urlPrefix}/groups/${mutation.groupId}/settlements`
+    const url = mutation.type === 'CreateSettlement' ? collection : `${collection}/${mutation.payload.settlement.id}`
+    const body = requestBody(mutation)
+    response = await fetcher(url, {
       method: mutation.type === 'CreateSettlement' ? 'POST' : mutation.type === 'UpdateSettlement' ? 'PUT' : 'DELETE',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Access-Identity-ID': options.identity.accessIdentityId, Authorization: `Bearer ${options.identity.credential}` },
+      headers: context.headers,
+      credentials: context.credentials,
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
+    if (context.accountMode) await applyAccountMutationResponse(response, mutation, options.groupsStore)
   } catch {
     const result = failure('network', 'Der Server ist derzeit nicht erreichbar. Die Zahlung bleibt lokal gespeichert.', true)
     if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)
@@ -69,7 +73,15 @@ export async function synchronizeSettlementMutation(options: Options): Promise<S
   else if (response.status >= 500) result = failure('server', 'Der Server konnte die Zahlung nicht bestätigen.', true)
   else result = failure('unexpected', 'Die Synchronisierung erhielt eine unerwartete Antwort.', true)
   if (result.outcome === 'synced') {
-    try { await (options.acknowledge ?? removePendingMutation)(mutation.id); options.groupsStore.confirmMutationSync(mutation.id) }
+    try {
+      if (options.acknowledge) await options.acknowledge(mutation.id)
+      else if (!options.identity.credential) {
+        const revision = options.groupsStore.groupRevisions[mutation.groupId]
+        if (typeof revision !== 'number' || !Number.isSafeInteger(revision)) throw new Error('Account revision missing')
+        await acknowledgeAccountMutation(mutation.id, mutation.groupId, revision)
+      } else await removePendingMutation(mutation.id)
+      options.groupsStore.confirmMutationSync(mutation.id)
+    }
     catch { result = failure('persistence', 'Die Serverbestätigung konnte lokal nicht gespeichert werden.', true) }
   }
   if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)

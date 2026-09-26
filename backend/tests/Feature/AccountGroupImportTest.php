@@ -114,3 +114,32 @@ it('requires an authenticated session for import and workspace reads', function 
     $this->postJson(js38ImportUrl(), js38Payload())->assertUnauthorized();
     $this->getJson('/api/account/workspace')->assertUnauthorized();
 });
+
+it('deletes an adopted Account graph without affecting another Account', function () {
+    $account = js38Account();
+    $other = Account::query()->create(['email' => 'other@example.test', 'password' => 'correct horse battery staple']);
+    $this->actingAs($account, 'web');
+    $this->postJson(js38ImportUrl(), js38Payload())->assertCreated();
+    $this->withHeaders([
+        'X-Access-Identity-ID' => JS38_IDENTITY,
+        'X-Mutation-ID' => '38000000-0000-4000-8000-000000000099',
+        'X-Group-Revision' => '1',
+    ])->postJson('/api/account/workspace/groups/'.JS38_GROUP.'/participants', [
+        'participantId' => '38000000-0000-4000-8000-000000000098',
+        'name' => 'Cara',
+        'order' => 2,
+    ])->assertCreated();
+
+    $this->deleteJson('/api/account', ['password' => 'correct horse battery staple'])->assertNoContent();
+
+    expect(Account::find($account->id))->toBeNull()
+        ->and(Account::find($other->id))->not->toBeNull();
+    $this->assertDatabaseCount('access_identities', 0)
+        ->assertDatabaseCount('groups', 0)
+        ->assertDatabaseCount('participants', 0)
+        ->assertDatabaseCount('expenses', 0)
+        ->assertDatabaseCount('expense_shares', 0)
+        ->assertDatabaseCount('settlements', 0)
+        ->assertDatabaseCount('account_group_imports', 0)
+        ->assertDatabaseCount('account_mutations', 0);
+});

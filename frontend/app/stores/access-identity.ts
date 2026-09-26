@@ -8,11 +8,11 @@ function createCredential(): string {
 
 export interface AccessIdentity {
   readonly id: string
-  readonly credential: string
+  readonly credential: string | null
   readonly synchronizationStatus: AccessIdentitySynchronizationStatus
 }
 
-export type AccessIdentitySynchronizationStatus = 'never-synchronized' | 'registered' | 'expired-local-only'
+export type AccessIdentitySynchronizationStatus = 'never-synchronized' | 'registered' | 'expired-local-only' | 'account-linked'
 
 export function generateAccessIdentity(): AccessIdentity {
   return { id: crypto.randomUUID(), credential: createCredential(), synchronizationStatus: 'never-synchronized' }

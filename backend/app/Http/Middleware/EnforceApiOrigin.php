@@ -25,6 +25,7 @@ class EnforceApiOrigin
         $response->headers->set('Cache-Control', 'no-store');
         if (is_string($origin) && $origin !== '') {
             $response->headers->set('Access-Control-Allow-Origin', $canonicalOrigin);
+            $response->headers->set('Access-Control-Allow-Credentials', 'true');
             $response->headers->set('Vary', 'Origin');
         }
 

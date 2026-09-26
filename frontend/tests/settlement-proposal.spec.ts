@@ -31,7 +31,7 @@ async function seedProposalState(
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
 
   await page.evaluate(async ({ groupId, aliceId, bobId, carolId, expenseId, balances, archived, strategy }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -108,7 +108,7 @@ async function seedCustomBalanceState(
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
 
   await page.evaluate(async ({ groupId, participants, strategy }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -192,7 +192,7 @@ async function seedCustomBalanceState(
 
 async function storedFinancialMutationCounts(page: Page): Promise<{ settlements: number; pendingMutations: number }> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -282,7 +282,7 @@ test('keeps an unavailable persisted exact strategy visible and recovers below t
   await expect(proposal.getByRole('list', { name: 'Vorgeschlagene Zahlungen' })).toBeVisible()
 
   await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)

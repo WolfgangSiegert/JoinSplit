@@ -58,6 +58,9 @@ class AppServiceProvider extends ServiceProvider
 
     private function requestKey(Request $request): string
     {
+        if ($accountId = $request->user('web')?->getAuthIdentifier()) {
+            return $request->ip().'|account:'.$accountId;
+        }
         $identityId = strtolower((string) $request->header('X-Access-Identity-ID'));
 
         return $request->ip().'|'.$identityId;

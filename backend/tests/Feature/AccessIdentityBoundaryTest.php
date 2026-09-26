@@ -85,6 +85,7 @@ it('allows only the configured same origin and returns no-store API responses', 
         ->postJson('/api/access-identities')
         ->assertCreated()
         ->assertHeader('Access-Control-Allow-Origin', 'https://joinsplit.tiny-bits.org')
+        ->assertHeader('Access-Control-Allow-Credentials', 'true')
         ->assertHeader('Cache-Control', 'no-store, private');
 });
 

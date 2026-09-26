@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Middleware\AuthenticateAccessIdentityMutation;
 use App\Http\Middleware\EnforceApiOrigin;
 use App\Http\Middleware\SetSecurityHeaders;
+use App\Http\Middleware\AuthenticateAccountMutation;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'access.identity.mutation' => AuthenticateAccessIdentityMutation::class,
             'api.origin' => EnforceApiOrigin::class,
+            'account.mutation' => AuthenticateAccountMutation::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

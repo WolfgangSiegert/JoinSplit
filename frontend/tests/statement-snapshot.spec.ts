@@ -22,7 +22,7 @@ async function seedStatementState(
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   await page.evaluate(async ({ groupId, aliceId, bobId, expenseId, archived, pending, strategy }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -94,7 +94,7 @@ async function seedStatementState(
 
 async function durableCounts(page: Page): Promise<{ expenses: number; settlements: number; pending: number }> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -256,7 +256,7 @@ test('shows safe empty states for missing groups and groups without participants
 
   await page.goto('/')
   await page.evaluate(async ({ groupId }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>(resolve => { request.onsuccess = () => resolve(request.result) })
     const transaction = db.transaction(['participants', 'groups', 'expenses', 'expenseShares'], 'readwrite')
     transaction.objectStore('participants').clear()
@@ -275,7 +275,7 @@ test('shows safe empty states for missing groups and groups without participants
 test('distinguishes participants whose names, status, and balance are identical', async ({ page }) => {
   await seedStatementState(page)
   await page.evaluate(async ({ groupId, samOneId, samTwoId }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>(resolve => { request.onsuccess = () => resolve(request.result) })
     const transaction = db.transaction(['participants', 'groups'], 'readwrite')
     transaction.objectStore('participants').put({ id: samOneId, groupId, name: 'Sam', status: 'inactive', order: 2 })
@@ -304,7 +304,7 @@ test('long Group, Expense, and Participant values reflow at 320px', async ({ pag
   await seedStatementState(page)
   const longToken = 'SehrLangerWertOhneTrennzeichen'.repeat(3)
   await page.evaluate(async ({ groupId, aliceId, expenseId, longToken }) => {
-    const request = indexedDB.open('joinsplit', 5)
+    const request = indexedDB.open('joinsplit', 7)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const tx = db.transaction(['groups', 'participants', 'expenses'], 'readwrite')
     const groups = tx.objectStore('groups')

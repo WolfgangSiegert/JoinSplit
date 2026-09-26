@@ -355,14 +355,16 @@ Mindestens prüfen:
 
 Server-Slice bleibt Regressionstest.
 
-## M5 planning boundary
+## M5 Account persistence extension
 
-Die folgende M5-Richtung ist freigegeben, aber noch nicht implementiert:
+M5 erweitert das Schema auf Version 7:
 
-- ein Account-Workspace kann nach Session-Anmeldung vom Server geladen und
-  atomar in IndexedDB rehydriert werden,
-- Adoption-/Import-Fortschritt und Group-Revisionen werden dauerhaft lokal
-  benötigt,
+- `accountWorkspace` speichert Account-ID, E-Mail, autorisierte Access
+  Identities, Group-Revisionen und Konfliktmarkierungen,
+- `accountAdoption` speichert stabile Import-IDs und unveränderliche Snapshots
+  für wiederholbare Adoption,
+- ein validierter Account-Workspace wird nach Session-Anmeldung atomar in
+  IndexedDB rehydriert,
 - Account-Session, Passwort und Account-Tokens werden niemals in IndexedDB
   oder localStorage gespeichert,
 - Logout entfernt Account-Domain-Daten, zugehörige Pending Mutations und
@@ -370,9 +372,8 @@ Die folgende M5-Richtung ist freigegeben, aber noch nicht implementiert:
 - Revision-Konflikte stoppen die Queue der betroffenen Group und lösen keinen
   automatischen Merge aus.
 
-Der genaue neue Schema-Upgrade-Pfad wird erst nach Freigabe des
-[`Account and Data-Adoption Contract`](account-data-adoption.md) in den
-zugehörigen Implementierungs-Items festgelegt.
+Der verbindliche Daten- und Sicherheitsvertrag steht in
+[`Account and Data-Adoption Contract`](account-data-adoption.md).
 
 ## Non-goals of the completed M2/M4 persistence architecture
 
@@ -389,5 +390,4 @@ Nicht Bestandteil dieser Architekturphase:
 - unauthenticated data export/import
 - generic repository layer
 - generic sync engine
-- multi-device synchronization before M5
 - conflict merge UI

@@ -27,6 +27,8 @@ interface GroupsState {
   pendingMutations: PendingMutation[]
   mutationSync: Record<string, MutationSyncState>
   syncedGroups: Record<string, true>
+  groupRevisions: Record<string, number>
+  conflictedGroups: Record<string, true>
 }
 
 interface HydratedGroupsState {
@@ -35,11 +37,13 @@ interface HydratedGroupsState {
   readonly pendingMutations: PendingMutation[]
   readonly expenses?: Expense[]
   readonly settlements?: Settlement[]
+  readonly groupRevisions?: Readonly<Record<string, number>>
+  readonly conflictedGroupIds?: readonly string[]
 }
 
 export const useGroupsStore = defineStore('groups', {
   state: (): GroupsState => ({
-    groups: [], participants: [], expenses: [], settlements: [], pendingMutations: [], mutationSync: {}, syncedGroups: {},
+    groups: [], participants: [], expenses: [], settlements: [], pendingMutations: [], mutationSync: {}, syncedGroups: {}, groupRevisions: {}, conflictedGroups: {},
   }),
 
   getters: {
@@ -76,6 +80,8 @@ export const useGroupsStore = defineStore('groups', {
           mutation.id, { state: 'pending' as const, error: null },
         ])),
         syncedGroups: {},
+        groupRevisions: { ...(state.groupRevisions ?? {}) },
+        conflictedGroups: Object.fromEntries((state.conflictedGroupIds ?? []).map(id => [id, true])),
       })
     },
 
@@ -209,6 +215,15 @@ export const useGroupsStore = defineStore('groups', {
       this.pendingMutations = this.pendingMutations.filter(item => item.id !== mutationId)
       delete this.mutationSync[mutationId]
       if (mutation.type === 'CreateGroup') this.syncedGroups[mutation.groupId] = true
+    },
+
+    recordRevision(groupId: string, revision: number): void {
+      this.groupRevisions[groupId] = revision
+      delete this.conflictedGroups[groupId]
+    },
+
+    markRevisionConflict(groupId: string): void {
+      this.conflictedGroups[groupId] = true
     },
 
     groupSyncState(groupId: string): MutationSyncState | { state: 'synced'; error: null } | undefined {

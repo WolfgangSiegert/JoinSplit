@@ -106,3 +106,19 @@ it('requires an authenticated Account session to adopt an identity', function ()
 
     linkIdentityRequest($this)->assertUnauthorized();
 });
+
+it('creates a fresh linked identity for a signed-in device without an Account token', function () {
+    $account = js37Account();
+    $this->actingAs($account, 'web');
+
+    $this->postJson('/api/account/access-identities', [
+        'identityId' => JS37_IDENTITY,
+    ])->assertCreated()->assertJsonPath('data.id', JS37_IDENTITY);
+    $this->postJson('/api/account/access-identities', [
+        'identityId' => JS37_IDENTITY,
+    ])->assertOk();
+
+    $this->assertDatabaseHas('access_identities', [
+        'id' => JS37_IDENTITY, 'account_id' => $account->id, 'credential_digest' => null,
+    ]);
+});

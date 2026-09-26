@@ -1,5 +1,6 @@
 import type { PendingAddParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
-import { removePendingMutation } from '../persistence/database'
+import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
+import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
 
 interface Options {
@@ -37,22 +38,24 @@ function responseMatches(body: unknown, mutation: ParticipantResponseMutation): 
 }
 
 async function send(mutation: ParticipantMutation, options: Options): Promise<ParticipantSyncResult> {
-  const base = options.apiBase.replace(/\/$/u, '')
+  const fetcher = options.fetcher ?? globalThis.fetch
+  const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
   const participantId = mutation.payload.participantId
-  const collection = `${base}/api/groups/${mutation.groupId}/participants`
+  const collection = `${context.urlPrefix}/groups/${mutation.groupId}/participants`
   const url = mutation.type === 'AddParticipant' ? collection : `${collection}/${participantId}`
   const method = mutation.type === 'AddParticipant' ? 'POST' : mutation.type === 'DeleteParticipant' ? 'DELETE' : 'PATCH'
   const body = mutation.type === 'AddParticipant' ? mutation.payload
     : mutation.type === 'RenameParticipant' ? { name: mutation.payload.name } : mutation.type === 'DeactivateParticipant' ? { active: false } : undefined
   let response: Response
   try {
-    response = await (options.fetcher ?? globalThis.fetch)(url, {
+    response = await fetcher(url, {
       method,
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json',
-        'X-Access-Identity-ID': options.identity.accessIdentityId!, Authorization: `Bearer ${options.identity.credential}` },
+      headers: context.headers,
+      credentials: context.credentials,
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
   } catch { return failed('network', 'Der Server ist derzeit nicht erreichbar. Die Änderung bleibt lokal gespeichert.', true) }
+  if (context.accountMode) await applyAccountMutationResponse(response, mutation, options.groupsStore)
   if (mutation.type === 'DeleteParticipant' && response.status === 204) return { outcome: 'synced', status: 204 }
   if ((response.status === 200 || response.status === 201) && mutation.type !== 'DeleteParticipant') {
     try {
@@ -77,15 +80,22 @@ export async function synchronizeParticipantMutation(options: Options): Promise<
   const mutation = options.groupsStore.beginMutationSync(pending.id)
   if (!mutation || (mutation.type !== 'AddParticipant' && mutation.type !== 'RenameParticipant'
     && mutation.type !== 'DeactivateParticipant' && mutation.type !== 'DeleteParticipant')) return { outcome: 'busy' }
-  if (!options.identity.accessIdentityId || !options.identity.credential) {
+  if (!options.identity.accessIdentityId) {
     const result = failed('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)
     if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)
     return result
   }
-  const result = await send(mutation, options)
+  let result: ParticipantSyncResult
+  try { result = await send(mutation, options) }
+  catch { result = failed('network', 'Der Server ist derzeit nicht erreichbar. Die Änderung bleibt lokal gespeichert.', true) }
   if (result.outcome === 'synced') {
     try {
-      await (options.acknowledge ?? removePendingMutation)(mutation.id)
+      if (options.acknowledge) await options.acknowledge(mutation.id)
+      else if (!options.identity.credential) {
+        const revision = options.groupsStore.groupRevisions[mutation.groupId]
+        if (typeof revision !== 'number' || !Number.isSafeInteger(revision)) throw new Error('Account revision missing')
+        await acknowledgeAccountMutation(mutation.id, mutation.groupId, revision)
+      } else await removePendingMutation(mutation.id)
       options.groupsStore.confirmMutationSync(mutation.id)
     } catch {
       const persistence = failed('persistence', 'Die Serverbestätigung konnte lokal nicht gespeichert werden.', true)

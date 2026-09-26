@@ -131,7 +131,13 @@ async function confirmReset(): Promise<void> {
         <h1 class="text-3xl font-semibold text-brand-900">Einstellungen</h1>
       </header>
 
-      <section class="card mt-7 p-5" aria-labelledby="appearance-settings">
+      <section class="card mt-7 p-5" aria-labelledby="account-settings">
+        <h2 id="account-settings" class="text-lg font-semibold">Account & Geräte</h2>
+        <p class="mt-2 text-sm text-gray-600">Optional lokale Gruppen sichern und auf weiteren Geräten laden.</p>
+        <NuxtLink to="/account" class="secondary-button mt-4 w-full"><AppIcon name="users" />Account verwalten</NuxtLink>
+      </section>
+
+      <section class="card mt-5 p-5" aria-labelledby="appearance-settings">
         <h2 id="appearance-settings" class="text-lg font-semibold">Erscheinungsbild</h2>
 
         <fieldset class="mt-5">

@@ -7,6 +7,7 @@ import { isCalendarDate } from '../domain/expense'
 import { isCanonicalPositiveMinor, type DurableSettlementSnapshot } from '../domain/settlement'
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+const SERVER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const CREDENTIAL = /^[0-9a-f]{64}$/u
 const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement', 'ArchiveGroup', 'ReactivateGroup', 'DeleteGroup'])
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
@@ -76,10 +77,23 @@ function expense(value: unknown): value is Expense {
 
 export function validateDurableState(value: DurableState): DurableState {
   const identity = value.accessIdentity
-  if (identity !== null && (!uuid(identity.id) || !CREDENTIAL.test(identity.credential)
-    || !['never-synchronized', 'registered', 'expired-local-only'].includes(identity.synchronizationStatus))) {
+  if (identity !== null && (!uuid(identity.id)
+    || (identity.synchronizationStatus === 'account-linked'
+      ? identity.credential !== null
+      : typeof identity.credential !== 'string' || !CREDENTIAL.test(identity.credential))
+    || !['never-synchronized', 'registered', 'expired-local-only', 'account-linked'].includes(identity.synchronizationStatus))) {
     throw new Error('Invalid persisted access identity')
   }
+  const workspace = value.accountWorkspace ?? null
+  if (workspace !== null && (typeof workspace.accountId !== 'string' || !SERVER_UUID.test(workspace.accountId)
+    || typeof workspace.email !== 'string' || !workspace.email.includes('@')
+    || !Array.isArray(workspace.accessIdentityIds) || !workspace.accessIdentityIds.every(uuid)
+    || new Set(workspace.accessIdentityIds).size !== workspace.accessIdentityIds.length
+    || !record(workspace.groupRevisions) || Object.entries(workspace.groupRevisions).some(([id, revision]) => !uuid(id) || !integer(revision))
+    || !Array.isArray(workspace.conflictedGroupIds) || !workspace.conflictedGroupIds.every(uuid))) {
+    throw new Error('Invalid persisted Account workspace')
+  }
+  if ((workspace === null) !== (identity?.synchronizationStatus !== 'account-linked')) throw new Error('Account workspace and identity mode mismatch')
   if (!value.groups.every(group) || !value.participants.every(participant) || !value.pendingMutations.every(mutation)
     || !value.expenses.every(expense)
     || !value.settlements.every(durableSettlement)
@@ -97,9 +111,11 @@ export function validateDurableState(value: DurableState): DurableState {
     || mutationIds.size !== value.pendingMutations.length || createdOrders.size !== value.pendingMutations.length) throw new Error('Duplicate persisted identifiers or queue order')
   if ([...groupIds].some(id => participantIds.has(id))) throw new Error('Persisted group and participant identifiers collide')
   if (!identity && (value.groups.length || value.participants.length || value.pendingMutations.length || value.expenses.length || value.settlements.length)) throw new Error('Persisted domain state has no access identity')
+  const authorizedIdentityIds = new Set(workspace?.accessIdentityIds ?? (identity ? [identity.id] : []))
+  if (identity && !authorizedIdentityIds.has(identity.id)) throw new Error('Current identity is not part of the Account workspace')
 
   for (const currentGroup of value.groups) {
-    if (identity && currentGroup.ownerAccessIdentityId !== identity.id) throw new Error('Persisted group owner does not match access identity')
+    if (!authorizedIdentityIds.has(currentGroup.ownerAccessIdentityId)) throw new Error('Persisted group owner does not match an authorized identity')
     const ordered = value.participants.filter(item => item.groupId === currentGroup.id).sort((a, b) => a.order - b.order)
     if (new Set(ordered.map(item => item.order)).size !== ordered.length
       || ordered.map(item => item.id).join('|') !== currentGroup.participantIds.join('|')) throw new Error('Persisted group participant ordering is inconsistent')
@@ -129,7 +145,7 @@ export function validateDurableState(value: DurableState): DurableState {
   if (value.participants.some(item => !groupIds.has(item.groupId))) throw new Error('Persisted participant has no group')
   for (const currentExpense of value.expenses) {
     const currentGroup = value.groups.find(item => item.id === currentExpense.groupId)
-    if (!currentGroup || !identity || currentExpense.creatorAccessIdentityId !== identity.id) throw new Error('Persisted Expense ownership mismatch')
+    if (!currentGroup || !authorizedIdentityIds.has(currentExpense.creatorAccessIdentityId)) throw new Error('Persisted Expense ownership mismatch')
     const groupParticipants = value.participants.filter(item => item.groupId === currentExpense.groupId).sort((a, b) => a.order - b.order)
     const participantOrder = new Map(groupParticipants.map((item, index) => [item.id, index]))
     if (!participantOrder.has(currentExpense.payerParticipantId) || currentExpense.shares.some(share => !participantOrder.has(share.participantId))) throw new Error('Persisted Expense Participant mismatch')
@@ -141,7 +157,7 @@ export function validateDurableState(value: DurableState): DurableState {
   }
   for (const currentSettlement of value.settlements) {
     const currentGroup = value.groups.find(item => item.id === currentSettlement.groupId)
-    if (!currentGroup || !identity || currentSettlement.creatorAccessIdentityId !== identity.id) throw new Error('Persisted Settlement ownership mismatch')
+    if (!currentGroup || !authorizedIdentityIds.has(currentSettlement.creatorAccessIdentityId)) throw new Error('Persisted Settlement ownership mismatch')
     const participantIdsForGroup = new Set(value.participants.filter(item => item.groupId === currentSettlement.groupId).map(item => item.id))
     if (!participantIdsForGroup.has(currentSettlement.senderParticipantId) || !participantIdsForGroup.has(currentSettlement.receiverParticipantId)) throw new Error('Persisted Settlement Participant mismatch')
     if (!currentGroup.hasFinancialHistory) throw new Error('Persisted Group financial history mismatch')
@@ -155,7 +171,7 @@ export function validateDurableState(value: DurableState): DurableState {
     if (!currentGroup) throw new Error('Persisted mutation has no group')
     if (current.type === 'ArchiveGroup' || current.type === 'ReactivateGroup' || current.type === 'DeleteGroup') continue
     if (current.type === 'CreateGroup') {
-      if (!identity || current.payload.actorId !== identity.id || current.payload.name !== currentGroup.name) throw new Error('Persisted CreateGroup mismatch')
+      if (!authorizedIdentityIds.has(current.payload.actorId) || current.payload.name !== currentGroup.name) throw new Error('Persisted CreateGroup mismatch')
       const initial = current.payload.initialParticipant
       if (initial) {
         latestParticipantMutation.set(initial.participantId, current)
@@ -174,7 +190,7 @@ export function validateDurableState(value: DurableState): DurableState {
     }
     if (current.type === 'CreateSettlement' || current.type === 'UpdateSettlement' || current.type === 'DeleteSettlement') {
       const snapshot = current.payload.settlement
-      if (!identity || snapshot.creatorAccessIdentityId !== identity.id) throw new Error('Persisted Settlement mutation ownership mismatch')
+      if (!authorizedIdentityIds.has(snapshot.creatorAccessIdentityId)) throw new Error('Persisted Settlement mutation ownership mismatch')
       const participantBelongedToGroup = (participantId: string): boolean => {
         const localParticipant = value.participants.find(item => item.id === participantId)
         if (localParticipant) return localParticipant.groupId === current.groupId
