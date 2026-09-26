@@ -26,24 +26,24 @@ yet verified
 
 | Field | Value | Evidence/status |
 | --- | --- | --- |
-| Git commit | `5f1db912b12d06888ed95ca15df329063d0a678a` | local `main` and `origin/main` identical when recorded |
-| Commit subject | `feat: add branded JoinSplit app icon` | verified from Git |
-| CI run | [GitHub Actions 36229322313](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36229322313) | completed successfully for the recorded commit |
+| Git commit | `36205cc261515c8da48e7a998f4ecea3f93d09f6` | local `main`, `origin/main` and Render's live commit identical when recorded |
+| Commit subject | `test: align reset flow with landing page` | verified from Git and Render |
+| CI run | [GitHub Actions 36241515078](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36241515078) | completed successfully for the recorded commit |
 | Render service | `srv-darf6v7avr4c73ee3k40` | PASS on 2026-09-26: Frankfurt, Free and Blueprint-managed |
-| Render deploy | `dep-daro0n8jo6nc738oi78g` | live deploy observed; duration 1m17s |
+| Render deploy | `dep-darrkkbbc2fs738977p0` | PASS: live manual deploy observed on 2026-09-26 at 14:28 CEST; duration 1m24s |
 | Neon project | `joinsplit-production` | AWS Frankfurt and Free reported; final dated account check pending |
-| Automatic deploy | Off | PASS on 2026-09-26; manual deployment remains required |
+| Automatic deploy | Off | PASS rechecked in Render at `2026-09-26T13:24Z`; manual deployment remains required |
 
 ## 2. Deployment and migration
 
 | Check | Result | Required evidence |
 | --- | --- | --- |
-| Production configuration validation | PASS | Render log: `Production configuration is valid.` |
-| Migration command | PASS | Render log reports no pending migrations for the recorded deploy |
+| Production configuration validation | PASS | Current Render deploy log at 2026-09-26 14:29 CEST: `Production configuration is valid.` |
+| Migration command | PASS | Current Render deploy log at 2026-09-26 14:29 CEST: `Nothing to migrate.` |
 | Expected highest migration | `2026_09_25_000001_add_last_mutated_at_to_access_identities` | compare with production migration state |
-| Startup retention cleanup | PASS | aggregate-only Render log reports `identities=0 groups=0` |
-| Secrets absent from output | PASS for reviewed deploy excerpt | no credential values observed; a broader runtime-log review remains an operations gate |
-| Destructive commands absent | PASS for reviewed deploy | no test seeder, `migrate:fresh` or rollback observed |
+| Startup retention cleanup | PASS | Current Render deploy log at 2026-09-26 14:29 CEST reports `identities=0 groups=0` |
+| Secrets absent from output | PASS for reviewed current-deploy excerpt | no credential values observed; a broader runtime-log review remains an operations gate |
+| Destructive commands absent | PASS for reviewed current deploy | no test seeder, `migrate:fresh` or rollback observed |
 
 Expected startup order is production-configuration validation, migrations via
 the direct Neon endpoint, retention cleanup, then Apache, Nuxt and the Laravel
@@ -55,12 +55,12 @@ scheduler.
 | --- | --- | --- |
 | Canonical DNS | `joinsplit.tiny-bits.org` CNAME to `joinsplit.onrender.com` | PASS at `2026-09-26T07:38Z` via Cloudflare public DNS |
 | Render domain verification | verified | PASS observed in Render on 2026-09-26 |
-| TLS certificate | valid hostname and trusted chain | PASS on 2026-09-26 through successful canonical HTTPS requests |
-| HTTP to HTTPS | canonical HTTPS | PASS on 2026-09-26: HTTP 301 to `https://joinsplit.tiny-bits.org/` |
-| Render hostname | redirects to canonical origin | PASS at `2026-09-26T07:38Z`: HTTP 308 via `curl` |
-| `/` | application shell | PASS on 2026-09-26: HTTP 200 on canonical origin |
-| `/up` | HTTP 200 liveness response | PASS at `2026-09-26T07:38Z` on Render hostname |
-| `/ready` | HTTP 200 with minimal readiness response | PASS on 2026-09-26 on canonical origin |
+| TLS certificate | valid hostname and trusted chain | PASS at `2026-09-26T13:24:25Z` through successful canonical HTTPS requests |
+| HTTP to HTTPS | canonical HTTPS | PASS at `2026-09-26T13:24:25Z`: HTTP 301 to `https://joinsplit.tiny-bits.org/` |
+| Render hostname | redirects to canonical origin | PASS at `2026-09-26T13:24:25Z`: HTTP 308 via `curl` |
+| `/` | application shell | PASS at `2026-09-26T13:24:25Z`: HTTP 200 on canonical origin |
+| `/up` | HTTP 200 liveness response | PASS at `2026-09-26T13:24:25Z`; current Render deploy also records repeated successful platform health checks |
+| `/ready` | HTTP 200 with minimal readiness response | PASS at `2026-09-26T13:24:25Z` with `{"status":"ready"}` |
 | Separate public Laravel origin | none | PASS in the reviewed deployment configuration |
 
 ## 4. Bounded production smoke
@@ -109,6 +109,17 @@ version number.
 | Safari on current iOS | pending | pending | pending | BLOCKED |
 | Chrome on current Android | pending | pending | pending | BLOCKED |
 
+An additional non-mutating automated production smoke ran at
+`2026-09-26T13:30:47Z` with a 320 x 800 CSS-pixel viewport. It verifies the
+public shell and disclosure navigation but does not replace the named manual
+browser and real-device rows above.
+
+| Playwright engine | Reported browser identity | Result |
+| --- | --- | --- |
+| Chromium | HeadlessChrome 153.0.8010.12 | PASS: `/` HTTP 200, no horizontal overflow, `/demo` navigation and heading correct, no console errors |
+| Firefox | Firefox 155.0 | PASS: `/` HTTP 200, no horizontal overflow, `/demo` navigation and heading correct, no console errors |
+| WebKit | Safari/WebKit 26.6 | PASS: `/` HTTP 200, no horizontal overflow, `/demo` navigation and heading correct, no console errors |
+
 ## 6. Operations and free-tier gates
 
 The zero-cost showcase intentionally uses a mixed automatic and manual
@@ -117,12 +128,12 @@ an SLA.
 
 | Gate | Required evidence | Result |
 | --- | --- | --- |
-| Exactly one JoinSplit Render service | Free, Frankfurt, no paid upgrade | PASS on 2026-09-26; the workspace also contains one unrelated service |
+| Exactly one JoinSplit Render service | Free, Frankfurt, no paid upgrade | PASS rechecked in Render at `2026-09-26T13:24Z`; the workspace also contains one unrelated service |
 | Exactly one Neon project | Free, AWS Frankfurt, no paid upgrade | BLOCKED: dated account check pending |
-| Cost controls | payment method and provider behavior reviewed | BLOCKED |
-| Runtime-log retention | Render workspace retains data-bearing logs no longer than seven days | BLOCKED |
-| Log-content review | no secrets, identifiers, names or financial payloads | BLOCKED |
-| Render automatic checks | `/up`, failed deploy, unhealthy-service and Free-limit notifications configured | PARTIAL PASS: `/up` Health Check and workspace default failure notifications verified; unhealthy-service and Free-limit notification coverage not independently evidenced |
+| Cost controls | payment method and provider behavior reviewed | PARTIAL PASS at `2026-09-26T13:24Z`: Render Hobby, no card on file, current and projected September cost USD 0.00; Neon billing state still requires an authenticated check |
+| Runtime-log retention | Render workspace retains data-bearing logs no longer than seven days | PASS: Render dashboard confirms Hobby; [Render logging documentation](https://render.com/docs/logging#retention-period) specifies seven-day Hobby retention |
+| Log-content review | no secrets, identifiers, names or financial payloads | BLOCKED: review at `2026-09-26T13:31Z` found Apache combined logs persisting Group UUIDs in referrers; a local fix replaces combined access logs with method/status/size/duration only and requires CI, deploy and production verification |
+| Render automatic checks | `/up`, failed deploy, unhealthy-service and Free-limit notifications configured | PARTIAL PASS rechecked at `2026-09-26T13:24Z`: `/up`, Auto-Deploy Off and workspace default `Only failure notifications` verified; Render documents failed-deploy, unhealthy-service and automatic Free-limit email coverage, but the receiving address has not been independently verified |
 | Manual release checks | canonical HTTPS, `/ready`, domain/TLS and provider dashboards | PARTIAL PASS: endpoint, TLS and Render dashboard checks pass; Neon dashboard requires a new authenticated session |
 | Manual metrics review | 5xx/429, Neon capacity and connections | BLOCKED |
 | Cleanup evidence | startup cleanup success and awake-time scheduler log review | BLOCKED |

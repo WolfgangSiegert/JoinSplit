@@ -28,6 +28,7 @@ RUN composer install --no-dev --no-interaction --no-progress --no-scripts --pref
 
 COPY backend/ ./
 COPY backend/docker/joinsplit.conf /etc/apache2/conf-available/joinsplit.conf
+COPY backend/docker/000-default.conf /etc/apache2/sites-available/000-default.conf
 COPY backend/docker/supervisord.conf /etc/supervisor/conf.d/joinsplit.conf
 COPY --from=frontend-build /usr/local/bin/node /usr/local/bin/node
 COPY --from=frontend-build /app/.output /var/www/frontend/.output
@@ -35,8 +36,6 @@ COPY --from=frontend-build /app/.output /var/www/frontend/.output
 RUN composer dump-autoload --no-dev --optimize --no-interaction \
     && a2enconf joinsplit \
     && sed -ri 's!Listen 80!Listen 10000!' /etc/apache2/ports.conf \
-    && sed -ri 's!<VirtualHost \*:80>!<VirtualHost *:10000>!' /etc/apache2/sites-available/000-default.conf \
-    && sed -ri 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 10000

@@ -24,10 +24,21 @@ it('keeps the zero-cost Render and Neon showcase deployment explicit and manuall
 
 it('keeps Laravel routes out of the internal Nuxt proxy', function () {
     $apacheConfiguration = file_get_contents(dirname(__DIR__, 2).'/docker/joinsplit.conf');
+    $virtualHost = file_get_contents(dirname(__DIR__, 2).'/docker/000-default.conf');
 
     expect($apacheConfiguration)->not->toBeFalse()
         ->and($apacheConfiguration)->toContain('ProxyPass /index.php !')
         ->and($apacheConfiguration)->toContain('ProxyPass /api !')
         ->and($apacheConfiguration)->toContain('ProxyPass /up !')
-        ->and($apacheConfiguration)->toContain('ProxyPass /ready !');
+        ->and($apacheConfiguration)->toContain('ProxyPass /ready !')
+        ->and($apacheConfiguration)->toContain('method=%m status=%>s bytes=%B duration_us=%D')
+        ->and($apacheConfiguration)->not->toContain('%U')
+        ->and($apacheConfiguration)->not->toContain('%r')
+        ->and($apacheConfiguration)->not->toContain('%{Referer}i')
+        ->and($apacheConfiguration)->not->toContain('%{User-Agent}i')
+        ->and($virtualHost)->not->toBeFalse()
+        ->and($virtualHost)->toContain('<VirtualHost *:10000>')
+        ->and($virtualHost)->toContain('DocumentRoot /var/www/html/public')
+        ->and($virtualHost)->toContain('CustomLog /proc/self/fd/1 joinsplit_privacy')
+        ->and($virtualHost)->not->toContain('combined');
 });
