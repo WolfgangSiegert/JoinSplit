@@ -62,6 +62,24 @@ class ProductionConfiguration
         if (config('production.trusted_proxies') !== 'REMOTE_ADDR') {
             $errors[] = 'TRUSTED_PROXIES';
         }
+        if (config('session.driver') !== 'database') {
+            $errors[] = 'SESSION_DRIVER';
+        }
+        if ((int) config('session.lifetime') !== 720) {
+            $errors[] = 'SESSION_LIFETIME';
+        }
+        if (! (bool) config('session.encrypt')) {
+            $errors[] = 'SESSION_ENCRYPT';
+        }
+        if (! (bool) config('session.secure')) {
+            $errors[] = 'SESSION_SECURE_COOKIE';
+        }
+        if (! (bool) config('session.http_only')) {
+            $errors[] = 'SESSION_HTTP_ONLY';
+        }
+        if (config('session.same_site') !== 'lax') {
+            $errors[] = 'SESSION_SAME_SITE';
+        }
 
         return $errors;
     }

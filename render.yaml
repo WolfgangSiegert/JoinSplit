@@ -50,7 +50,19 @@ services:
       - key: CACHE_STORE
         value: array
       - key: SESSION_DRIVER
-        value: array
+        value: database
+      - key: SESSION_LIFETIME
+        value: "720"
+      - key: SESSION_ENCRYPT
+        value: "true"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: SESSION_HTTP_ONLY
+        value: "true"
+      - key: SESSION_SAME_SITE
+        value: lax
+      - key: SESSION_COOKIE
+        value: joinsplit_session
       - key: NODE_ENV
         value: production
       - key: NUXT_PUBLIC_API_BASE

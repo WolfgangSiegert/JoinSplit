@@ -59,8 +59,12 @@ return [
     |
     */
 
-    // No user provider is configured until authentication is implemented.
-    'providers' => [],
+    'providers' => [
+        'users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Account::class,
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------

@@ -18,6 +18,11 @@ it('keeps the zero-cost Render and Neon showcase deployment explicit and manuall
         ->and($specification)->toContain('- key: DB_DIRECT_HOST')
         ->and($specification)->toContain('value: verify-full')
         ->and($specification)->toContain('value: /etc/ssl/certs/ca-certificates.crt')
+        ->and($specification)->toContain("- key: SESSION_DRIVER\n        value: database")
+        ->and($specification)->toContain("- key: SESSION_LIFETIME\n        value: \"720\"")
+        ->and($specification)->toContain("- key: SESSION_SECURE_COOKIE\n        value: \"true\"")
+        ->and($specification)->toContain("- key: SESSION_HTTP_ONLY\n        value: \"true\"")
+        ->and($specification)->toContain("- key: SESSION_SAME_SITE\n        value: lax")
         ->and($specification)->not->toContain('postgresql://')
         ->and($specification)->not->toContain('deploy_on_push: true');
 });

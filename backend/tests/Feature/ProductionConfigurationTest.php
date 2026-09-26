@@ -18,6 +18,12 @@ function configureValidProduction(string $certificate): void
         'database.connections.pgsql.sslmode' => 'verify-full',
         'database.connections.pgsql.sslrootcert' => $certificate,
         'logging.default' => 'stderr',
+        'session.driver' => 'database',
+        'session.lifetime' => 720,
+        'session.encrypt' => true,
+        'session.secure' => true,
+        'session.http_only' => true,
+        'session.same_site' => 'lax',
     ]);
 }
 
@@ -29,6 +35,11 @@ it('accepts only the approved production boundary without exposing values', func
 
     expect(app(ProductionConfiguration::class)->errors())->toBe([]);
     app(ProductionConfiguration::class)->ensureValid();
+
+    // The production boundary above deliberately requires database-backed
+    // sessions. The HSTS assertion itself must stay independent from an
+    // external database connection.
+    config(['session.driver' => 'array']);
 
     $this->get('/')
         ->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
@@ -51,6 +62,12 @@ it('rejects debug, noncanonical origins, non-Neon database hosts, weak TLS and f
         'database.connections.pgsql.sslmode' => 'verify-full',
         'database.connections.pgsql.sslrootcert' => '/missing/ca.crt',
         'logging.default' => 'single',
+        'session.driver' => 'file',
+        'session.lifetime' => 120,
+        'session.encrypt' => false,
+        'session.secure' => false,
+        'session.http_only' => false,
+        'session.same_site' => 'none',
     ]);
 
     $errors = app(ProductionConfiguration::class)->errors();
@@ -68,6 +85,12 @@ it('rejects debug, noncanonical origins, non-Neon database hosts, weak TLS and f
         'DB_SSLROOTCERT',
         'LOG_CHANNEL',
         'TRUSTED_PROXIES',
+        'SESSION_DRIVER',
+        'SESSION_LIFETIME',
+        'SESSION_ENCRYPT',
+        'SESSION_SECURE_COOKIE',
+        'SESSION_HTTP_ONLY',
+        'SESSION_SAME_SITE',
     ])->and(implode(',', $errors))->not->toContain('secret');
 });
 

@@ -38,6 +38,18 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('authenticated-mutations', fn (Request $request) => Limit::perMinute(60)
             ->by('authenticated-mutations:'.$this->requestKey($request))
             ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
+
+        RateLimiter::for('account-registration', fn (Request $request) => Limit::perHour(5)
+            ->by('account-registration:'.$request->ip())
+            ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
+
+        RateLimiter::for('account-login', fn (Request $request) => Limit::perMinute(10)
+            ->by('account-login:'.$request->ip().'|'.$this->emailKey($request))
+            ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
+
+        RateLimiter::for('account-session', fn (Request $request) => Limit::perMinute(60)
+            ->by('account-session:'.($request->user('web')?->getAuthIdentifier() ?? $request->ip()))
+            ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
     }
 
     private function requestKey(Request $request): string
@@ -45,5 +57,10 @@ class AppServiceProvider extends ServiceProvider
         $identityId = strtolower((string) $request->header('X-Access-Identity-ID'));
 
         return $request->ip().'|'.$identityId;
+    }
+
+    private function emailKey(Request $request): string
+    {
+        return hash('sha256', strtolower(trim((string) $request->input('email'))));
     }
 }
