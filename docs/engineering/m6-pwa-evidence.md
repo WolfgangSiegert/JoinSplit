@@ -11,8 +11,9 @@ JS-048 manually deployed that commit to the canonical origin through Render
 deploy `dep-das32up7lnhs73fdev3g` on 2026-09-26. Render reported a successful
 live deploy in 1m18s after production configuration validation, no pending
 migrations and successful process startup. The desktop installation and
-offline/reconnect path passed on macOS and Chrome as recorded below. Mobile
-installation and a genuine production update transition remain open.
+offline/reconnect path passed on macOS and Chrome as recorded below. Android
+installation and offline relaunch also passed. A genuine production update
+transition remains open.
 
 ## Automated candidate evidence
 
@@ -32,7 +33,7 @@ installation and a genuine production update transition remain open.
 | Platform | Exact device / OS / browser | Commit and deploy | Result | Notes |
 | --- | --- | --- | --- | --- |
 | Desktop installed PWA | Mac running macOS 15.7.9; Chrome 153.0.8010.54 | `8c09be3`; `dep-das32up7lnhs73fdev3g` | PASS, human-reported | Installed app launched standalone with the production beta; fictional offline state and reconnect were exercised |
-| Mobile installed PWA | PENDING | PENDING | PENDING | Real device preferred; label emulation |
+| Mobile installed PWA | Android 10; Chrome 153.0.8010.53 | `8c09be3`; `dep-das32up7lnhs73fdev3g` | PASS, human-reported | Installed from Chrome, launched from the app icon, retained fictional Group data offline and returned to online operation |
 
 ## Production lifecycle evidence
 
