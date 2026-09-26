@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountSessionController;
 use App\Http\Controllers\AccountAccessIdentityController;
+use App\Http\Controllers\AccountWorkspaceController;
 use App\Http\Controllers\ReadinessController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,10 @@ Route::prefix('/api/account')->middleware('api.origin')->group(function () {
         Route::post('/logout', [AccountSessionController::class, 'logout']);
         Route::delete('/', [AccountSessionController::class, 'destroy']);
         Route::post('/access-identities/link', [AccountAccessIdentityController::class, 'store'])
+            ->middleware('throttle:account-adoption');
+        Route::get('/workspace', [AccountWorkspaceController::class, 'index']);
+        Route::post('/adoptions/{adoption}/groups/{group}/import', [AccountWorkspaceController::class, 'import'])
+            ->whereUuid('adoption')->whereUuid('group')
             ->middleware('throttle:account-adoption');
     });
 });

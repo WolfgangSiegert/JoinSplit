@@ -11,13 +11,14 @@ class Group extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['id', 'name', 'currency', 'is_active'];
+    protected $fillable = ['id', 'name', 'currency', 'is_active', 'revision'];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
             'has_financial_history' => 'boolean',
+            'revision' => 'integer',
         ];
     }
 
