@@ -136,7 +136,7 @@ onUnmounted(() => window.clearTimeout(updateActivationTimeout))
       <div>
         <h2 id="pwa-update-title" class="font-semibold">Neue JoinSplit-Version verfügbar</h2>
         <p class="mt-1 text-sm text-gray-600">
-          Die Aktualisierung startet nur auf deine ausdrückliche Auswahl.
+          Die neue Version wird erst nach deiner ausdrücklichen Bestätigung aktiviert.
           <template v-if="pendingCount"> {{ pendingMutationLabel(pendingCount) }} {{ pendingMutationVerb(pendingCount, 'ist', 'sind') }} noch nicht synchronisiert.</template>
         </p>
       </div>
