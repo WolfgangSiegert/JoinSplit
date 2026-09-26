@@ -99,6 +99,29 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   letter-spacing: -0.025em;
 }
 
+.app-brand {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-beta-badge {
+  display: inline-flex;
+  min-height: 1.35rem;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--coral) 48%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--coral) 10%, var(--surface-strong));
+  color: var(--coral-dark);
+  padding: 0.1rem 0.42rem;
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .app-wordmark__icon {
   width: 2rem;
   height: 2rem;
@@ -810,6 +833,11 @@ html[data-theme="dark"] .secondary-button {
 html[data-theme="dark"] .primary-button { background: #a93c2d; }
 html[data-theme="dark"] .primary-button:hover { background: #bd4939; }
 html[data-theme="dark"] .danger-button { background: #a93434; }
+html[data-theme="dark"] .app-beta-badge {
+  border-color: color-mix(in srgb, var(--coral) 62%, var(--line));
+  background: color-mix(in srgb, var(--coral) 18%, var(--surface-strong));
+  color: var(--ink);
+}
 html[data-theme="dark"] .theme-toggle:not(.theme-toggle--dark) .theme-toggle__icon:first-child,
 html[data-theme="dark"] .theme-toggle--dark .theme-toggle__icon:last-child { background: #a93c2d; }
 html[data-theme="dark"][data-design="3"] .primary-button { background: #315fc8; }

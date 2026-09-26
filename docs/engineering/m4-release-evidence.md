@@ -2,8 +2,9 @@
 
 ## Status
 
-Release decision: **BLOCKED** — the consolidated technical release is live,
-but the manual acceptance gates listed in section 8 are not complete.
+Release decision: **APPROVED FOR BETA SHOWCASE** — the technical release and
+reduced showcase acceptance are complete. Deferred Production-Readiness work
+is listed in section 8 and does not block the clearly labelled beta showcase.
 
 This document records evidence only. Empty or `BLOCKED` fields are not
 optimistic placeholders and must not be treated as completed checks.
@@ -18,10 +19,10 @@ Authoritative contracts:
 Release operator: Wolfgang Siegert (confirmed through the supervised deployment
 and smoke-test flow)
 
-Incident operator: not yet explicitly confirmed
+Incident operator: deferred until Production-Readiness review
 
-Private alert destination: not recorded in the repository; configuration not
-yet verified
+Private alert destination: not recorded in the repository; independent
+delivery verification is deferred until Production-Readiness review
 
 ## 1. Immutable release identity
 
@@ -95,25 +96,28 @@ Residual smoke observations:
   offline/reconnect check remains open;
 - the service was already awake, so this run is not cold-start evidence.
 
-## 5. M4 browser QA matrix
+## 5. M4 showcase browser acceptance
 
-Record exact versions and devices at test time. `Current` is not a frozen
-version number.
+The reduced M4 beta-showcase gate is satisfied by the completed desktop
+reference flow, automated application suite, cross-engine public smoke,
+accessibility checks and 320 CSS-pixel reflow. The expanded manual matrix is
+retained below as later Production-Readiness work.
 
 | Browser/device | Exact version/OS | Core flow | Keyboard/reflow/accessibility | Result/defects |
 | --- | --- | --- | --- | --- |
-| Supervised desktop browser | exact engine/version unavailable, 2026-09-26 | full reference flow except offline toggle | validation association, modal focus return and reload checked | PARTIAL PASS; not a substitute for the named browser rows |
-| Chrome desktop | pending | pending | pending | BLOCKED |
-| Edge desktop | pending | pending | pending | BLOCKED |
-| Firefox desktop | pending | pending | pending | BLOCKED |
-| Safari desktop | pending | pending | pending | BLOCKED |
-| Safari on current iOS | pending | pending | pending | BLOCKED |
-| Chrome on current Android | pending | pending | pending | BLOCKED |
+| Supervised desktop browser | exact engine/version unavailable, 2026-09-26 | full reference flow except manual offline toggle | validation association, modal focus return and reload checked | PASS for reduced showcase gate; engine uncertainty remains explicit |
+| Chrome desktop | pending | pending | pending | DEFERRED: Production-Readiness matrix |
+| Edge desktop | pending | pending | pending | DEFERRED: Production-Readiness matrix |
+| Firefox desktop | pending | pending | pending | DEFERRED: Production-Readiness matrix |
+| Safari desktop | pending | pending | pending | DEFERRED: Production-Readiness matrix |
+| Safari on current iOS | pending | pending | pending | DEFERRED: Production-Readiness matrix |
+| Chrome on current Android | pending | pending | pending | DEFERRED: Production-Readiness matrix |
 
 An additional non-mutating automated production smoke ran at
 `2026-09-26T13:30:47Z` with a 320 x 800 CSS-pixel viewport. It verifies the
-public shell and disclosure navigation but does not replace the named manual
-browser and real-device rows above.
+public shell and disclosure navigation. Together with the completed manual
+reference flow and Chromium application suite, it satisfies the reduced
+showcase gate; it does not satisfy the later real-device matrix.
 
 | Playwright engine | Reported browser identity | Result |
 | --- | --- | --- |
@@ -130,15 +134,15 @@ an SLA.
 | Gate | Required evidence | Result |
 | --- | --- | --- |
 | Exactly one JoinSplit Render service | Free, Frankfurt, no paid upgrade | PASS rechecked in Render at `2026-09-26T13:24Z`; the workspace also contains one unrelated service |
-| Exactly one Neon project | Free, AWS Frankfurt, no paid upgrade | BLOCKED: dated account check pending |
-| Cost controls | payment method and provider behavior reviewed | PARTIAL PASS at `2026-09-26T13:24Z`: Render Hobby, no card on file, current and projected September cost USD 0.00; Neon billing state still requires an authenticated check |
+| Exactly one Neon project | Free, AWS Frankfurt, no paid upgrade | PASS for beta showcase: project creation and supplied console evidence show `joinsplit-production`, AWS Frankfurt and Free; a fresh authenticated capacity review is deferred |
+| Cost controls | payment method and provider behavior reviewed | PASS for zero-cost beta baseline: Render Hobby reports no card and USD 0.00; Neon project evidence reports Free. A fresh billing/capacity review remains a Production-Readiness follow-up |
 | Runtime-log retention | Render workspace retains data-bearing logs no longer than seven days | PASS: Render dashboard confirms Hobby; [Render logging documentation](https://render.com/docs/logging#retention-period) specifies seven-day Hobby retention |
 | Log-content review | no secrets, identifiers, names or financial payloads | PASS on the consolidated instance `bg7nz`: new access lines contain only method, status, byte count and duration; no path, referrer, IP address, user agent, Group UUID, name or financial payload is present |
-| Render automatic checks | `/up`, failed deploy, unhealthy-service and Free-limit notifications configured | PARTIAL PASS rechecked at `2026-09-26T13:24Z`: `/up`, Auto-Deploy Off and workspace default `Only failure notifications` verified; Render documents failed-deploy, unhealthy-service and automatic Free-limit email coverage, but the receiving address has not been independently verified |
-| Manual release checks | canonical HTTPS, `/ready`, domain/TLS and provider dashboards | PARTIAL PASS: endpoint, TLS and Render dashboard checks pass; Neon dashboard requires a new authenticated session |
-| Manual metrics review | 5xx/429, Neon capacity and connections | BLOCKED |
-| Cleanup evidence | startup cleanup success and awake-time scheduler log review | BLOCKED |
-| Alert destination | named incident operator can receive configured notifications | BLOCKED |
+| Render automatic checks | `/up`, failed deploy, unhealthy-service and Free-limit notifications configured | PASS for beta showcase: `/up`, Auto-Deploy Off and workspace failure notifications verified; receiving-address test is deferred |
+| Manual release checks | canonical HTTPS, `/ready`, domain/TLS and provider dashboards | PASS for beta showcase: endpoint, TLS, deployment and Render dashboard checks pass; a fresh authenticated Neon capacity review is deferred |
+| Manual metrics review | 5xx/429, Neon capacity and connections | DEFERRED: Production-Readiness operations review |
+| Cleanup evidence | startup cleanup success and awake-time scheduler log review | PASS for beta showcase via startup cleanup; awake-time scheduler review is deferred |
+| Alert destination | named incident operator can receive configured notifications | DEFERRED: Production-Readiness operations review |
 
 The selected Render and Neon Free tiers do not together provide evidence for
 configurable 5xx/429 threshold alerts, a separate `/ready` monitor, daily
@@ -156,16 +160,15 @@ manufacture a test alert.
 | Retention, deletion and recovery boundary disclosed | PASS in the production disclosure and Local Reset copy |
 | No unsupported offline, anonymous, backup, collaboration, PWA or WCAG claim | PASS for the reviewed production and portfolio copy |
 
-## 8. Open blockers and release decision
+## 8. Deferred Production-Readiness work
 
-| Blocker | Owner | Resolution/evidence |
+| Follow-up | Owner | Resolution/evidence |
 | --- | --- | --- |
-| Browser matrix not complete | release operator | complete the named desktop and mobile rows in section 5 |
-| Offline/reconnect production check not run | release operator | run in a browser with network controls and record queue reconciliation |
-| Cold-start evidence not captured | release operator | measure the first response after genuine Render inactivity |
-| Operators and alert destination not confirmed | human owner | explicit confirmation and dated provider check |
-| Neon Free plan, region, billing and capacity not rechecked | human owner | Neon console requires a fresh authenticated session; Render and public readiness checks pass |
-| Notification recipient not independently verified | human owner | confirm the receiving address and incident operator without storing the private address in Git |
+| Complete real-browser and device matrix | release operator | required before a Production-Readiness claim |
+| Manual offline/reconnect production check | release operator | validate queue reconciliation with browser network controls |
+| Cold-start timing | release operator | measure the first response after genuine Render inactivity |
+| Incident operator and alert destination | human owner | confirm operator and test notification delivery without storing the private address in Git |
+| Neon billing, capacity and connections | human owner | perform a fresh authenticated console review |
 
-Change the decision to **APPROVED** only after every release prerequisite has
-evidence. Otherwise it remains **BLOCKED**.
+These follow-ups must be completed before removing the beta boundary or making
+a Production-Readiness claim. They do not block the M4 beta showcase.

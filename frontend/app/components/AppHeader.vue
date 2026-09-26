@@ -38,10 +38,13 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
 <template>
   <header class="app-header">
     <div class="app-header__content">
-      <NuxtLink to="/" class="app-wordmark" aria-label="JoinSplit – Startseite">
-        <img class="app-wordmark__icon" src="/favicon.svg" alt="" width="32" height="32">
-        <span>JoinSplit</span>
-      </NuxtLink>
+      <div class="app-brand">
+        <NuxtLink to="/" class="app-wordmark" aria-label="JoinSplit – Startseite">
+          <img class="app-wordmark__icon" src="/favicon.svg" alt="" width="32" height="32">
+          <span>JoinSplit</span>
+        </NuxtLink>
+        <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
+      </div>
       <button
         type="button"
         class="theme-toggle"

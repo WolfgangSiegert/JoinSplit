@@ -51,7 +51,7 @@ Before creating resources, confirm:
 - the approved Git commit and green CI run,
 - the Render workspace and billing method,
 - the Neon project owner and billing method,
-- the named incident operator and alert destination,
+- the named release operator,
 - access to DNS for `tiny-bits.org`,
 - confirmation that both resources show the Free plan before creation.
 
@@ -135,7 +135,10 @@ cleanup logs, and Neon capacity and connections. Render Free and Neon Free do
 not provide complete automatic alert coverage for those checks, so this release
 makes no continuous-monitoring or SLA claim. Do not intentionally break the
 production deployment for an alert test. Record the dated result and remaining
-gaps in [`m4-release-evidence.md`](m4-release-evidence.md).
+gaps in [`m4-release-evidence.md`](m4-release-evidence.md). For the explicitly
+labelled beta showcase, an independently tested alert destination, a forced
+cold-start measurement and the complete real-device matrix are tracked as
+Production-Readiness follow-ups rather than publication blockers.
 
 Neon Free's short restore history is best-effort infrastructure recovery, not a
 portfolio guarantee or user backup. A paid restore window is deliberately

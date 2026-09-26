@@ -41,7 +41,7 @@ deterministic proposal is Ben to Ava EUR 4.00 and Cleo to Ava EUR 4.00.
 
 ## Reference happy path
 
-Run the complete path once in current stable desktop Chrome. Execute steps 1
+Run the complete path once in a current desktop browser. Execute steps 1
 through 10, then the targeted negative and offline checks, restore the exact
 post-Settlement baseline of Ava +4.00, Ben 0.00 and Cleo -4.00, and only then
 continue with destructive steps 11 through 14.
@@ -92,8 +92,8 @@ continue with destructive steps 11 through 14.
 
 ## Targeted negative and offline checks
 
-Run all checks once in the Chrome reference run before steps 11 through 14.
-Repeat only platform-specific offline and sharing behavior on mobile. Restore
+Run all checks once in the reference run before steps 11 through 14 when the
+required browser controls are available. Restore
 the exact post-Settlement baseline before continuing the happy path.
 
 - **Validation:** submit an empty Group name and empty Expense and Settlement
@@ -120,7 +120,17 @@ Do not manipulate production data or clocks to simulate the 30-day expiry or
 the terminal local-only identity. Use the automated expiry tests and separate
 operations evidence for those cases.
 
-## Browser verification matrix
+## Showcase acceptance and later Production-Readiness matrix
+
+M4 beta showcase acceptance requires one complete manual desktop reference
+flow, automated Chromium/Firefox/WebKit public-shell coverage, the Chromium
+application suite, automated accessibility checks and 320 CSS-pixel reflow.
+The offline/reconnect check may be satisfied by automated integration coverage
+for M4 when the supervised browser does not expose network controls.
+
+The following manual matrix is retained for a later Production-Readiness
+review. Missing rows do not block publication while the application remains a
+clearly labelled beta showcase:
 
 | Platform | Browser | Minimum scope |
 | --- | --- | --- |

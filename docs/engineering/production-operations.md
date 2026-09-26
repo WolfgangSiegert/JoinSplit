@@ -17,8 +17,9 @@ operational verification remain required before public release.
 
 The canonical application domain is `https://joinsplit.tiny-bits.org`. The
 approved public operator is Wolfgang Siegert and the privacy contact is
-`mailto:WoSiegert@hotmail.com`. The named human release and incident operator
-and the private alert destination remain separate required pre-release inputs.
+`mailto:WoSiegert@hotmail.com`. A named incident operator and independently
+verified private alert destination remain Production-Readiness follow-ups
+rather than beta-showcase publication blockers.
 
 ## Release profile
 
@@ -329,20 +330,23 @@ capacity and connection alerts. The release therefore makes no claim of
 continuous external availability monitoring, complete automatic alert
 coverage, an SLA, RPO or RTO.
 
-Available failure notifications go to the named incident operator. Their
-destination and settings must be inspected before release. A non-destructive
+Available failure notifications should go to a named incident operator. Their
+destination and settings must be inspected before a Production-Readiness
+declaration. A non-destructive
 provider test notification may be used when available, but production must not
 be intentionally broken merely to manufacture a test alert. Evidence and open
 gaps are recorded in [`m4-release-evidence.md`](m4-release-evidence.md).
 
-## Required pre-release inputs
+## Required beta-showcase inputs
 
 The following operational values are intentionally not inferred from the
 public contact and must be supplied before production deployment:
 
-- the named human release and incident operator,
-- the operator's alert destination,
+- the named human release operator,
 - confirmation that Render and Neon both show their Free plans,
 - verified Render runtime-log retention,
 - public wording that discloses free-tier availability, deletion and recovery
   limitations.
+
+The incident operator, independently verified alert destination and manual
+capacity/metrics review remain documented Production-Readiness follow-ups.

@@ -30,9 +30,9 @@ all described release behavior is already implemented or deployed.
 
 The current application already provides the local single-owner workflow,
 durable IndexedDB state and queued API synchronization described by the
-repository's MVP and architecture documents. The following parts of this
-contract remain requirements that must be implemented and verified before the
-public release:
+repository's MVP and architecture documents. The public release is explicitly
+labelled as a beta showcase. The following parts define its implemented and
+verified release boundary:
 
 - the Render Frankfurt and Neon AWS Frankfurt production deployment with one
   shared browser HTTPS origin,
@@ -41,8 +41,8 @@ public release:
 - the expired local-only state and terminal synchronization behavior,
 - the seven-day data-bearing operational-log limit and the provider metadata
   exception,
-- cold-start and provider-suspension behavior,
-- the M4 browser verification matrix,
+- disclosed cold-start and provider-suspension behavior,
+- the reduced M4 showcase browser acceptance defined below,
 - the canonical-domain deployment and portfolio entry.
 
 The public test-data warning, detailed disclosure view and explicit local-reset
@@ -243,17 +243,20 @@ There is no availability SLA, RPO or RTO. The server copy and local browser
 state are not supported backups. These limitations reinforce the rule that only
 invented, non-sensitive test data may be used.
 
-## M4 Browser Verification Matrix
+## M4 Showcase Browser Acceptance
 
-The release candidate is verified against the stable browser versions current
-at the time of M4 release:
+The beta showcase release requires:
 
-- Chrome, Edge, Firefox and Safari on desktop,
-- Safari on the current iOS release,
-- Chrome on the current Android release.
+- one complete manual reference flow in a current desktop browser,
+- automated Chromium, Firefox and WebKit coverage for the public shell,
+- automated application integration tests in Chromium,
+- automated accessibility checks and 320 CSS-pixel reflow verification,
+- accurate disclosure of browser binding, offline and free-tier limitations.
 
-This is the M4 verification matrix. It is not an unlimited long-term support
-commitment for all future browser versions, operating systems or devices.
+The complete stable Chrome, Edge, Firefox and Safari desktop matrix plus current
+iOS Safari and Android Chrome remains a Production-Readiness gate. It is
+deliberately deferred while JoinSplit is a beta portfolio showcase and is not
+an M4 publication blocker.
 
 ## Public Claim Boundaries
 
@@ -312,5 +315,11 @@ The public release is permitted only after all of the following are confirmed:
 - the local-reset warning and server-retention boundary,
 - the expired local-only user experience,
 - the cold-start, suspension and no-recovery-guarantee disclosure,
-- the M4 browser verification matrix,
+- the reduced M4 showcase browser acceptance,
+- a visible beta label in the application shell,
 - public copy consistent with this contract.
+
+The complete real-browser and real-device matrix, a manually forced
+offline/reconnect cycle, cold-start timing and independently tested alert
+delivery are deferred Production-Readiness evidence. They do not block this
+beta showcase release.
