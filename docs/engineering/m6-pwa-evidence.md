@@ -3,9 +3,15 @@
 ## Status
 
 JS-047 local automation passed on 2026-09-26. The run used Playwright Chromium
-153.0.8010.12 on macOS arm64 against a fresh production Nuxt build. GitHub CI,
-production and manual installation rows are completed only after their
-respective integration and JS-048 deployment gates.
+153.0.8010.12 on macOS arm64 against a fresh production Nuxt build. GitHub CI
+run [36270897874](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36270897874)
+passed for commit `8c09be3c10945d50a8306059d9fff2b0a73b8aec`.
+
+JS-048 manually deployed that commit to the canonical origin through Render
+deploy `dep-das32up7lnhs73fdev3g` on 2026-09-26. Render reported a successful
+live deploy in 1m18s after production configuration validation, no pending
+migrations and successful process startup. Manual installation rows remain
+open until they are performed on suitable real browser/device surfaces.
 
 ## Automated candidate evidence
 
@@ -18,7 +24,7 @@ respective integration and JS-048 deployment gates.
 | Waiting update does not reload | PASS locally | `frontend/tests/pwa-update-lifecycle.spec.ts` |
 | Explicit update preserves IndexedDB pending work | PASS locally | `frontend/tests/pwa-update-lifecycle.spec.ts` |
 | Install fallback, accessibility and 320 px reflow | PASS locally | `frontend/tests/pwa-experience.spec.ts` |
-| Full application regression | PASS locally; CI PENDING | 254 Vitest tests and 62 Playwright tests passed |
+| Full application regression | PASS locally and in CI | 254 Vitest tests and 62 Playwright tests passed locally; CI run 36270897874 passed |
 
 ## Manual installation evidence
 
@@ -31,10 +37,10 @@ respective integration and JS-048 deployment gates.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Canonical manifest and Service Worker headers | PENDING | JS-048 production smoke |
-| Canonical installability and root scope | PENDING | JS-048 production smoke |
+| Canonical manifest and Service Worker delivery | PASS | HTTPS 200; manifest served as `application/manifest+json`, Service Worker as JavaScript; deploy `dep-das32up7lnhs73fdev3g` |
+| Canonical manifest identity and root scope | PASS | Production manifest declares stable `/` id, start URL and scope, standalone display and approved icon set |
 | Production offline relaunch with fictional data | PENDING | JS-048 production smoke |
-| API and Account data absent from Cache Storage | PENDING | JS-048 production smoke |
-| Update from deployed version to candidate | PENDING | JS-048 controlled release smoke |
+| API and Account data absent from Cache Storage | PASS for deployed routing policy; manual browser inspection PENDING | Deployed Service Worker routes `/api/**`, `/ready`, `/health` and `/up` through `NetworkOnly`; CI exercises Cache Storage behavior |
+| Update from deployed version to candidate | PENDING | Deployment succeeded, but no suitable browser with a captured pre-deploy Service Worker state was available for a genuine production update observation |
 
 No `PENDING` row may be reported as passed by inference from local automation.

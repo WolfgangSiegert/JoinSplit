@@ -4,7 +4,9 @@ JoinSplit is a mobile-first, local-first web application for small groups that
 need to record shared expenses, split them evenly, understand balances, and
 derive settlement payments without creating user accounts.
 
-> **Release status:** M4 public beta showcase. The live canonical demo is
+> **Release status:** M6 public beta showcase with optional Account access and
+> a bounded PWA app shell. Production installation checks remain documented as
+> pending. The live canonical demo is
 > [joinsplit.tiny-bits.org](https://joinsplit.tiny-bits.org). The visible Beta
 > label marks the intentionally reduced showcase acceptance and must not be
 > interpreted as a Production-Readiness claim.
@@ -25,9 +27,11 @@ All screenshots use fictional names and test amounts.
 
 ## Who it is for
 
-JoinSplit is designed for one organiser managing a small group's shared costs
-from one browser installation. Participants are entries in the calculation;
-they do not receive accounts, invitations, or access to the group.
+JoinSplit is designed for one organiser managing a small group's shared costs.
+It remains usable without an Account in one browser installation; an optional
+Account can rehydrate the organiser's workspace on another device.
+Participants are entries in the calculation and do not receive invitations or
+access to the Group.
 
 The project is also an engineering showcase for:
 
@@ -111,8 +115,8 @@ device matrix remains explicitly deferred until a Production-Readiness review.
 - Neither anonymous nor Account server data has a backup or recovery SLA.
 - The public demo is limited to fictional, non-sensitive test data.
 - Automatic server retention replaces a manual server-erasure workflow in M4.
-- No payment execution, banking integration, additional split methods, PWA, or
-  native packaging.
+- No payment execution, banking integration, additional split methods,
+  collaboration, invitations, or native packaging.
 
 The precise 30-day access, cleanup, backup, local-reset, and recovery boundaries
 are documented in the [public portfolio demo contract](docs/product/portfolio-demo.md).

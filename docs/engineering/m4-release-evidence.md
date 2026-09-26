@@ -9,6 +9,10 @@ is listed in section 8 and does not block the clearly labelled beta showcase.
 This document records evidence only. Empty or `BLOCKED` fields are not
 optimistic placeholders and must not be treated as completed checks.
 
+This is historical M4 evidence. M5 and M6 deployment evidence is recorded in
+their respective architecture and QA documents; later capabilities do not
+retroactively change the M4 acceptance result.
+
 Authoritative contracts:
 
 - [`../product/portfolio-demo.md`](../product/portfolio-demo.md)

@@ -2,9 +2,10 @@
 
 ## Status
 
-This document defines the approved M4 target contract for a public JoinSplit
-portfolio release on Render and Neon. It is not a description of the
-repository's current production readiness.
+This document defines the operating contract for the public JoinSplit portfolio
+release on Render and Neon. The beta release has evolved from the approved M4
+deployment through the optional M5 Account slice and the bounded M6 PWA slice.
+It is not a Production-Readiness claim.
 
 The complementary product and public-claim boundary is defined in
 [`../product/portfolio-demo.md`](../product/portfolio-demo.md).
@@ -25,8 +26,9 @@ rather than beta-showcase publication blockers.
 
 JoinSplit is deployed to Render's Frankfurt region with Neon in AWS Frankfurt as a
 limited public portfolio application. The release remains accountless-first and
-single-owner, with an optional M5 Account and Multi-Device slice. It does not
-add collaboration, PWA or Capacitor infrastructure.
+single-owner, with an optional M5 Account and Multi-Device slice and the
+bounded M6 PWA app-shell. It does not add collaboration or Capacitor
+infrastructure.
 
 Production consists of one free Render Docker web service containing Nuxt,
 Laravel, Apache and the Laravel scheduler, plus one Neon Free PostgreSQL project

@@ -13,6 +13,14 @@ separately in
 this M4 contract is not retroactively rewritten as if those features already
 existed.
 
+Later releases are additive and have their own accepted contracts. The current
+beta deployment includes the optional M5 Account slice and the bounded M6 PWA
+slice defined in
+[`../architecture/account-data-adoption.md`](../architecture/account-data-adoption.md)
+and [`../architecture/pwa-distribution.md`](../architecture/pwa-distribution.md).
+Statements below that exclude Accounts or PWA describe the immutable M4 release
+gate, not the current M6 deployment.
+
 The release is a public portfolio demo. It demonstrates the existing
 single-owner expense-sharing workflow and its engineering quality. It is not a
 production financial service, a durable record-keeping system or a suitable
