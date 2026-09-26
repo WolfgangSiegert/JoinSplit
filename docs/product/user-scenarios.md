@@ -199,16 +199,23 @@ Insbesondere wird hier noch nicht festgelegt:
 Registrierung ist eine optionale Erweiterung des grundlegenden
 JoinSplit-Workflows.
 
-Eine spätere Registrierung soll eine bereits bestehende anonyme Nutzung
-übernehmen können.
+M5 setzt diese Erweiterung als **Accounts & Multi-Device Access** um. Die
+accountlose Nutzung bleibt erhalten. Nach ausdrücklicher Bestätigung übernimmt
+die Registrierung die im Browser vorhandenen Groups; bereits synchronisierte
+Groups werden verknüpft, andere lokale Groups authentifiziert und idempotent
+importiert.
 
 Dabei dürfen bestehende Participants, Gruppenzugriffe und
 Gruppenmitgliedschaften nicht verloren gehen oder dupliziert werden.
 
-Ein Account kann später zusätzliche Funktionen ermöglichen.
+Ein Account kann mehrere Access Identities besitzen und seine Daten nach einer
+Anmeldung auf weiteren Geräten in IndexedDB rehydrieren. Account und
+Participant bleiben getrennt; ein Account wird nicht automatisch Participant.
 
-Welche konkreten Funktionen ausschließlich registrierten Nutzern zur Verfügung
-stehen, wird in späteren Product Tasks entschieden.
+Der M5-Vertrag ist in
+[`account-data-adoption.md`](../architecture/account-data-adoption.md)
+festgelegt. Participation Invitations und kollaborative Berechtigungen bleiben
+außerhalb von M5.
 
 ## Participation Invitation
 
@@ -339,9 +346,8 @@ Participation Invitation
 
 Dieses Dokument legt bewusst noch nicht fest:
 
-- technische Authentifizierung,
-- Session-/Token-Storage,
-- konkrete Account-Features,
+- Account-Details außerhalb des separat freizugebenden
+  [`Account and Data-Adoption Contract`](../architecture/account-data-adoption.md),
 - konkrete Split-Methoden,
 - Rundungsregeln,
 - Datenbankschema,

@@ -60,8 +60,8 @@ bedeutet nicht, dass eingegebene Namen und Finanzdaten anonym sind.
 
 Offline erstellte Daten werden zunächst lokal gehalten. Nach der Synchronisation
 bleiben Laravel und PostgreSQL die kanonische serverseitige Repräsentation der
-gemeinsamen Daten. Für den noch zu implementierenden M4-Portfolio-Release gilt
-dies innerhalb seiner aktiven serverseitigen Aufbewahrungsperiode. Die
+gemeinsamen Daten. Für den veröffentlichten M4-Portfolio-Release gilt dies
+innerhalb seiner aktiven serverseitigen Aufbewahrungsperiode. Die
 zeitlich begrenzte Demo ist im
 [Portfolio-Demo-Vertrag](portfolio-demo.md) separat definiert.
 
@@ -252,8 +252,8 @@ Offline erstellte Groups und ihre Fachdaten sowie weitere lokale Änderungen
 werden lokal gehalten und mit dem Laravel-Backend synchronisiert, sobald eine
 Netzwerkverbindung verfügbar ist. Dies setzt keine frühere API-Verbindung
 voraus. Nach der Synchronisation bleiben Laravel und PostgreSQL die kanonische
-serverseitige Repräsentation. Der noch zu implementierende M4-Portfolio-Release
-begrenzt diese Repräsentation durch seinen separaten Aufbewahrungsvertrag.
+serverseitige Repräsentation. Der veröffentlichte M4-Portfolio-Release begrenzt
+diese anonyme Repräsentation durch seinen separaten Aufbewahrungsvertrag.
 
 Der Nutzer soll erkennen können, wenn:
 
@@ -293,10 +293,21 @@ Dazu gehören:
 
 ### Optional Accounts
 
-JoinSplit soll später optionale registrierte Accounts unterstützen.
+M5 konkretisiert optionale registrierte Accounts und Multi-Device-Zugriff als
+Post-MVP-Erweiterung. Accountlose Nutzung bleibt lokal-first verfügbar und die
+bestehende anonyme Synchronisierung bleibt als temporäre browsergebundene
+Serverkopie bestehen.
 
-Eine Registrierung soll bestehende anonyme Nutzung übernehmen können, ohne
-Participants oder Gruppenmitgliedschaften zu duplizieren.
+Eine Registrierung übernimmt nach ausdrücklicher Bestätigung bestehende lokale
+Groups, ohne Participants oder Group-Daten zu duplizieren. Bereits
+synchronisierte Groups werden über ihre Access Identity mit dem Account
+verknüpft; nie synchronisierte oder abgelaufene lokale Groups verwenden einen
+idempotenten authentifizierten Import. Account und Participant bleiben
+unterschiedliche Konzepte.
+
+Der verbindliche Entscheidungsstand und die noch menschlich zu bestätigenden
+Detailentscheidungen stehen in
+[`account-data-adoption.md`](../architecture/account-data-adoption.md).
 
 ### Additional Split Methods
 
@@ -404,7 +415,8 @@ Dieses Dokument legt bewusst noch nicht fest:
 - weitere Settlement-Proposal-Strategien,
 - konkrete Statement-Ausgabeform,
 - UI- und Navigationsstruktur,
-- Account-Features nach dem MVP,
+- Detailentscheidungen zu Accounts außerhalb des freigegebenen
+  [`Account and Data-Adoption Contract`](../architecture/account-data-adoption.md),
 - Reihenfolge der Post-MVP-Funktionen.
 
 Diese Entscheidungen werden in den jeweils dafür vorgesehenen Product-,

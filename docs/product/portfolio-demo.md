@@ -5,6 +5,14 @@
 This document defines the product, data-handling and public-claim boundaries
 for the M4 JoinSplit web portfolio release.
 
+It remains the immutable product boundary for the deployed
+`v0.1.0-beta.1` showcase. The approved M5 Account roadmap does not make Account
+or Multi-Device behavior available in that release. M5 planning is recorded
+separately in
+[`../architecture/account-data-adoption.md`](../architecture/account-data-adoption.md);
+this M4 contract is not retroactively rewritten as if those features already
+existed.
+
 The release is a public portfolio demo. It demonstrates the existing
 single-owner expense-sharing workflow and its engineering quality. It is not a
 production financial service, a durable record-keeping system or a suitable

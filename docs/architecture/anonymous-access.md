@@ -237,11 +237,20 @@ Für M1 werden nicht eingeführt:
 Für M1 ist kein zusätzliches Auth-/Security-Paket erforderlich.
 Framework- und Plattformmittel genügen für diesen begrenzten Mechanismus.
 
-## Future Account Compatibility
+## M5 Account Compatibility
 
-Ein zukünftiger Account kann mit der bestehenden Access Identity verknüpft
-werden. Bestehende Group-Ownership und zukünftige Participant-Verknüpfungen
-bleiben an derselben Access Identity erhalten, statt beim Account-Upgrade
-dupliziert zu werden.
+M5 verknüpft einen optionalen Account mit einer oder mehreren Access Identities.
+Bestehende Group-Ownership bleibt an der jeweiligen Access Identity
+nachvollziehbar und wird nicht durch duplizierte Groups oder Participants
+ersetzt. Account und Participant bleiben getrennt.
 
-Der konkrete Account-Upgrade-Workflow bleibt zurückgestellt.
+Für eine aktive synchronisierte Identity erfolgt die Verknüpfung nach
+Credential-Prüfung. Nie synchronisierte und `expired-local-only` Groups nutzen
+einen ausdrücklichen, session-authentifizierten und idempotenten Import. Dieser
+Import ist die begrenzte M5-Ausnahme zur M4-Regel, dass ein abgelaufener
+anonymer Serverstand nicht automatisch rekonstruiert oder erneut registriert
+wird. Ein gewöhnlicher anonymer Sync-Retry erhält diese Ausnahme nicht.
+
+Nach der Verknüpfung darf das bisherige anonyme Bearer-Credential keinen
+eigenständigen dauerhaften Zugriff auf Accountdaten gewähren. Der vollständige
+Vertrag steht in [`account-data-adoption.md`](account-data-adoption.md).

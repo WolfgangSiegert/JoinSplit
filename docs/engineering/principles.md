@@ -259,8 +259,8 @@ Netzwerk. Der verbindliche fachliche Offline-Umfang steht in
 ### Server Authority
 
 Laravel und PostgreSQL bleiben die kanonische serverseitige Repräsentation der
-gemeinsamen Daten. Für den noch zu implementierenden M4-Portfolio-Release gilt
-dies nur innerhalb seiner aktiven Aufbewahrungsperiode. Der zeitlich begrenzte
+gemeinsamen Daten. Für den veröffentlichten M4-Portfolio-Release gilt dies nur
+innerhalb seiner aktiven Aufbewahrungsperiode. Der zeitlich begrenzte
 Demo-Betrieb ist keine dauerhafte Backup- oder Recovery-Zusage.
 
 Offline First macht den Browser nicht zur dauerhaften alleinigen Source of

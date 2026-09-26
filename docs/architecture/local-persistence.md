@@ -51,8 +51,8 @@ IndexedDB ist kein zweiter Server und kein Server-State-Cache.
 Name:
 joinsplit
 
-Aktuelle Schema-Version:
-4
+Aktuelle implementierte Schema-Version:
+5
 
 Object stores:
 
@@ -73,6 +73,7 @@ Persistieren:
 
 - id
 - credential
+- synchronizationStatus
 
 Das Credential wird benötigt, damit bereits persistierte Pending Mutations nach
 einem Reload weiterhin unter derselben Access Identity synchronisiert werden
@@ -354,7 +355,26 @@ Mindestens prüfen:
 
 Server-Slice bleibt Regressionstest.
 
-## Non-goals
+## M5 planning boundary
+
+Die folgende M5-Richtung ist freigegeben, aber noch nicht implementiert:
+
+- ein Account-Workspace kann nach Session-Anmeldung vom Server geladen und
+  atomar in IndexedDB rehydriert werden,
+- Adoption-/Import-Fortschritt und Group-Revisionen werden dauerhaft lokal
+  benötigt,
+- Account-Session, Passwort und Account-Tokens werden niemals in IndexedDB
+  oder localStorage gespeichert,
+- Logout entfernt Account-Domain-Daten, zugehörige Pending Mutations und
+  verknüpfte Credentials vom Gerät,
+- Revision-Konflikte stoppen die Queue der betroffenen Group und lösen keinen
+  automatischen Merge aus.
+
+Der genaue neue Schema-Upgrade-Pfad wird erst nach Freigabe des
+[`Account and Data-Adoption Contract`](account-data-adoption.md) in den
+zugehörigen Implementierungs-Items festgelegt.
+
+## Non-goals of the completed M2/M4 persistence architecture
 
 Nicht Bestandteil dieser Architekturphase:
 
@@ -365,9 +385,9 @@ Nicht Bestandteil dieser Architekturphase:
 - Background Sync API
 - IndexedDB encryption framework
 - complex data recovery
-- automatic reconstruction of an expired server copy
-- data export/import
+- automatic anonymous reconstruction of an expired server copy
+- unauthenticated data export/import
 - generic repository layer
 - generic sync engine
-- multi-device synchronization
+- multi-device synchronization before M5
 - conflict merge UI
