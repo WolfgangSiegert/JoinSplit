@@ -24,6 +24,7 @@ export default defineNuxtConfig({
       title: 'JoinSplit',
       htmlAttrs: { lang: 'de' },
       meta: [{ name: 'description', content: 'Gemeinsame Ausgaben mit JoinSplit.' }],
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     },
   },
 })

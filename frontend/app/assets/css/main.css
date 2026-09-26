@@ -84,10 +84,20 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 }
 
 .app-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   color: var(--coral);
   font-size: 1.02rem;
   font-weight: 850;
   letter-spacing: -0.025em;
+}
+
+.app-wordmark__icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.45rem;
+  box-shadow: 0 2px 8px rgb(16 42 86 / 0.14);
 }
 
 .theme-toggle {
