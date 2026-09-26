@@ -42,7 +42,7 @@ function settlementContribution(senderParticipantId: string, amountMinor: bigint
 <template>
   <main class="page-shell">
     <div v-if="group && participant && balance" class="page-content">
-      <NuxtLink :to="`/groups/${group.id}/balances`" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Salden</NuxtLink>
+      <NuxtLink :to="`/groups/${group.id}/balances`" class="secondary-link -ml-4 mb-3" aria-label="← Salden"><AppIcon name="arrow-left" />Salden</NuxtLink>
       <header>
         <p class="text-sm font-semibold tracking-wide text-brand-700">{{ group.name }}</p>
         <h1 class="mt-2 text-3xl font-semibold text-brand-900">{{ participant.name }}</h1>

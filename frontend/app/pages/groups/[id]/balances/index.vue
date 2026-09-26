@@ -181,7 +181,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+      <NuxtLink to="/" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
       <header>
         <p class="eyebrow">{{ group.name }}</p>
         <h1 class="mt-2 text-4xl font-bold text-ink-900">Salden</h1>

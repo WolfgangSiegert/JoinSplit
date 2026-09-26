@@ -110,7 +110,7 @@ onMounted(async () => {
   <main class="page-shell">
     <div v-if="group" class="page-content">
       <div class="flex items-center justify-between gap-3">
-        <NuxtLink to="/" class="secondary-link -ml-4"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+        <NuxtLink to="/" class="secondary-link -ml-4" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
         <GroupSyncStatus :group-id="group.id" show-synced compact />
       </div>
 

@@ -125,7 +125,7 @@ async function confirmReset(): Promise<void> {
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+      <NuxtLink to="/" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
 
       <header>
         <h1 class="text-3xl font-semibold text-brand-900">Einstellungen</h1>

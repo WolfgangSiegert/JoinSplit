@@ -8,7 +8,7 @@ const contactIsConfigured = computed(() => operatorName.value !== '' && privacyC
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+      <NuxtLink to="/" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
 
       <header>
         <p class="text-sm font-semibold tracking-wide text-brand-700">Öffentliche Portfolio-Demo</p>

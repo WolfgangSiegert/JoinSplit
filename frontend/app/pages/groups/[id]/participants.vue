@@ -125,7 +125,7 @@ async function cancelRename(id: string): Promise<void> {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink :to="`/groups/${group.id}`" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppe</NuxtLink>
+      <NuxtLink :to="`/groups/${group.id}`" class="secondary-link -ml-4 mb-3" aria-label="← Gruppe"><AppIcon name="arrow-left" />Gruppe</NuxtLink>
       <header>
         <p class="eyebrow">{{ group.name }}</p>
         <h1 class="mt-2 text-4xl font-bold text-brand-900">Personen</h1>
