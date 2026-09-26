@@ -29,10 +29,10 @@ yet verified
 | Git commit | `5f1db912b12d06888ed95ca15df329063d0a678a` | local `main` and `origin/main` identical when recorded |
 | Commit subject | `feat: add branded JoinSplit app icon` | verified from Git |
 | CI run | [GitHub Actions 36229322313](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36229322313) | completed successfully for the recorded commit |
-| Render service | `srv-darf6v7avr4c73ee3k40` | Frankfurt, Free and Blueprint-managed; final dated account check pending |
+| Render service | `srv-darf6v7avr4c73ee3k40` | PASS on 2026-09-26: Frankfurt, Free and Blueprint-managed |
 | Render deploy | `dep-daro0n8jo6nc738oi78g` | live deploy observed; duration 1m17s |
 | Neon project | `joinsplit-production` | AWS Frankfurt and Free reported; final dated account check pending |
-| Automatic deploy | Off | observed in Render; final release check pending |
+| Automatic deploy | Off | PASS on 2026-09-26; manual deployment remains required |
 
 ## 2. Deployment and migration
 
@@ -117,13 +117,13 @@ an SLA.
 
 | Gate | Required evidence | Result |
 | --- | --- | --- |
-| Exactly one Render service | Free, Frankfurt, no paid upgrade | BLOCKED: dated account check pending |
+| Exactly one JoinSplit Render service | Free, Frankfurt, no paid upgrade | PASS on 2026-09-26; the workspace also contains one unrelated service |
 | Exactly one Neon project | Free, AWS Frankfurt, no paid upgrade | BLOCKED: dated account check pending |
 | Cost controls | payment method and provider behavior reviewed | BLOCKED |
 | Runtime-log retention | Render workspace retains data-bearing logs no longer than seven days | BLOCKED |
 | Log-content review | no secrets, identifiers, names or financial payloads | BLOCKED |
-| Render automatic checks | `/up`, failed deploy, unhealthy-service and Free-limit notifications configured | BLOCKED |
-| Manual release checks | canonical HTTPS, `/ready`, domain/TLS and provider dashboards | BLOCKED |
+| Render automatic checks | `/up`, failed deploy, unhealthy-service and Free-limit notifications configured | PARTIAL PASS: `/up` Health Check and workspace default failure notifications verified; unhealthy-service and Free-limit notification coverage not independently evidenced |
+| Manual release checks | canonical HTTPS, `/ready`, domain/TLS and provider dashboards | PARTIAL PASS: endpoint, TLS and Render dashboard checks pass; Neon dashboard requires a new authenticated session |
 | Manual metrics review | 5xx/429, Neon capacity and connections | BLOCKED |
 | Cleanup evidence | startup cleanup success and awake-time scheduler log review | BLOCKED |
 | Alert destination | named incident operator can receive configured notifications | BLOCKED |
