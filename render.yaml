@@ -39,6 +39,10 @@ services:
         value: pgsql
       - key: DB_URL
         sync: false
+      - key: DB_POOLED
+        value: "true"
+      - key: DB_DIRECT_HOST
+        sync: false
       - key: DB_SSLMODE
         value: verify-full
       - key: DB_SSLROOTCERT

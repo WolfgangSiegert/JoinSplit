@@ -96,7 +96,8 @@ minimum, Laravel requires:
 - `APP_DEBUG=false`,
 - `APP_URL=https://joinsplit.tiny-bits.org`,
 - one Laravel-generated production `APP_KEY` entered as a Render secret,
-- the Neon PostgreSQL connection URL,
+- the pooled Neon PostgreSQL connection URL,
+- the direct Neon hostname used automatically for migrations,
 - `DB_SSLMODE=verify-full`,
 - the operating-system CA bundle path,
 - a production log channel that writes to standard error.

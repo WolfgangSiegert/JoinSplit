@@ -14,6 +14,8 @@ class ProductionConfiguration
         $appOrigin = $this->origin((string) config('app.url'));
         $databaseUrl = (string) config('database.connections.pgsql.url');
         $databaseHost = parse_url($databaseUrl, PHP_URL_HOST);
+        $databasePooled = (bool) config('database.connections.pgsql.pooled');
+        $databaseDirectHost = config('database.connections.pgsql.direct.host');
         $databaseSslMode = $this->databaseSslMode($databaseUrl);
         $rootCertificate = config('database.connections.pgsql.sslrootcert');
 
@@ -35,8 +37,18 @@ class ProductionConfiguration
         if (config('database.default') !== 'pgsql') {
             $errors[] = 'DB_CONNECTION';
         }
-        if (! is_string($databaseHost) || ! str_ends_with(strtolower($databaseHost), '.neon.tech')) {
+        if (! is_string($databaseHost)
+            || ! str_ends_with(strtolower($databaseHost), '.neon.tech')
+            || ! str_contains(strtolower($databaseHost), '-pooler.')) {
             $errors[] = 'DB_URL';
+        }
+        if (! $databasePooled) {
+            $errors[] = 'DB_POOLED';
+        }
+        if (! is_string($databaseDirectHost)
+            || ! str_ends_with(strtolower($databaseDirectHost), '.neon.tech')
+            || str_contains(strtolower($databaseDirectHost), '-pooler.')) {
+            $errors[] = 'DB_DIRECT_HOST';
         }
         if ($databaseSslMode !== 'verify-full') {
             $errors[] = 'DB_SSLMODE';

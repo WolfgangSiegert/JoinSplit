@@ -63,11 +63,15 @@ Before creating resources, confirm:
    `postgresql://...` URL, without a surrounding `psql` command or quotes, and
    replace Neon's `sslmode=require` query value with `sslmode=verify-full`.
    Do not send the resulting URL through chat or commit it.
-5. Confirm that the hostname ends in `.neon.tech` and the connection uses TLS.
-6. Do not create development or CI databases in the production project.
+5. Copy the direct connection hostname separately. It must be the same Neon
+   endpoint without the `-pooler` suffix; it contains no password.
+6. Confirm that both hostnames end in `.neon.tech` and the connection uses TLS.
+7. Do not create development or CI databases in the production project.
 
-The connection string is later entered as the combined service's `DB_URL`.
-`DB_SSLMODE=verify-full` and
+The pooled connection string is later entered as the combined service's
+`DB_URL`, while the direct hostname is entered as `DB_DIRECT_HOST`. Laravel
+uses the pooler for application traffic and the direct endpoint for migrations
+and other schema operations. `DB_POOLED=true`, `DB_SSLMODE=verify-full` and
 `DB_SSLROOTCERT=/etc/ssl/certs/ca-certificates.crt` remain separate variables.
 
 ## Pre-deployment verification
@@ -94,8 +98,9 @@ not green.
 4. Enter that value as the service's `APP_KEY`. A plain Render-generated Base64
    value is not a valid substitute because it lacks Laravel's `base64:` key
    encoding.
-5. Enter the prepared Neon connection URL as `DB_URL` when prompted. Startup
-   rejects a URL-level `sslmode` that weakens `verify-full`.
+5. Enter the prepared pooled Neon connection URL as `DB_URL` and the direct
+   Neon hostname (without credentials or `-pooler`) as `DB_DIRECT_HOST` when
+   prompted. Startup rejects a URL-level `sslmode` that weakens `verify-full`.
 6. Apply the Blueprint only after the cost summary matches the approved plans.
 7. Trigger the deploy. Container startup validates configuration, runs
    idempotent migrations and performs retention cleanup before serving traffic.
