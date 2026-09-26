@@ -2,7 +2,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-09-09',
   devtools: { enabled: false },
   telemetry: false,
-  modules: ['@pinia/nuxt', '@nuxt/ui'],
+  modules: ['@pinia/nuxt', '@nuxt/ui', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
@@ -19,12 +19,62 @@ export default defineNuxtConfig({
     fonts: false,
     colorMode: false,
   },
+  pwa: {
+    registerType: 'prompt',
+    includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+    manifest: {
+      id: '/',
+      name: 'JoinSplit',
+      short_name: 'JoinSplit',
+      description: 'Gemeinsame Ausgaben erfassen, fair aufteilen und übersichtlich ausgleichen.',
+      lang: 'de',
+      start_url: '/',
+      scope: '/',
+      display: 'standalone',
+      background_color: '#fbf7f0',
+      theme_color: '#c44332',
+      categories: ['finance', 'utilities'],
+      icons: [
+        {
+          src: '/pwa-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any',
+        },
+        {
+          src: '/pwa-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any',
+        },
+        {
+          src: '/pwa-maskable-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+      ],
+    },
+    workbox: {
+      cleanupOutdatedCaches: true,
+      navigateFallback: undefined,
+    },
+    devOptions: {
+      enabled: false,
+    },
+  },
   app: {
     head: {
       title: 'JoinSplit',
       htmlAttrs: { lang: 'de' },
-      meta: [{ name: 'description', content: 'Gemeinsame Ausgaben mit JoinSplit.' }],
-      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+      meta: [
+        { name: 'description', content: 'Gemeinsame Ausgaben mit JoinSplit.' },
+        { name: 'theme-color', content: '#c44332' },
+      ],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+      ],
     },
   },
 })

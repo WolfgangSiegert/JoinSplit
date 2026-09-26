@@ -68,8 +68,10 @@ Nuxt 4 / Vue 3 / Pinia
 
 Laravel is the canonical application API. Business rules do not live in Vue
 components or Laravel controllers. Pinia coordinates shared runtime state;
-IndexedDB stores the browser-bound identity, Groups, Participants, Expenses,
-Expense Shares, Settlements, settings, and pending mutations.
+IndexedDB stores the browser-bound identity, optional hydrated Account
+workspace, Groups, Participants, Expenses, Expense Shares, Settlements,
+settings, revisions and pending mutations. Account session credentials remain
+in the secure server-side Laravel session and its HttpOnly cookie.
 
 Equal Split and Balance Calculation have independent TypeScript and PHP
 implementations exercised against shared scenario vectors. Settlement Proposals
@@ -98,11 +100,15 @@ device matrix remains explicitly deferred until a Production-Readiness review.
 
 ## Honest limitations
 
-- One owner and one browser-bound access identity; no accounts or collaboration.
-- No credential recovery or supported cross-device restoration.
-- No Service Worker: first load, restart, or reload while offline is not
-  guaranteed.
-- The server copy is synchronization state, not a user backup.
+- One owner per Group and no collaboration or Participant login.
+- Accounts are optional; password recovery and email verification are not yet
+  available.
+- Multi-device Account hydration detects conflicts but does not merge them
+  automatically.
+- The PWA manifest and Service Worker foundation exist, but offline restart and
+  reload remain unsupported until the M6 app-shell boundary is completed and
+  verified.
+- Neither anonymous nor Account server data has a backup or recovery SLA.
 - The public demo is limited to fictional, non-sensitive test data.
 - Automatic server retention replaces a manual server-erasure workflow in M4.
 - No payment execution, banking integration, additional split methods, PWA, or

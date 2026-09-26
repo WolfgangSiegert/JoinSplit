@@ -25,8 +25,8 @@ rather than beta-showcase publication blockers.
 
 JoinSplit is deployed to Render's Frankfurt region with Neon in AWS Frankfurt as a
 limited public portfolio application. The release remains accountless-first and
-single-owner. It does not add accounts, collaboration, PWA or Capacitor
-infrastructure.
+single-owner, with an optional M5 Account and Multi-Device slice. It does not
+add collaboration, PWA or Capacitor infrastructure.
 
 Production consists of one free Render Docker web service containing Nuxt,
 Laravel, Apache and the Laravel scheduler, plus one Neon Free PostgreSQL project

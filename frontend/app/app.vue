@@ -31,6 +31,7 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
 </script>
 
 <template>
+  <VitePwaManifest />
   <UApp>
     <AppHeader />
     <NuxtPage v-if="lifecycleStore.state === 'ready'" />
