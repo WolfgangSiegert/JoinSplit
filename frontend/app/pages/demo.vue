@@ -50,9 +50,13 @@ const contactIsConfigured = computed(() => operatorName.value !== '' && privacyC
         <h2 id="retention-boundary-title" class="text-xl font-semibold">Aufbewahrung auf dem Server</h2>
         <p class="mt-3">
           Der normale Serverzugriff endet 30 Tage nach der letzten erfolgreich angenommenen Änderung.
-          Die aktive Kopie wird innerhalb der folgenden 24 Stunden gelöscht. Wiederherstellungsbackups
-          können die Daten bis zu sieben weitere Tage enthalten. Die konservative technische
-          Höchstgrenze beträgt damit 38 Tage.
+          Die automatische Bereinigung läuft beim Start des kostenlosen Dienstes und täglich, solange
+          er aktiv ist. Da Render einen inaktiven kostenlosen Dienst pausiert, gibt es für die
+          physische Löschung keine feste Frist.
+        </p>
+        <p class="mt-3">
+          Neons kurze Wiederherstellungshistorie ist eine Best-Effort-Funktion des Providers. Sie ist
+          kein Nutzer-Backup und begründet keine zugesagte technische Löschfrist.
         </p>
         <p class="mt-3">
           Lokale Daten verschwinden dadurch nicht automatisch. Nach dem Ende der Serveraufbewahrung

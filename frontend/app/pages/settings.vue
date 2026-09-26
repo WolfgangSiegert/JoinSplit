@@ -234,8 +234,9 @@ async function confirmReset(): Promise<void> {
             </p>
             <p>
               Bereits synchronisierte Serverkopien werden nicht gelöscht. Der normale Serverzugriff
-              endet 30 Tage nach der letzten angenommenen Änderung; die konservative technische
-              Löschgrenze beträgt 38 Tage.
+              endet 30 Tage nach der letzten angenommenen Änderung. Die automatische Bereinigung läuft
+              beim Start und während der kostenlose Dienst aktiv ist; wegen möglicher Free-Tier-Pausen
+              gibt es keine feste physische Löschfrist.
             </p>
             <p>
               Nach dem Reset wird eine neue Browser-Identität erstellt. Die alten Daten können nicht

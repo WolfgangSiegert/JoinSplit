@@ -158,12 +158,16 @@ Laravel exposes two deliberately different checks:
 
 Both endpoints return only a small status response. They never expose
 configuration, versions, hostnames, credentials, exception messages or SQL
-details. Render uses the Nuxt health endpoint to decide whether to route
-traffic; Laravel readiness remains an external operational check.
+details. The combined service routes public `/up` to Laravel and Render uses it
+to decide whether to route traffic. Laravel readiness remains an external
+operational check.
 
-Nuxt has a separate lightweight component health check. External monitoring
-checks the canonical application URL and Laravel readiness; it does not use a
-mutation endpoint as a health check.
+Nuxt additionally exposes the internal lightweight `/health` component check.
+Render continuously checks public `/up`. The canonical application URL and
+Laravel readiness are verified
+manually at release and during operational review; no continuous external
+availability monitor is promised for the zero-cost showcase. Health checks
+never use a mutation endpoint.
 
 ## Migrations and rollback
 
@@ -297,20 +301,39 @@ identifier, route template, response status, duration, generated correlation
 identifier and aggregate cleanup or backup counts. Unexpected persistence
 errors retain useful internal causality while client responses remain generic.
 
-Monitoring must cover:
+The zero-cost showcase uses a deliberately bounded mix of automatic provider
+checks and dated manual operational reviews.
 
-- canonical HTTPS availability,
-- Nuxt health,
-- Laravel liveness and readiness,
-- elevated 5xx and 429 rates,
-- failed deployments and migrations,
-- failed retention cleanup,
-- provider free-tier exhaustion or suspension,
-- database capacity and connection exhaustion,
-- certificate and domain failures.
+Render automation covers:
 
-Alerts go to the named operator. Monitoring must be verified with a controlled
-test alert before public release.
+- `/up` liveness through the configured service health check,
+- failed builds or deployments through failure notifications,
+- a running service becoming unhealthy through failure notifications,
+- migrations and startup cleanup indirectly because either failure aborts
+  container startup,
+- provider Free-limit notifications where Render exposes them,
+- managed certificate issuance and renewal.
+
+The release operator manually verifies and records:
+
+- the canonical HTTPS origin, redirects, certificate and domain,
+- `/ready`, including the Neon connection and expected schema,
+- Render 5xx and 429 metrics,
+- awake-time scheduler and cleanup logs,
+- Neon storage, compute use and connection capacity,
+- provider Free plans, payment-method implications and suspension risk.
+
+Render Free does not provide a separately evidenced `/ready` monitor,
+configurable 5xx or 429 threshold alerts, awake-time cleanup alerts, or Neon
+capacity and connection alerts. The release therefore makes no claim of
+continuous external availability monitoring, complete automatic alert
+coverage, an SLA, RPO or RTO.
+
+Available failure notifications go to the named incident operator. Their
+destination and settings must be inspected before release. A non-destructive
+provider test notification may be used when available, but production must not
+be intentionally broken merely to manufacture a test alert. Evidence and open
+gaps are recorded in [`m4-release-evidence.md`](m4-release-evidence.md).
 
 ## Required pre-release inputs
 

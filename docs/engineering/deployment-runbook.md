@@ -39,8 +39,10 @@ The selected baseline costs USD 0 per month within provider free-tier limits:
 Render can suspend the service when free instance hours, bandwidth, build
 minutes, or outbound-traffic limits are exhausted. Neon can suspend compute
 when its free allowance is exhausted. A payment method can turn some overages
-into charges, so the Render spend limit and provider usage alerts must be set
-before release. Upgrading either provider requires a new human decision.
+into charges. Before release, inspect both accounts, record the payment-method
+implications and enable every relevant Free-plan usage notification the
+providers expose. A Render pipeline spend limit is not a general service-cost
+cap. Upgrading either provider requires a new human decision.
 
 ## Required inputs
 
@@ -125,9 +127,15 @@ Do not place real names or financial data in the smoke test.
 ## Monitoring and recovery
 
 Render runtime logs for the selected workspace must be verified to retain
-data-bearing logs for no more than seven days. Alerts cover failed deploys,
-readiness, 5xx rates, failed cleanup runs, domain/TLS failures, and database
-capacity. A controlled alert test is required before launch.
+data-bearing logs for no more than seven days. Confirm the `/up` health check,
+failed-deploy and unhealthy-service notifications, and available Free-limit
+notifications. Manually
+verify canonical HTTPS, `/ready`, domain/TLS, 5xx and 429 metrics, scheduler and
+cleanup logs, and Neon capacity and connections. Render Free and Neon Free do
+not provide complete automatic alert coverage for those checks, so this release
+makes no continuous-monitoring or SLA claim. Do not intentionally break the
+production deployment for an alert test. Record the dated result and remaining
+gaps in [`m4-release-evidence.md`](m4-release-evidence.md).
 
 Neon Free's short restore history is best-effort infrastructure recovery, not a
 portfolio guarantee or user backup. A paid restore window is deliberately

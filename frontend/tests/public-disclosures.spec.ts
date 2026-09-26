@@ -92,7 +92,8 @@ test('shows the public-demo boundary before data entry and keeps full disclosure
 
   await expect(page).toHaveURL('/demo')
   await expect(page.getByRole('heading', { level: 1, name: 'Demo- und Datenhinweise' })).toBeVisible()
-  await expect(page.getByText('Die konservative technische Höchstgrenze beträgt damit 38 Tage.')).toBeVisible()
+  await expect(page.getByText('Da Render einen inaktiven kostenlosen Dienst pausiert, gibt es für die physische Löschung keine feste Frist.')).toBeVisible()
+  await expect(page.getByText('Sie ist kein Nutzer-Backup und begründet keine zugesagte technische Löschfrist.')).toBeVisible()
   await expect(page.getByText('Ein erster Aufruf, Neustart oder Reload ohne Netzwerk ist nicht garantiert.')).toBeVisible()
   await expect(page.getByText('Verantwortlich: Wolfgang Siegert')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Kontakt aufnehmen' })).toHaveAttribute('href', 'mailto:WoSiegert@hotmail.com')
