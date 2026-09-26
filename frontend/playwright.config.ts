@@ -37,11 +37,12 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: 'node .output/server/index.mjs',
+      command: 'node tests/support/pwa-test-server.mjs',
       url: 'http://127.0.0.1:3100',
       env: {
         HOST: '127.0.0.1',
         PORT: '3100',
+        JOIN_SPLIT_BACKEND_HOSTPORT: '127.0.0.1:8001',
         NUXT_PUBLIC_API_BASE: 'http://127.0.0.1:8001',
       },
       reuseExistingServer: false,

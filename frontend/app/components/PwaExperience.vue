@@ -19,6 +19,7 @@ const updateError = ref('')
 const syncFeedback = ref('')
 const installFeedback = ref('')
 const installError = ref('')
+let updateActivationTimeout: number | undefined
 
 const pendingCount = computed(() => groupsStore.pendingMutations.length)
 const canInstall = computed(() => Boolean(pwa?.showInstallPrompt) && !pwa?.isPWAInstalled)
@@ -96,6 +97,13 @@ async function applyUpdate(): Promise<void> {
   updateError.value = ''
   try {
     await pwa.updateServiceWorker(true)
+    pwa.getSWRegistration()?.waiting?.postMessage({ type: 'SKIP_WAITING' })
+    window.clearTimeout(updateActivationTimeout)
+    updateActivationTimeout = window.setTimeout(() => {
+      applyingUpdate.value = false
+      updateError.value = 'Die neue Version reagiert noch nicht. Die aktuelle Version und deine lokalen Daten bleiben erhalten; du kannst es erneut versuchen.'
+      void nextTick(() => applyUpdateButton.value?.focus())
+    }, 8_000)
   } catch {
     applyingUpdate.value = false
     updateError.value = 'Die neue Version konnte nicht aktiviert werden. Die aktuelle Version und deine lokalen Daten bleiben erhalten.'
@@ -107,6 +115,8 @@ async function applyUpdate(): Promise<void> {
 function reloadForRecovery(): void {
   window.location.reload()
 }
+
+onUnmounted(() => window.clearTimeout(updateActivationTimeout))
 </script>
 
 <template>
