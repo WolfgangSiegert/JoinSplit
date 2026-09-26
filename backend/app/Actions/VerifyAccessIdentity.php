@@ -24,7 +24,9 @@ class VerifyAccessIdentity
             throw new AccessIdentityUnavailableException;
         }
 
-        if (! hash_equals($identity->credential_digest, $digest)) {
+        if ($identity->account_id !== null
+            || ! is_string($identity->credential_digest)
+            || ! hash_equals($identity->credential_digest, $digest)) {
             throw new AccessIdentityAuthenticationException;
         }
 

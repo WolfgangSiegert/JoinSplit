@@ -13,6 +13,7 @@ class PruneExpiredAccessIdentities
     {
         $cutoff ??= now()->subDays(30);
         $candidateIds = AccessIdentity::query()
+            ->whereNull('account_id')
             ->where(function ($query) use ($cutoff): void {
                 $query->where('last_mutated_at', '<=', $cutoff)
                     ->orWhere(function ($query) use ($cutoff): void {
@@ -29,7 +30,7 @@ class PruneExpiredAccessIdentities
         foreach ($candidateIds as $identityId) {
             $result = DB::transaction(function () use ($identityId, $cutoff): array {
                 $identity = AccessIdentity::query()->lockForUpdate()->find($identityId);
-                if (! $identity || ! $this->isExpired($identity, $cutoff)) {
+        if (! $identity || $identity->account_id !== null || ! $this->isExpired($identity, $cutoff)) {
                     return ['identities' => 0, 'groups' => 0];
                 }
 

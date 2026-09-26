@@ -50,6 +50,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('account-session', fn (Request $request) => Limit::perMinute(60)
             ->by('account-session:'.($request->user('web')?->getAuthIdentifier() ?? $request->ip()))
             ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
+
+        RateLimiter::for('account-adoption', fn (Request $request) => Limit::perMinute(30)
+            ->by('account-adoption:'.($request->user('web')?->getAuthIdentifier() ?? $request->ip()))
+            ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
     }
 
     private function requestKey(Request $request): string
