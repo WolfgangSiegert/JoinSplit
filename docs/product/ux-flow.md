@@ -271,6 +271,15 @@ ausdrücklich lokaler Reset warnt vor dem Verlust aller Browserdaten und
 ausstehenden Änderungen. Er entfernt IndexedDB und Credential, löscht aber
 keine synchronisierte Serverkopie und darf dies auch nicht behaupten.
 
+Die App-Installation bleibt eine progressive Ergänzung: Eine direkte Aktion
+erscheint nur, wenn der Browser einen nativen Installationsdialog anbietet.
+Andernfalls erklären die Einstellungen knapp den manuellen Browserweg, ohne
+eine erfolgte Installation zu behaupten. Eine neue App-Version wird sichtbar
+angeboten und nie still neu geladen. Bei ausstehenden lokalen Änderungen nennt
+der Dialog deren Anzahl und lässt wahlweise zuerst synchronisieren, die aktuelle
+Version weiterverwenden oder das lokale Risiko ausdrücklich akzeptieren.
+IndexedDB wird durch eine App-Aktualisierung nicht gelöscht.
+
 ## Confirmed UX Decisions
 
 - Die MVP-Währung ist EUR und wird sichtbar ausgewiesen.

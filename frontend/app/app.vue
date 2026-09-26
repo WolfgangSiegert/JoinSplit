@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const lifecycleStore = useApplicationLifecycleStore()
 const settingsStore = useSettingsStore()
-usePendingCreateGroupSync()
+const { synchronizePending } = usePendingCreateGroupSync()
 
 const systemPrefersDark = ref(import.meta.client && window.matchMedia('(prefers-color-scheme: dark)').matches)
 const resolvedColorMode = computed(() => settingsStore.colorMode === 'system'
@@ -34,6 +34,9 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
   <VitePwaManifest />
   <UApp>
     <AppHeader />
+    <ClientOnly>
+      <PwaExperience :synchronize-pending="synchronizePending" />
+    </ClientOnly>
     <NuxtPage v-if="lifecycleStore.state === 'ready'" />
 
     <main v-else-if="lifecycleStore.state === 'loading'" class="page-shell" aria-busy="true">

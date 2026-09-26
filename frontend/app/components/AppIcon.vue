@@ -9,6 +9,7 @@ defineProps<{
     | 'chevron-right'
     | 'copy'
     | 'database'
+    | 'download'
     | 'image'
     | 'info'
     | 'plus'
@@ -64,6 +65,9 @@ defineProps<{
     </template>
     <template v-else-if="name === 'database'">
       <ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5v7c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12v7c0 1.7 4 3 9 3s9-1.3 9-3v-7" />
+    </template>
+    <template v-else-if="name === 'download'">
+      <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
     </template>
     <template v-else-if="name === 'image'">
       <rect width="18" height="18" x="3" y="3" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />

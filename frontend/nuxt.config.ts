@@ -27,6 +27,9 @@ export default defineNuxtConfig({
   },
   pwa: {
     registerType: 'prompt',
+    client: {
+      installPrompt: true,
+    },
     includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
     manifest: {
       id: '/',
