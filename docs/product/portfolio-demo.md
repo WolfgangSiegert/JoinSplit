@@ -138,11 +138,13 @@ The locally available core workflow remains usable without an API connection
 after the web application has loaded. Local changes are durably queued and can
 be synchronized when the connection returns.
 
-The M4 release does not include a Service Worker, PWA installation or an
-offline application shell. It therefore does not guarantee that JoinSplit can
-be opened for the first time, restarted or reloaded without a network
-connection. Public descriptions must not shorten this boundary to an
-unqualified claim that the web application "works fully offline".
+The M6 implementation includes a Service Worker and a bounded application-shell
+cache. A navigation document and its public presentation assets become
+available only after they have loaded successfully under Service Worker
+control. First-ever offline use and previously unseen routes therefore remain
+unsupported. API and Account responses never enter Cache Storage. Public
+descriptions must not shorten this boundary to an unqualified claim that the
+web application "works fully offline".
 
 ## Active Server-Data Retention
 

@@ -105,9 +105,9 @@ device matrix remains explicitly deferred until a Production-Readiness review.
   available.
 - Multi-device Account hydration detects conflicts but does not merge them
   automatically.
-- The PWA manifest and Service Worker foundation exist, but offline restart and
-  reload remain unsupported until the M6 app-shell boundary is completed and
-  verified.
+- The PWA app-shell cache is intentionally limited to previously loaded
+  presentation resources. First-ever offline use, unseen routes and a complete
+  production browser/device verification remain unsupported.
 - Neither anonymous nor Account server data has a backup or recovery SLA.
 - The public demo is limited to fictional, non-sensitive test data.
 - Automatic server retention replaces a manual server-erasure workflow in M4.

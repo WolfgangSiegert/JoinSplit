@@ -72,7 +72,9 @@ const contactIsConfigured = computed(() => operatorName.value !== '' && privacyC
         </p>
         <p class="mt-3">
           Der bereits geladene Kernablauf kann ohne API-Verbindung weiterarbeiten und Änderungen
-          vormerken. Ein erster Aufruf, Neustart oder Reload ohne Netzwerk ist nicht garantiert.
+          vormerken. Bereits erfolgreich geladene Ansichten können über den begrenzten App-Shell-Cache
+          offline neu starten. Ein erster Aufruf oder eine zuvor nicht geladene Ansicht ist ohne
+          Netzwerk weiterhin nicht garantiert.
         </p>
       </section>
 

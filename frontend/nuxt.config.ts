@@ -1,3 +1,9 @@
+import {
+  isCacheableAppNavigation,
+  isCacheablePublicAsset,
+  isNetworkOnlyRequest,
+} from './pwa/runtime-caching'
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-09',
   devtools: { enabled: false },
@@ -58,6 +64,39 @@ export default defineNuxtConfig({
     workbox: {
       cleanupOutdatedCaches: true,
       navigateFallback: undefined,
+      runtimeCaching: [
+        {
+          urlPattern: isNetworkOnlyRequest,
+          handler: 'NetworkOnly',
+        },
+        {
+          urlPattern: isCacheableAppNavigation,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'joinsplit-app-documents-v1',
+            networkTimeoutSeconds: 5,
+            cacheableResponse: { statuses: [200] },
+            expiration: {
+              maxEntries: 12,
+              maxAgeSeconds: 7 * 24 * 60 * 60,
+              purgeOnQuotaError: true,
+            },
+          },
+        },
+        {
+          urlPattern: isCacheablePublicAsset,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'joinsplit-public-assets-v1',
+            cacheableResponse: { statuses: [200] },
+            expiration: {
+              maxEntries: 80,
+              maxAgeSeconds: 30 * 24 * 60 * 60,
+              purgeOnQuotaError: true,
+            },
+          },
+        },
+      ],
     },
     devOptions: {
       enabled: false,

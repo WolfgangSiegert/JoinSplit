@@ -258,16 +258,18 @@ statisch.
 
 Die historische M1-Grenze hielt Access Identity und Credential nur im
 Arbeitsspeicher. Seit M2 liegen beide dauerhaft in IndexedDB. Das schützt nicht
-vor Löschen oder Verlust des Browserprofils und schafft keine Recovery- oder
-Multi-Device-Funktion. Eine offline verfügbare App Shell bleibt weiterhin
-außerhalb des aktuellen Releases.
+vor Löschen oder Verlust des Browserprofils. Seit M5 kann ein optionaler Account
+autorisierte Daten auf einem anderen Gerät rehydrieren; eine Backup- oder
+Recovery-Zusage entsteht dadurch nicht.
 
-Als noch zu implementierendes M4-Ziel erscheint vor der ersten Dateneingabe eine
+Vor der ersten Dateneingabe erscheint die in M4 eingeführte
 Testdatenwarnung. Ein sichtbarer Link erklärt Single Owner, Browserbindung,
-Recovery-, Offline- und Aufbewahrungsgrenzen. Ein ausdrücklich lokaler Reset
-warnt vor dem Verlust aller Browserdaten und ausstehenden Änderungen. Er
-entfernt IndexedDB und Credential, löscht aber keine synchronisierte
-Serverkopie und darf dies auch nicht behaupten.
+Recovery-, Offline- und Aufbewahrungsgrenzen. Seit M6 kann eine bereits unter
+Service-Worker-Kontrolle geladene Ansicht aus dem begrenzten App-Shell-Cache
+offline neu starten; Erstaufruf und ungesehene Routen bleiben netzabhängig. Ein
+ausdrücklich lokaler Reset warnt vor dem Verlust aller Browserdaten und
+ausstehenden Änderungen. Er entfernt IndexedDB und Credential, löscht aber
+keine synchronisierte Serverkopie und darf dies auch nicht behaupten.
 
 ## Confirmed UX Decisions
 
