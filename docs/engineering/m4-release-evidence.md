@@ -14,8 +14,11 @@ Authoritative contracts:
 - [`deployment-runbook.md`](deployment-runbook.md)
 - [`m4-production-qa.md`](m4-production-qa.md)
 
-Release operator: not yet explicitly confirmed  
-Incident operator: not yet explicitly confirmed  
+Release operator: Wolfgang Siegert (confirmed through the supervised deployment
+and smoke-test flow)
+
+Incident operator: not yet explicitly confirmed
+
 Private alert destination: not recorded in the repository; configuration not
 yet verified
 
@@ -23,11 +26,11 @@ yet verified
 
 | Field | Value | Evidence/status |
 | --- | --- | --- |
-| Git commit | `ea04503d4f714a20e8a6f39ac0bb33d798e1f97f` | local `main` and `origin/main` identical when recorded |
-| Commit subject | `fix: route database migrations through direct endpoint` | verified from Git |
-| CI run | [GitHub Actions 36223189347](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36223189347) | completed successfully for the recorded commit |
+| Git commit | `5f1db912b12d06888ed95ca15df329063d0a678a` | local `main` and `origin/main` identical when recorded |
+| Commit subject | `feat: add branded JoinSplit app icon` | verified from Git |
+| CI run | [GitHub Actions 36229322313](https://github.com/WolfgangSiegert/JoinSplit/actions/runs/36229322313) | completed successfully for the recorded commit |
 | Render service | `srv-darf6v7avr4c73ee3k40` | Frankfurt, Free and Blueprint-managed; final dated account check pending |
-| Render deploy | `dep-darmir97lnhs73e0i9g0` | live deploy reported; final log evidence pending |
+| Render deploy | `dep-daro0n8jo6nc738oi78g` | live deploy observed; duration 1m17s |
 | Neon project | `joinsplit-production` | AWS Frankfurt and Free reported; final dated account check pending |
 | Automatic deploy | Off | observed in Render; final release check pending |
 
@@ -35,12 +38,12 @@ yet verified
 
 | Check | Result | Required evidence |
 | --- | --- | --- |
-| Production configuration validation | PASS reported | non-secret final Render log excerpt |
-| Migration command | PASS reported | final log including highest applied migration |
+| Production configuration validation | PASS | Render log: `Production configuration is valid.` |
+| Migration command | PASS | Render log reports no pending migrations for the recorded deploy |
 | Expected highest migration | `2026_09_25_000001_add_last_mutated_at_to_access_identities` | compare with production migration state |
-| Startup retention cleanup | BLOCKED | aggregate-only successful log evidence |
-| Secrets absent from output | BLOCKED | operator review of deployment and runtime logs |
-| Destructive commands absent | BLOCKED | verify no test seeder, `migrate:fresh` or rollback ran |
+| Startup retention cleanup | PASS | aggregate-only Render log reports `identities=0 groups=0` |
+| Secrets absent from output | PASS for reviewed deploy excerpt | no credential values observed; a broader runtime-log review remains an operations gate |
+| Destructive commands absent | PASS for reviewed deploy | no test seeder, `migrate:fresh` or rollback observed |
 
 Expected startup order is production-configuration validation, migrations via
 the direct Neon endpoint, retention cleanup, then Apache, Nuxt and the Laravel
@@ -52,13 +55,13 @@ scheduler.
 | --- | --- | --- |
 | Canonical DNS | `joinsplit.tiny-bits.org` CNAME to `joinsplit.onrender.com` | PASS at `2026-09-26T07:38Z` via Cloudflare public DNS |
 | Render domain verification | verified | PASS observed in Render on 2026-09-26 |
-| TLS certificate | valid hostname and trusted chain | BLOCKED: issuance pending when last checked |
-| HTTP to HTTPS | canonical HTTPS | BLOCKED |
+| TLS certificate | valid hostname and trusted chain | PASS on 2026-09-26 through successful canonical HTTPS requests |
+| HTTP to HTTPS | canonical HTTPS | PASS on 2026-09-26: HTTP 301 to `https://joinsplit.tiny-bits.org/` |
 | Render hostname | redirects to canonical origin | PASS at `2026-09-26T07:38Z`: HTTP 308 via `curl` |
-| `/` | application shell | BLOCKED on canonical TLS |
-| `/up` | HTTP 200 liveness response | PASS at `2026-09-26T07:38Z` on Render hostname; canonical check pending |
-| `/ready` | HTTP 200 with minimal readiness response | PASS at `2026-09-26T07:38Z` on Render hostname; canonical check pending |
-| Separate public Laravel origin | none | BLOCKED: final review pending |
+| `/` | application shell | PASS on 2026-09-26: HTTP 200 on canonical origin |
+| `/up` | HTTP 200 liveness response | PASS at `2026-09-26T07:38Z` on Render hostname |
+| `/ready` | HTTP 200 with minimal readiness response | PASS on 2026-09-26 on canonical origin |
+| Separate public Laravel origin | none | PASS in the reviewed deployment configuration |
 
 ## 4. Bounded production smoke
 
@@ -68,14 +71,28 @@ payloads, real names or real financial data in this document.
 
 | Step | Expected | Result/defect |
 | --- | --- | --- |
-| Create Group and Participants | accepted locally and synchronized | BLOCKED |
-| Create and edit Expense | deterministic shares and synchronized state | BLOCKED |
-| Balance and proposal | exact expected values | BLOCKED |
-| Record and remove Settlement | balances update deterministically | BLOCKED |
-| Statement Snapshot | static output without financial mutation | BLOCKED |
-| Reload | local state remains available | BLOCKED |
-| Archive/reactivate | read-only and writable states enforced | BLOCKED |
-| Local Reset | accurate warning without server-deletion claim | BLOCKED |
+| Create Group and Participants | accepted locally and synchronized | PASS: `QA-Hüttentour`, `Ava Test`, `Ben Probe`, `Cleo Muster`; duplicate-name override required |
+| Create and edit Expense | deterministic shares and synchronized state | PASS: 10.01 EUR split 3.34/3.34/3.33; edited 12.01 EUR split 4.01/4.00/4.00 |
+| Balance and proposal | exact expected values | PASS: +8.00/-4.00/-4.00 and two deterministic 4.00 EUR transfers |
+| Record and remove Settlement | balances update deterministically | PASS: create, edit and delete verified; direction and overpayment require explicit override |
+| Statement Snapshot | static output without financial mutation | PASS: Cleo statement showed -4.00 EUR, timestamp and expected details; copy confirmation visible |
+| Reload | local state remains available | PASS after full page reload |
+| Archive/reactivate | read-only and writable states enforced | PASS across reload |
+| Local Reset | accurate warning without server-deletion claim | PASS: cancel preserved state and restored focus; confirm produced empty local state and a new identity |
+
+The reference run used only the fictional names and amounts prescribed by the
+QA protocol. Expense and Settlement records were removed before reset. The
+synchronized QA Group and Participants remain subject to normal retention
+cleanup because Local Reset intentionally does not delete server copies.
+
+Residual smoke observations:
+
+- validation errors are programmatically associated and focus moves correctly,
+  but Expense errors remain visible while values are corrected and clear only
+  on the next submit;
+- the available supervised browser did not expose a network toggle, so the
+  offline/reconnect check remains open;
+- the service was already awake, so this run is not cold-start evidence.
 
 ## 5. M4 browser QA matrix
 
@@ -84,6 +101,7 @@ version number.
 
 | Browser/device | Exact version/OS | Core flow | Keyboard/reflow/accessibility | Result/defects |
 | --- | --- | --- | --- | --- |
+| Supervised desktop browser | exact engine/version unavailable, 2026-09-26 | full reference flow except offline toggle | validation association, modal focus return and reload checked | PARTIAL PASS; not a substitute for the named browser rows |
 | Chrome desktop | pending | pending | pending | BLOCKED |
 | Edge desktop | pending | pending | pending | BLOCKED |
 | Firefox desktop | pending | pending | pending | BLOCKED |
@@ -121,22 +139,21 @@ manufacture a test alert.
 | Check | Result |
 | --- | --- |
 | README remains a release-candidate statement until approval | PASS |
-| Portfolio entry links only to canonical HTTPS origin | BLOCKED |
-| Free-tier and cold-start limitation disclosed | BLOCKED: final copy review pending |
-| Retention, deletion and recovery boundary disclosed | BLOCKED: final copy review pending |
-| No unsupported offline, anonymous, backup, collaboration, PWA or WCAG claim | BLOCKED: final copy review pending |
+| Portfolio entry links only to canonical HTTPS origin | PASS on 2026-09-26; GitHub source link also works |
+| Free-tier and cold-start limitation disclosed | PASS in the production disclosure copy; cold-start measurement remains open |
+| Retention, deletion and recovery boundary disclosed | PASS in the production disclosure and Local Reset copy |
+| No unsupported offline, anonymous, backup, collaboration, PWA or WCAG claim | PASS for the reviewed production and portfolio copy |
 
 ## 8. Open blockers and release decision
 
 | Blocker | Owner | Resolution/evidence |
 | --- | --- | --- |
-| TLS certificate pending | Render / release operator | valid canonical HTTPS result |
-| Deployed UI still promises obsolete 24-hour and 38-day deletion limits | implementation owner | local correction and focused test PASS; commit, deploy and production copy review pending |
-| Canonical production smoke not run | release operator | completed section 4 |
-| Browser matrix not run | release operator | completed section 5 |
+| Browser matrix not complete | release operator | complete the named desktop and mobile rows in section 5 |
+| Offline/reconnect production check not run | release operator | run in a browser with network controls and record queue reconciliation |
+| Cold-start evidence not captured | release operator | measure the first response after genuine Render inactivity |
 | Operators and alert destination not confirmed | human owner | explicit confirmation and dated provider check |
 | Free-tier, logs and notification settings not fully evidenced | human owner | completed section 6 |
-| Portfolio entry not published | portfolio project | canonical link live after approval |
+| Portfolio App icon not displayed | portfolio project | separate follow-up to the completed JS-031 presentation scope |
 
 Change the decision to **APPROVED** only after every release prerequisite has
 evidence. Otherwise it remains **BLOCKED**.
