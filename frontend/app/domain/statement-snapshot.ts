@@ -63,34 +63,37 @@ export function generateStatementSnapshot(input: StatementSnapshotInput): Readon
 
   const generatedAt = input.generatedAt.toISOString()
   const containsUnsyncedChanges = input.pendingMutations.some(mutation => mutation.groupId === input.group.id)
+  const participantLabel = labels.get(participant.id)!
   const lines: string[] = [
-    'JoinSplit – Abrechnungsauszug',
-    `Gruppe: ${plainLine(input.group.name)}${input.group.status === 'archived' ? ' (archiviert)' : ''}`,
-    `Währung: ${input.group.currency}`,
-    `Person: ${labels.get(participant.id)}${participant.status === 'inactive' ? ' (inaktiv)' : ''}`,
-    `Erstellt: ${formatUtcInstant(input.generatedAt)}`,
+    `JoinSplit – dein Stand für „${plainLine(input.group.name)}“${input.group.status === 'archived' ? ' (archiviert)' : ''}`,
+    '',
+    `Hallo ${participantLabel},`,
+    'hier ist dein aktueller Stand in der Gruppe:',
+    participantOutcome(balance.balanceAmountMinor),
+    '',
+    `Stand vom ${formatUtcInstant(input.generatedAt)}${participant.status === 'inactive' ? ' · Person ist derzeit inaktiv' : ''}`,
   ]
 
   if (containsUnsyncedChanges) {
-    lines.push('', 'Hinweis: Dieser lokale Gruppenstand enthält noch nicht synchronisierte Änderungen.')
+    lines.push('', 'Hinweis: Diese Übersicht enthält Änderungen, die bisher nur auf diesem Gerät gespeichert sind.')
   }
 
   lines.push(
     '',
-    'Zusammenfassung',
-    `Bezahlt: ${formatUnsigned(balance.paidAmountMinor)}`,
-    `Eigene Anteile: ${formatUnsigned(balance.shareAmountMinor)}`,
-    `Zahlungen gesendet: ${formatUnsigned(balance.sentSettlementAmountMinor)}`,
-    `Zahlungen erhalten: ${formatUnsigned(balance.receivedSettlementAmountMinor)}`,
-    `Offener Saldo: ${formatSignedAmountMinor(balance.balanceAmountMinor)}`,
+    'Deine Übersicht',
+    `Du hast bezahlt: ${formatUnsigned(balance.paidAmountMinor)}`,
+    `Dein Anteil: ${formatUnsigned(balance.shareAmountMinor)}`,
+    `Von dir bereits gezahlt: ${formatUnsigned(balance.sentSettlementAmountMinor)}`,
+    `An dich bereits gezahlt: ${formatUnsigned(balance.receivedSettlementAmountMinor)}`,
+    `Dein aktueller Stand: ${formatSignedAmountMinor(balance.balanceAmountMinor)}`,
     '',
-    'Relevante Ausgaben',
+    'Ausgaben, an denen du beteiligt bist',
   )
 
   const relevantExpenses = input.expenses
     .filter(expense => expense.payerParticipantId === participant.id || expense.shares.some(share => share.participantId === participant.id))
     .sort(compareDatedRecords('incurredOn'))
-  if (relevantExpenses.length === 0) lines.push('Keine relevanten Ausgaben.')
+  if (relevantExpenses.length === 0) lines.push('Für dich sind noch keine Ausgaben erfasst.')
   for (const expense of relevantExpenses) {
     const share = expense.shares.find(candidate => candidate.participantId === participant.id)?.amountMinor ?? 0
     lines.push(
@@ -99,27 +102,33 @@ export function generateStatementSnapshot(input: StatementSnapshotInput): Readon
     )
   }
 
-  lines.push('', 'Relevante Zahlungen')
+  lines.push('', 'Bereits erfasste Ausgleichszahlungen')
   const relevantSettlements = input.settlements
     .filter(settlement => settlement.senderParticipantId === participant.id || settlement.receiverParticipantId === participant.id)
     .sort(compareDatedRecords('occurredOn'))
-  if (relevantSettlements.length === 0) lines.push('Keine relevanten Zahlungen.')
+  if (relevantSettlements.length === 0) lines.push('Für dich sind noch keine Ausgleichszahlungen erfasst.')
   for (const settlement of relevantSettlements) {
     lines.push(`- ${settlement.occurredOn} · ${labels.get(settlement.senderParticipantId)} → ${labels.get(settlement.receiverParticipantId)} · ${formatSettlementAmountMinor(settlement.amountMinor)}`)
   }
 
-  lines.push('', `Vorgeschlagene Ausgleichszahlungen (${strategyLabel(input.proposalStrategy)})`)
+  lines.push('', `So könnt ihr den Rest ausgleichen (${strategyLabel(input.proposalStrategy)})`)
   if (proposal.status === 'unavailable') {
     lines.push(`Nicht verfügbar: ${proposal.nonZeroParticipantCount} offene Salden; unterstützt werden höchstens ${proposal.limit}.`)
   } else {
     const relevantTransfers = proposal.transfers.filter(transfer => isRelevantTransfer(transfer, participant.id))
-    if (relevantTransfers.length === 0) lines.push('Keine vorgeschlagenen Ausgleichszahlungen für diese Person.')
+    if (relevantTransfers.length === 0) lines.push('Für dich ist keine weitere Ausgleichszahlung nötig.')
     for (const transfer of relevantTransfers) {
       lines.push(`- ${labels.get(transfer.senderParticipantId)} → ${labels.get(transfer.receiverParticipantId)} · ${formatSettlementAmountMinor(BigInt(transfer.amountMinor))}`)
     }
   }
 
   return Object.freeze({ generatedAt, text: lines.join('\n'), containsUnsyncedChanges })
+}
+
+function participantOutcome(balanceAmountMinor: bigint): string {
+  if (balanceAmountMinor > 0n) return `Du bekommst noch ${formatUnsigned(balanceAmountMinor)}.`
+  if (balanceAmountMinor < 0n) return `Du solltest noch ${formatUnsigned(-balanceAmountMinor)} zahlen.`
+  return 'Für dich ist gerade alles ausgeglichen.'
 }
 
 function validateGroup(group: Group): void {

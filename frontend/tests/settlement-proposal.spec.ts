@@ -24,13 +24,14 @@ async function seedProposalState(
   options: {
     balances?: 'open' | 'zero'
     archived?: boolean
+    recordingEnabled?: boolean
     strategy?: 'deterministic' | 'minimum-transfer'
   } = {},
 ): Promise<void> {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
 
-  await page.evaluate(async ({ groupId, aliceId, bobId, carolId, expenseId, balances, archived, strategy }) => {
+  await page.evaluate(async ({ groupId, aliceId, bobId, carolId, expenseId, balances, archived, recordingEnabled, strategy }) => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
@@ -51,6 +52,8 @@ async function seedProposalState(
     transaction.objectStore('settings').put({
       key: 'preferences',
       addSelfAsParticipantByDefault: true,
+      settlementRecordingEnabled: recordingEnabled,
+      settlementRecordingGroupIds: [],
       settlementProposalStrategy: strategy,
     })
     transaction.objectStore('groups').put({
@@ -95,6 +98,7 @@ async function seedProposalState(
     expenseId: EXPENSE_ID,
     balances: options.balances ?? 'open',
     archived: options.archived ?? false,
+    recordingEnabled: options.recordingEnabled ?? false,
     strategy: options.strategy ?? 'deterministic',
   })
 }
@@ -105,7 +109,7 @@ async function seedCustomBalanceState(
   strategy: 'deterministic' | 'minimum-transfer',
 ): Promise<void> {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
 
   await page.evaluate(async ({ groupId, participants, strategy }) => {
     const request = indexedDB.open('joinsplit', 10)
@@ -210,7 +214,7 @@ async function storedFinancialMutationCounts(page: Page): Promise<{ settlements:
 }
 
 test('shows the deterministic proposal in stable order without recording payments', async ({ page }) => {
-  await seedProposalState(page)
+  await seedProposalState(page, { recordingEnabled: true })
   await page.goto(`/groups/${GROUP_ID}/balances`)
 
   const proposal = page.getByRole('region', { name: 'Ausgleichsvorschlag' })
@@ -227,6 +231,15 @@ test('shows the deterministic proposal in stable order without recording payment
 
   await page.setViewportSize({ width: 320, height: 700 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})
+
+test('hides the recording notice when settlement recording is disabled', async ({ page }) => {
+  await seedProposalState(page)
+  await page.goto(`/groups/${GROUP_ID}/balances`)
+
+  const proposal = page.getByRole('region', { name: 'Ausgleichsvorschlag' })
+  await expect(proposal.getByText('Noch nicht verbucht.')).toHaveCount(0)
+  await expect(proposal.getByRole('link', { name: 'Zahlung erfassen' })).toHaveCount(0)
 })
 
 test('switching strategy shows the exact proposal without changing financial state', async ({ page }) => {

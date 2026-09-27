@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Support\NameNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateParticipantRequest extends FormRequest
@@ -20,7 +19,7 @@ class UpdateParticipantRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:100'],
-            'active' => ['sometimes', 'required', Rule::in([false])],
+            'active' => ['sometimes', 'required', 'boolean'],
             'personId' => ['sometimes', 'nullable', 'string', 'uuid:4'],
             'participantId' => ['prohibited'], 'groupId' => ['prohibited'], 'order' => ['prohibited'],
             'ownerId' => ['prohibited'], 'owner_id' => ['prohibited'], 'ownerAccessIdentityId' => ['prohibited'],
@@ -32,7 +31,7 @@ class UpdateParticipantRequest extends FormRequest
         return [function (Validator $validator): void {
             $fields = array_filter(['name', 'active', 'personId'], fn (string $field): bool => array_key_exists($field, $this->all()));
             if (count($fields) !== 1) {
-                $validator->errors()->add('participant', 'Rename, deactivate and Person association must be separate operations.');
+                $validator->errors()->add('participant', 'Rename, status change and Person association must be separate operations.');
             }
         }];
     }

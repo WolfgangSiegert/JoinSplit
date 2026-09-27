@@ -71,11 +71,13 @@ describe('Statement Snapshot', () => {
       text: expect.any(String),
     })
     expect(Object.isFrozen(snapshot)).toBe(true)
-    expect(snapshot.text).toContain('Erstellt: 24.09.2026, 16:05:06 UTC')
-    expect(snapshot.text).toContain('Bezahlt: 0,00\u00a0€')
-    expect(snapshot.text).toContain('Eigene Anteile: 5,00\u00a0€')
-    expect(snapshot.text).toContain('Zahlungen gesendet: 2,00\u00a0€')
-    expect(snapshot.text).toContain('Offener Saldo: −3,00\u00a0€')
+    expect(snapshot.text).toContain('Hallo Bob,')
+    expect(snapshot.text).toContain('Du solltest noch 3,00\u00a0€ zahlen.')
+    expect(snapshot.text).toContain('Stand vom 24.09.2026, 16:05:06 UTC')
+    expect(snapshot.text).toContain('Du hast bezahlt: 0,00\u00a0€')
+    expect(snapshot.text).toContain('Dein Anteil: 5,00\u00a0€')
+    expect(snapshot.text).toContain('Von dir bereits gezahlt: 2,00\u00a0€')
+    expect(snapshot.text).toContain('Dein aktueller Stand: −3,00\u00a0€')
     expect(snapshot.text).toContain('Bob → Alice · 3,00\u00a0€')
   })
 
@@ -88,10 +90,11 @@ describe('Statement Snapshot', () => {
 
   it('reports explicit empty sections for a zero state', () => {
     const snapshot = generateStatementSnapshot(input({ expenses: [], settlements: [] }))
-    expect(snapshot.text).toContain('Offener Saldo: 0,00\u00a0€')
-    expect(snapshot.text).toContain('Keine relevanten Ausgaben.')
-    expect(snapshot.text).toContain('Keine relevanten Zahlungen.')
-    expect(snapshot.text).toContain('Keine vorgeschlagenen Ausgleichszahlungen für diese Person.')
+    expect(snapshot.text).toContain('Für dich ist gerade alles ausgeglichen.')
+    expect(snapshot.text).toContain('Dein aktueller Stand: 0,00\u00a0€')
+    expect(snapshot.text).toContain('Für dich sind noch keine Ausgaben erfasst.')
+    expect(snapshot.text).toContain('Für dich sind noch keine Ausgleichszahlungen erfasst.')
+    expect(snapshot.text).toContain('Für dich ist keine weitere Ausgleichszahlung nötig.')
   })
 
   it('warns only for Pending Mutations of the represented Group', () => {
@@ -104,7 +107,7 @@ describe('Statement Snapshot', () => {
     expect(unrelated.containsUnsyncedChanges).toBe(false)
     expect(unrelated.text).not.toContain('nicht synchronisierte Änderungen')
     expect(related.containsUnsyncedChanges).toBe(true)
-    expect(related.text).toContain('Dieser lokale Gruppenstand enthält noch nicht synchronisierte Änderungen.')
+    expect(related.text).toContain('Diese Übersicht enthält Änderungen, die bisher nur auf diesem Gerät gespeichert sind.')
   })
 
   it('normalizes hostile multiline names and descriptions without interpreting markup', () => {
@@ -114,7 +117,7 @@ describe('Statement Snapshot', () => {
     ]
     const hostileExpense = { ...expense, description: 'Essen\r\nWARNUNG: falsch' }
     const snapshot = generateStatementSnapshot(input({ participants: hostileParticipants, expenses: [hostileExpense] }))
-    expect(snapshot.text).toContain('Person: Bob <script>')
+    expect(snapshot.text).toContain('Hallo Bob <script>,')
     expect(snapshot.text).toContain('Essen WARNUNG: falsch')
     expect(snapshot.text).not.toContain('<b>Alice</b>\nAdmin')
   })
@@ -128,8 +131,9 @@ describe('Statement Snapshot', () => {
       group: { ...group, name: 'Alt\nGruppe', status: 'archived' },
       participants: duplicateParticipants,
     }))
-    expect(snapshot.text).toContain('Gruppe: Alt Gruppe (archiviert)')
-    expect(snapshot.text).toContain('Person: Alex (Teilnehmer 2) (inaktiv)')
+    expect(snapshot.text).toContain('JoinSplit – dein Stand für „Alt Gruppe“ (archiviert)')
+    expect(snapshot.text).toContain('Hallo Alex (Teilnehmer 2),')
+    expect(snapshot.text).toContain('Person ist derzeit inaktiv')
     expect(snapshot.text).toContain('Alex (Teilnehmer 2) → Alex (Teilnehmer 1)')
   })
 
@@ -150,8 +154,8 @@ describe('Statement Snapshot', () => {
       participants: [participants[0]!, { ...participants[1]!, name: 'B\u202Eob\u2069' }],
       expenses: [{ ...expense, description: 'Abend\u202Aessen' }],
     }))
-    expect(snapshot.text).toContain('Gruppe: Reise')
-    expect(snapshot.text).toContain('Person: Bob')
+    expect(snapshot.text).toContain('JoinSplit – dein Stand für „Reise“')
+    expect(snapshot.text).toContain('Hallo Bob,')
     expect(snapshot.text).toContain('Abendessen')
     expect(snapshot.text).not.toMatch(/[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/u)
   })
@@ -211,7 +215,7 @@ describe('Statement Snapshot', () => {
       participantId: 'debtor-a', participants: exactParticipants, expenses: exactExpenses,
       settlements: [], proposalStrategy: 'minimum-transfer',
     }))
-    expect(snapshot.text).toContain('Vorgeschlagene Ausgleichszahlungen (Möglichst wenige Zahlungen)')
+    expect(snapshot.text).toContain('So könnt ihr den Rest ausgleichen (Möglichst wenige Zahlungen)')
     expect(snapshot.text).toContain('Schuldner A → Gläubiger B · 6,00\u00a0€')
     expect(snapshot.text).not.toContain('Schuldner B → Gläubiger A')
   })

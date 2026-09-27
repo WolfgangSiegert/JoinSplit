@@ -194,7 +194,7 @@ async function confirmDelete(): Promise<void> {
         Eine Person wurde inzwischen auf einem anderen Gerät geändert. Lade unter Account den aktuellen Serverstand; JoinSplit führt die Änderungen nicht automatisch zusammen.
       </div>
 
-      <section class="card mt-6 p-5" aria-labelledby="person-form-title">
+      <section id="person-form" class="card mt-6 scroll-mt-32 p-5" aria-labelledby="person-form-title">
         <h2 id="person-form-title" class="text-xl font-semibold">{{ editingPerson ? 'Person bearbeiten' : 'Neue Person' }}</h2>
         <form class="mt-4 space-y-4" @submit.prevent="save">
           <label class="block font-medium">Name<input v-model="name" class="field-input mt-2" autocomplete="name" maxlength="100" required></label>

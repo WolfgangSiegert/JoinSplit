@@ -1,4 +1,4 @@
-import { canDeleteParticipant, prepareParticipantAdd, prepareParticipantAssociation, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantRename } from '../domain/participant'
+import { canDeleteParticipant, prepareParticipantAdd, prepareParticipantAssociation, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantReactivate, prepareParticipantRename } from '../domain/participant'
 import { participantHasFinancialReferences } from '../domain/expense'
 import { participantHasSettlementReferences } from '../domain/settlement'
 import { persistParticipantAdd, persistParticipantAssociation, persistParticipantDelete, persistParticipantUpdate } from '../persistence/database'
@@ -66,6 +66,19 @@ export function useParticipants(dependencies: ParticipantDependencies = {
     })
   }
 
+  async function reactivate(participantId: string) {
+    const groupId = groupsStore.participants.find(item => item.id === participantId)?.groupId
+    if (!groupId) throw new Error('Active group and participant required')
+    return serializeGroupLocalWrite(groupsStore, groupId, groupsStore.pendingMutations, async (createdOrder) => {
+      const participant = groupsStore.participants.find(item => item.id === participantId)
+      const group = participant && groupsStore.findGroup(participant.groupId)
+      if (!participant || !group || group.status !== 'active') throw new Error('Active group and participant required')
+      const prepared = prepareParticipantReactivate(participant, groupsStore.pendingMutations, undefined, createdOrder)
+      await dependencies.persistUpdate(prepared.participant, prepared.mutation)
+      groupsStore.commitParticipantUpdate(prepared.participant, prepared.mutation)
+    })
+  }
+
   async function associate(participantId: string, personId: string | null) {
     const groupId = groupsStore.participants.find(item => item.id === participantId)?.groupId
     if (!groupId) throw new Error('Active group and participant required')
@@ -103,5 +116,5 @@ export function useParticipants(dependencies: ParticipantDependencies = {
     })
   }
 
-  return { add, rename, deactivate, associate, remove }
+  return { add, rename, deactivate, reactivate, associate, remove }
 }

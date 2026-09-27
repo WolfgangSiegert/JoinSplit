@@ -21,7 +21,13 @@ const visibleStrategyOverride = ref<'deterministic' | 'minimum-transfer' | null>
 const visibleStrategy = computed(() =>
   visibleStrategyOverride.value ?? settingsStore.settlementProposalStrategy,
 )
-const savingSettings = computed(() => savingAppearance.value || savingDefault.value || savingStrategy.value)
+const savingSettlementRecording = ref(false)
+const settlementRecordingPersistenceError = ref('')
+const visibleSettlementRecordingOverride = ref<boolean | null>(null)
+const visibleSettlementRecording = computed(() =>
+  visibleSettlementRecordingOverride.value ?? settingsStore.settlementRecordingEnabled,
+)
+const savingSettings = computed(() => savingAppearance.value || savingDefault.value || savingStrategy.value || savingSettlementRecording.value)
 const resetDialog = ref<HTMLDialogElement | null>(null)
 const resetTrigger = ref<HTMLButtonElement | null>(null)
 const resetConfirm = ref<HTMLButtonElement | null>(null)
@@ -91,6 +97,21 @@ async function changeSettlementStrategy(event: Event): Promise<void> {
   } finally {
     visibleStrategyOverride.value = null
     savingStrategy.value = false
+  }
+}
+
+async function changeSettlementRecording(event: Event): Promise<void> {
+  const value = (event.target as HTMLInputElement).checked
+  visibleSettlementRecordingOverride.value = value
+  savingSettlementRecording.value = true
+  settlementRecordingPersistenceError.value = ''
+  try {
+    await settingsStore.setSettlementRecordingEnabled(value)
+  } catch {
+    settlementRecordingPersistenceError.value = 'Die Einstellung konnte nicht lokal gespeichert werden.'
+  } finally {
+    visibleSettlementRecordingOverride.value = null
+    savingSettlementRecording.value = false
   }
 }
 
@@ -217,6 +238,29 @@ async function confirmReset(): Promise<void> {
         <p class="mt-3 text-sm text-gray-600">Die Auswahl bleibt auf diesem Gerät gespeichert und ändert keine bereits erfassten Zahlungen.</p>
         <p v-if="strategyPersistenceError" class="error-text mt-3 text-sm" role="alert">
           {{ strategyPersistenceError }}
+        </p>
+      </section>
+
+      <section class="card mt-5 p-5" aria-labelledby="settlement-recording">
+        <h2 id="settlement-recording" class="text-lg font-semibold">Ausgleichszahlungen erfassen</h2>
+        <p class="mt-2 text-sm text-gray-600">
+          Standardmäßig berechnet JoinSplit nur Vorschläge. Aktiviere diese Funktion, wenn tatsächlich erfolgte Zahlungen in allen Gruppen dokumentiert werden sollen.
+        </p>
+        <label class="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-lg">
+          <input
+            :checked="visibleSettlementRecording"
+            type="checkbox"
+            class="size-5 shrink-0 accent-brand-600"
+            :disabled="savingSettings"
+            @change="changeSettlementRecording"
+          >
+          <span class="font-medium">Ausgleichszahlungen in allen Gruppen erfassen</span>
+        </label>
+        <p class="mt-3 text-sm text-gray-600">
+          Die Auswahl gilt nur auf diesem Gerät. Alternativ kann die Funktion direkt in einer einzelnen Gruppe aktiviert werden.
+        </p>
+        <p v-if="settlementRecordingPersistenceError" class="error-text mt-3 text-sm" role="alert">
+          {{ settlementRecordingPersistenceError }}
         </p>
       </section>
 

@@ -8,7 +8,7 @@ const MUTATION_ID = '66666666-6666-4666-8666-666666666666'
 
 async function seed(page: Page, mode: 'archived-only' | 'history-pending' | 'clean'): Promise<void> {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   await page.evaluate(async ({ mode, ids }) => {
     const request = indexedDB.open('joinsplit')
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

@@ -55,6 +55,8 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
     settings: {
       addSelfAsParticipantByDefault: false,
       settlementProposalStrategy: 'deterministic',
+      settlementRecordingEnabled: false,
+      settlementRecordingGroupIds: [],
       colorMode: 'dark',
       visualDesign: '3',
     },
@@ -96,6 +98,8 @@ describe('durable state validation and bootstrap', () => {
     expect(useGroupsStore().createGroupSync[GROUP_ID]).toEqual({ state: 'pending', error: null })
     expect(useSettingsStore().addSelfAsParticipantByDefault).toBe(false)
     expect(useSettingsStore().settlementProposalStrategy).toBe('deterministic')
+    expect(useSettingsStore().settlementRecordingEnabled).toBe(false)
+    expect(useSettingsStore().settlementRecordingGroupIds).toEqual([])
     expect(useSettingsStore().colorMode).toBe('dark')
     expect(useSettingsStore().visualDesign).toBe('3')
     expect(persistIdentity).not.toHaveBeenCalled()
@@ -276,6 +280,19 @@ describe('durable state validation and bootstrap', () => {
     }
     expect(() => validateDurableState(durableState({ pendingMutations: [deactivate] })))
       .toThrow('Persisted DeactivateParticipant local state mismatch')
+  })
+
+  test('accepts a pending ReactivateParticipant only when local state is active', () => {
+    const reactivate: PendingMutation = {
+      id: '66666666-6666-4666-8666-666666666666', type: 'ReactivateParticipant', groupId: GROUP_ID, createdOrder: 1,
+      payload: { participantId: PARTICIPANT_ID, name: 'Wolfgang', active: true, order: 0 },
+    }
+    const active = durableState({ pendingMutations: [reactivate] })
+    expect(validateDurableState(active)).toBe(active)
+    expect(() => validateDurableState(durableState({
+      participants: [{ ...durableState().participants[0]!, status: 'inactive' }],
+      pendingMutations: [reactivate],
+    }))).toThrow('Persisted ReactivateParticipant local state mismatch')
   })
 
   test('accepts an AddParticipant followed by RenameParticipant when local state matches the rename', () => {

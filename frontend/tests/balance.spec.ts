@@ -22,7 +22,7 @@ async function seedBalanceState(
   const participants = options.participants ?? true
   const expenses = options.expenses ?? 'mixed'
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
 
   await page.evaluate(async ({ groupId, aliceId, bobId, carolId, expenseId, participants, expenses, archived }) => {
     const request = indexedDB.open('joinsplit', 10)
@@ -110,11 +110,14 @@ test('balance overview and participant composition use local data, stable order,
   await expect(items).toHaveCount(3)
   await expect(items.nth(0)).toContainText('Alice')
   await expect(items.nth(0)).toContainText('Soll erhalten: +5,00 €')
+  await expect(items.nth(0).locator('.amount-value')).toHaveClass(/balance-amount--positive/)
   await expect(items.nth(1)).toContainText('Bob')
   await expect(items.nth(1)).toContainText('Soll zahlen: −5,00 €')
+  await expect(items.nth(1).locator('.amount-value')).toHaveClass(/balance-amount--negative/)
   await expect(items.nth(2)).toContainText('Carol')
   await expect(items.nth(2)).toContainText('Inaktiv')
   await expect(items.nth(2)).toContainText('Ausgeglichen: 0,00 €')
+  await expect(items.nth(2).locator('.amount-value')).toHaveClass(/balance-amount--neutral/)
   await expect(page.getByRole('link', { name: 'Salden' })).toHaveAttribute('aria-current', 'page')
   await expectNoAxeViolations(page)
 

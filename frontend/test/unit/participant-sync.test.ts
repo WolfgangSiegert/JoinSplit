@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Participant } from '../../app/domain/create-group'
-import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactivateParticipant, PendingRenameParticipant } from '../../app/domain/pending-mutation'
+import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactivateParticipant, PendingReactivateParticipant, PendingRenameParticipant } from '../../app/domain/pending-mutation'
 import { synchronizeParticipantMutation } from '../../app/services/participant-sync'
 import { useGroupsStore } from '../../app/stores/groups'
 
@@ -21,11 +21,16 @@ function deactivateMutation(): PendingDeactivateParticipant {
     payload: { participantId: PARTICIPANT_ID, name: 'Alice', active: false, order: 3 } }
 }
 
+function reactivateMutation(): PendingReactivateParticipant {
+  return { id: MUTATION_ID, type: 'ReactivateParticipant', groupId: GROUP_ID, createdOrder: 0,
+    payload: { participantId: PARTICIPANT_ID, name: 'Alice', active: true, order: 3 } }
+}
+
 function responseParticipant(overrides: Record<string, unknown> = {}) {
   return { id: PARTICIPANT_ID, groupId: GROUP_ID, name: 'Alice Neu', active: true, order: 3, ...overrides }
 }
 
-function setup(mutation: PendingRenameParticipant | PendingDeactivateParticipant) {
+function setup(mutation: PendingRenameParticipant | PendingDeactivateParticipant | PendingReactivateParticipant) {
   const groupsStore = useGroupsStore()
   const participant: Participant = { id: PARTICIPANT_ID, groupId: GROUP_ID, name: mutation.payload.name,
     status: mutation.payload.active ? 'active' : 'inactive', order: mutation.payload.order }
@@ -34,7 +39,7 @@ function setup(mutation: PendingRenameParticipant | PendingDeactivateParticipant
 }
 
 async function synchronize(
-  mutation: PendingRenameParticipant | PendingDeactivateParticipant,
+  mutation: PendingRenameParticipant | PendingDeactivateParticipant | PendingReactivateParticipant,
   body: Record<string, unknown>,
   acknowledge = vi.fn(async () => {}),
 ) {
@@ -116,6 +121,14 @@ describe('Participant synchronization reconciliation', () => {
     const { result, groupsStore, requestInit } = await synchronize(deactivateMutation(), body)
     expect(result).toEqual({ outcome: 'synced', status: 200 })
     expect(JSON.parse(String(requestInit?.body))).toEqual({ active: false })
+    expect(groupsStore.pendingMutations).toEqual([])
+  })
+
+  test('reconciles a complete Reactivate response while sending only active=true', async () => {
+    const body = responseParticipant({ name: 'Alice', active: true })
+    const { result, groupsStore, requestInit } = await synchronize(reactivateMutation(), body)
+    expect(result).toEqual({ outcome: 'synced', status: 200 })
+    expect(JSON.parse(String(requestInit?.body))).toEqual({ active: true })
     expect(groupsStore.pendingMutations).toEqual([])
   })
 

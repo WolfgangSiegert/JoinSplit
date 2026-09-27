@@ -22,7 +22,7 @@ test('a controlled app relaunches offline from presentation caches without cachi
   page,
 }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   await page.evaluate(() => navigator.serviceWorker.ready)
 
   if (!await page.evaluate(() => Boolean(navigator.serviceWorker.controller))) {
@@ -31,7 +31,8 @@ test('a controlled app relaunches offline from presentation caches without cachi
 
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Offline App Shell')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
@@ -75,10 +76,11 @@ test('a controlled app relaunches offline from presentation caches without cachi
   await context.setOffline(true)
   await page.reload()
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Offline App Shell/ })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Offline Mutation')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()

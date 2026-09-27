@@ -2,6 +2,35 @@ import { expect, test } from '@playwright/test'
 
 const password = 'correct horse battery staple'
 
+test('requests a recovery link without Account disclosure and completes the reset-link UI', async ({ page }) => {
+  const requests: Array<{ path: string; body: Record<string, unknown> }> = []
+  await page.route('**/api/account/password/**', async (route) => {
+    requests.push({ path: new URL(route.request().url()).pathname, body: route.request().postDataJSON() })
+    await route.fulfill({ status: route.request().url().endsWith('/forgot') ? 202 : 200, contentType: 'application/json', body: '{}' })
+  })
+
+  await page.goto('/account')
+  await page.getByRole('button', { name: 'Passwort vergessen?' }).click()
+  await page.getByLabel('E-Mail').fill('owner@example.test')
+  await page.getByRole('button', { name: 'Link anfordern' }).click()
+  await expect(page.getByRole('status')).toHaveText('Prüfe dein Postfach. Falls ein Account existiert, wurde ein Link versendet.')
+
+  await page.goto('/account/reset?token=reset-token&email=owner%40example.test')
+  await expect(page.getByRole('heading', { name: 'Neues Passwort' })).toBeVisible()
+  await expect(page.getByLabel('E-Mail')).toHaveValue('owner@example.test')
+  await page.getByLabel('Neues Passwort').fill('new correct horse battery staple')
+  await page.getByRole('button', { name: 'Passwort speichern' }).click()
+  await expect(page.getByRole('status')).toHaveText('Dein Passwort wurde geändert. Du kannst dich jetzt anmelden.')
+
+  expect(requests).toEqual([
+    { path: '/api/account/password/forgot', body: { email: 'owner@example.test' } },
+    { path: '/api/account/password/reset', body: {
+      email: 'owner@example.test', token: 'reset-token', password: 'new correct horse battery staple',
+      password_confirmation: 'new correct horse battery staple',
+    } },
+  ])
+})
+
 test('registers, rehydrates on a new signed-in device, and deletes the Account', async ({ page }) => {
   const email = `account-${Date.now()}@example.test`
 

@@ -15,6 +15,8 @@ export const useAccountStore = defineStore('account', {
     hydrate(workspace: DurableAccountWorkspace | null): void { this.workspace = workspace },
     begin(): void { this.busy = true; this.error = '' },
     fail(message: string): void { this.busy = false; this.error = message },
+    succeed(): void { this.busy = false; this.error = '' },
+    clearError(): void { this.error = '' },
     finish(workspace: DurableAccountWorkspace | null): void {
       this.workspace = workspace; this.busy = false; this.error = ''
     },

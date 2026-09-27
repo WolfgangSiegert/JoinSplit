@@ -61,6 +61,12 @@ function balanceText(amountMinor: bigint): string {
   return `Ausgeglichen: ${formatSignedAmountMinor(amountMinor)}`
 }
 
+function balanceToneClass(amountMinor: bigint): string {
+  if (amountMinor > 0n) return 'balance-amount--positive'
+  if (amountMinor < 0n) return 'balance-amount--negative'
+  return 'balance-amount--neutral'
+}
+
 function participantName(participantId: string): string {
   return participantById.value.get(participantId)?.name ?? 'Unbekannter Teilnehmer'
 }
@@ -260,9 +266,9 @@ function downloadBlob(blob: Blob, filename: string): void {
                   <span class="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
                     <strong>{{ participantById.get(balance.participantId)?.name }}</strong>
                     <span v-if="participantById.get(balance.participantId)?.status === 'inactive'" class="ml-2 text-sm text-gray-600">Inaktiv</span>
-                    <span class="amount-value">{{ formatSignedAmountMinor(balance.balanceAmountMinor) }}</span>
+                    <span class="amount-value" :class="balanceToneClass(balance.balanceAmountMinor)">{{ formatSignedAmountMinor(balance.balanceAmountMinor) }}</span>
                   </span>
-                  <span class="mt-1 block text-sm text-ink-700">{{ balanceText(balance.balanceAmountMinor) }}</span>
+                  <span class="mt-1 block text-sm" :class="balanceToneClass(balance.balanceAmountMinor)">{{ balanceText(balance.balanceAmountMinor) }}</span>
                 </span>
               </NuxtLink>
             </li>
@@ -281,7 +287,7 @@ function downloadBlob(blob: Blob, filename: string): void {
             </div>
           </div>
 
-          <p class="settlement-proposal__notice mt-4">
+          <p v-if="settingsStore.isSettlementRecordingEnabled(group.id)" class="settlement-proposal__notice mt-4">
             <AppIcon name="info" class="size-5" />
             <span><strong>Noch nicht verbucht.</strong> Der Vorschlag ist nur eine Rechenhilfe und keine erfasste Zahlung. Erfasste Zahlungen erscheinen unter „Zahlungen“.</span>
           </p>
@@ -335,7 +341,7 @@ function downloadBlob(blob: Blob, filename: string): void {
                 </div>
               </li>
             </ol>
-            <NuxtLink v-if="visibleProposal.transfers.length && group.status === 'active'" :to="`/groups/${group.id}/settlements/new`" class="primary-button mt-4 w-full">
+            <NuxtLink v-if="visibleProposal.transfers.length && group.status === 'active' && settingsStore.isSettlementRecordingEnabled(group.id)" :to="`/groups/${group.id}/settlements/new`" class="primary-button mt-4 w-full">
               <AppIcon name="plus" />
               Zahlung erfassen
             </NuxtLink>

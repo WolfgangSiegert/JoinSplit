@@ -17,16 +17,16 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
 
 async function seedSettlementState(
   page: Page,
-  options: { archived?: boolean; inactiveDebtor?: boolean; settlement?: boolean } = {},
+  options: { archived?: boolean; inactiveDebtor?: boolean; settlement?: boolean; recordingEnabled?: boolean } = {},
 ): Promise<void> {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
-  await page.evaluate(async ({ groupId, debtorId, creditorId, expenseId, settlementId, archived, inactiveDebtor, includeSettlement }) => {
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
+  await page.evaluate(async ({ groupId, debtorId, creditorId, expenseId, settlementId, archived, inactiveDebtor, includeSettlement, recordingEnabled }) => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
-    const tx = db.transaction(['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations'], 'readwrite')
+    const tx = db.transaction(['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations', 'settings'], 'readwrite')
     for (const store of ['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations']) tx.objectStore(store).clear()
     tx.objectStore('groups').put({ id: groupId, name: 'Ausgleich', currency: 'EUR', ownerAccessIdentityId: identity.id, status: archived ? 'archived' : 'active', hasFinancialHistory: true, participantIds: [debtorId, creditorId] })
     tx.objectStore('participants').put({ id: debtorId, groupId, name: 'Dora', status: inactiveDebtor ? 'inactive' : 'active', order: 0 })
@@ -35,6 +35,7 @@ async function seedSettlementState(
     tx.objectStore('expenseShares').put({ expenseId, participantId: debtorId, amountMinor: 1000 })
     tx.objectStore('expenseShares').put({ expenseId, participantId: creditorId, amountMinor: 1000 })
     if (includeSettlement) tx.objectStore('settlements').put({ id: settlementId, groupId, senderParticipantId: debtorId, receiverParticipantId: creditorId, amountMinor: '400', occurredOn: '2026-09-24', creatorAccessIdentityId: identity.id })
+    tx.objectStore('settings').put({ key: 'preferences', addSelfAsParticipantByDefault: true, settlementProposalStrategy: 'deterministic', settlementRecordingEnabled: recordingEnabled, settlementRecordingGroupIds: [], colorMode: 'system', visualDesign: '2' })
     await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) })
     db.close()
   }, {
@@ -46,6 +47,7 @@ async function seedSettlementState(
     archived: options.archived ?? false,
     inactiveDebtor: options.inactiveDebtor ?? false,
     includeSettlement: options.settlement ?? false,
+    recordingEnabled: options.recordingEnabled ?? true,
   })
 }
 
@@ -54,13 +56,13 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
     Object.defineProperty(Navigator.prototype, 'onLine', { configurable: true, get: () => false })
   })
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   await page.evaluate(async ({ groupId, debtorId, creditorId, expenseId }) => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
-    const tx = db.transaction(['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations'], 'readwrite')
+    const tx = db.transaction(['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations', 'settings'], 'readwrite')
     for (const store of ['groups', 'participants', 'expenses', 'expenseShares', 'settlements', 'pendingMutations']) tx.objectStore(store).clear()
     tx.objectStore('groups').put({ id: groupId, name: 'Ausgleich', currency: 'EUR', ownerAccessIdentityId: identity.id, status: 'active', hasFinancialHistory: true, participantIds: [debtorId, creditorId] })
     tx.objectStore('participants').put({ id: debtorId, groupId, name: 'Dora', status: 'active', order: 0 })
@@ -68,6 +70,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
     tx.objectStore('expenses').put({ id: expenseId, groupId, description: 'Hotel', amountMinor: 2000, incurredOn: '2026-09-24', payerParticipantId: creditorId, creatorAccessIdentityId: identity.id, splitMethod: 'equal' })
     tx.objectStore('expenseShares').put({ expenseId, participantId: debtorId, amountMinor: 1000 })
     tx.objectStore('expenseShares').put({ expenseId, participantId: creditorId, amountMinor: 1000 })
+    tx.objectStore('settings').put({ key: 'preferences', addSelfAsParticipantByDefault: true, settlementProposalStrategy: 'deterministic', settlementRecordingEnabled: true, settlementRecordingGroupIds: [], colorMode: 'system', visualDesign: '2' })
     await new Promise<void>((resolve, reject) => { tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error) })
     db.close()
   }, { groupId: GROUP_ID, debtorId: DEBTOR_ID, creditorId: CREDITOR_ID, expenseId: EXPENSE_ID })
@@ -77,7 +80,9 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   await page.getByRole('link', { name: 'Zahlung erfassen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Zahlung erfassen' })).toBeFocused()
   await page.getByLabel('Gezahlt von').selectOption(DEBTOR_ID)
-  await page.getByLabel('Gezahlt an').selectOption(CREDITOR_ID)
+  await expect(page.getByLabel('Gezahlt an')).toHaveValue(CREDITOR_ID)
+  await expect(page.getByLabel('Betrag in Euro')).toHaveValue('10,00')
+  await expect(page.getByText('Vorschlag übernommen: Zahlung an Chris. Empfänger und Betrag können geändert werden.')).toBeVisible()
   await page.getByLabel('Betrag in Euro').fill('4,00')
   await page.getByRole('button', { name: 'Zahlung speichern' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Zahlung' })).toBeFocused()
@@ -109,6 +114,49 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
     db.close(); return records.sort((left, right) => left.createdOrder - right.createdOrder).map(item => item.type)
   })
   expect(mutationTypes).toEqual(['CreateSettlement', 'UpdateSettlement', 'DeleteSettlement'])
+})
+
+test('Settlement recording is off by default, keeps history readable, and can be enabled per group', async ({ page }) => {
+  await seedSettlementState(page, { settlement: true, recordingEnabled: false })
+  await page.goto(`/groups/${GROUP_ID}/settlements`)
+
+  await expect(page.getByRole('link', { name: /Dora → Chris/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Zahlung erfassen' })).toHaveCount(0)
+  await expect(page.getByText('Bereits vorhandene Zahlungen bleiben sichtbar.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Für diese Gruppe aktivieren' }).click()
+  await expect(page.getByRole('link', { name: 'Zahlung erfassen' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('link', { name: 'Zahlung erfassen' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Für diese Gruppe deaktivieren' }).click()
+  await expect(page.getByRole('link', { name: 'Zahlung erfassen' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Für diese Gruppe aktivieren' }).click()
+
+  const groupIds = await page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 10)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const settingsRequest = db.transaction('settings').objectStore('settings').get('preferences')
+    const settings = await new Promise<{ settlementRecordingGroupIds: string[] }>((resolve, reject) => { settingsRequest.onsuccess = () => resolve(settingsRequest.result); settingsRequest.onerror = () => reject(settingsRequest.error) })
+    db.close()
+    return settings.settlementRecordingGroupIds
+  })
+  expect(groupIds).toEqual([GROUP_ID])
+})
+
+test('direct Settlement entry is gated and global Settings activation unlocks every group', async ({ page }) => {
+  await seedSettlementState(page, { recordingEnabled: false })
+  await page.goto(`/groups/${GROUP_ID}/settlements/new`)
+  await expect(page.getByRole('heading', { name: 'Zahlungen erfassen ist deaktiviert' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Zahlung speichern' })).toHaveCount(0)
+
+  await page.goto('/settings#settlement-recording')
+  await page.getByLabel('Ausgleichszahlungen in allen Gruppen erfassen').check()
+  await page.reload()
+  await expect(page.getByLabel('Ausgleichszahlungen in allen Gruppen erfassen')).toBeChecked()
+
+  await page.goto(`/groups/${GROUP_ID}/settlements/new`)
+  await expect(page.getByRole('button', { name: 'Zahlung speichern' })).toBeVisible()
 })
 
 test('active Participants can explicitly confirm a payment against the open balance direction', async ({ page }) => {

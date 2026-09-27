@@ -39,7 +39,8 @@ test('a real waiting worker never reloads silently and preserves pending Indexed
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 
     await page.route('**/api/groups', route => route.abort('connectionrefused'))
-    await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+    await page.getByRole('button', { name: 'Neu', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
     await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
     await page.getByLabel('Gruppenname').fill('Update bleibt lokal')
     await page.getByRole('button', { name: 'Gruppe erstellen' }).click()

@@ -5,6 +5,7 @@ import {
   type PendingAddParticipant,
   type PendingAssociateParticipant,
   type PendingDeactivateParticipant,
+  type PendingReactivateParticipant,
   type PendingDeleteParticipant,
   type PendingMutation,
   type PendingRenameParticipant,
@@ -140,6 +141,22 @@ export function prepareParticipantDeactivate(
       id: generateId(), type: 'DeactivateParticipant', groupId: participant.groupId,
         createdOrder,
       payload: { participantId: participant.id, name: participant.name, active: false, order: participant.order },
+    }),
+  }
+}
+
+export function prepareParticipantReactivate(
+  participant: Participant,
+  pendingMutations: readonly PendingMutation[],
+  generateId: () => string = () => crypto.randomUUID(),
+  createdOrder: number = nextCreatedOrder(pendingMutations),
+): PreparedParticipantUpdate<PendingReactivateParticipant> {
+  return {
+    participant: { ...participant, status: 'active' },
+    mutation: freezePendingMutation({
+      id: generateId(), type: 'ReactivateParticipant', groupId: participant.groupId,
+      createdOrder,
+      payload: { participantId: participant.id, name: participant.name, active: true, order: participant.order },
     }),
   }
 }

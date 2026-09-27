@@ -76,6 +76,22 @@ export async function loginAccount(apiBase: string, email: string, password: str
   return ((await json(response)) as { data: AccountData }).data
 }
 
+export async function requestPasswordReset(apiBase: string, email: string, fetcher: typeof fetch = applicationFetch): Promise<void> {
+  await mutate(apiBase, '/api/account/password/forgot', 'POST', { email }, fetcher)
+}
+
+export async function resetAccountPassword(
+  apiBase: string,
+  email: string,
+  token: string,
+  password: string,
+  fetcher: typeof fetch = applicationFetch,
+): Promise<void> {
+  await mutate(apiBase, '/api/account/password/reset', 'POST', {
+    email, token, password, password_confirmation: password,
+  }, fetcher)
+}
+
 export async function linkAnonymousIdentity(apiBase: string, identityId: string, credential: string, fetcher: typeof fetch = applicationFetch): Promise<void> {
   const token = await csrf(apiBase, fetcher)
   const response = await fetcher(`${base(apiBase)}/api/account/access-identities/link`, {

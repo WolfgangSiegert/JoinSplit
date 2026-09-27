@@ -76,10 +76,10 @@ async function copySnapshot(): Promise<void> {
   try {
     if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable')
     await navigator.clipboard.writeText(snapshot.value.text)
-    actionMessage.value = 'Text wurde kopiert.'
+    actionMessage.value = 'Die Nachricht wurde kopiert.'
     actionFailed.value = false
   } catch {
-    actionMessage.value = 'Kopieren war nicht möglich. Der Text kann unten manuell ausgewählt werden.'
+    actionMessage.value = 'Kopieren war nicht möglich. Die Nachricht kann unten manuell ausgewählt werden.'
     actionFailed.value = true
   }
 }
@@ -88,7 +88,7 @@ async function shareSnapshot(): Promise<void> {
   if (!snapshot.value || typeof navigator.share !== 'function') return
   try {
     await navigator.share({
-      title: 'JoinSplit – Abrechnungsauszug',
+      title: 'JoinSplit – dein persönlicher Stand',
       text: snapshot.value.text,
     })
     actionMessage.value = 'Teilen wurde geöffnet.'
@@ -111,9 +111,9 @@ async function shareSnapshot(): Promise<void> {
       <NuxtLink :to="`/groups/${group.id}/balances`" class="secondary-link -ml-4 mb-3" aria-label="← Salden"><AppIcon name="arrow-left" />Salden</NuxtLink>
       <header>
         <p class="break-words text-sm font-semibold tracking-wide text-brand-700">{{ group.name }}</p>
-        <h1 class="mt-2 text-3xl font-semibold text-brand-900">Persönlichen Stand teilen</h1>
+        <h1 class="mt-2 text-3xl font-semibold text-brand-900">Deinen Stand teilen</h1>
         <p class="mt-2 text-gray-600">
-          Erzeuge auch offline einen Text aus dem aktuellen lokalen Stand. Er wird nicht hochgeladen und gibt keinen Zugriff auf die Gruppe.
+          Erstelle eine persönliche, leicht verständliche Nachricht. Sie funktioniert auch offline, wird nicht hochgeladen und gibt keinen Zugriff auf die Gruppe.
         </p>
       </header>
 
@@ -124,14 +124,14 @@ async function shareSnapshot(): Promise<void> {
       <section v-if="!snapshot" class="card mt-6 p-5" aria-labelledby="statement-create-title">
         <h2 id="statement-create-title" ref="createTitle" tabindex="-1" class="text-xl font-semibold">Vorschau erzeugen</h2>
         <template v-if="participants.length">
-          <label for="statement-participant" class="mt-4 block font-medium">Teilnehmer</label>
+          <label for="statement-participant" class="mt-4 block font-medium">Person</label>
           <select id="statement-participant" v-model="selectedParticipantId" class="field-input mt-2">
-            <option value="" disabled>Teilnehmer auswählen</option>
+            <option value="" disabled>Person auswählen</option>
             <option v-for="participant in participants" :key="participant.id" :value="participant.id">
               {{ optionLabel(participant.id) }}
             </option>
           </select>
-          <p class="mt-2 text-sm text-gray-600">Aktive und inaktive Teilnehmer sind auswählbar.</p>
+          <p class="mt-2 text-sm text-gray-600">Auch eine derzeit inaktive Person kann eine Übersicht erhalten.</p>
           <button
             type="button"
             class="primary-button mt-5 w-full"
@@ -151,9 +151,9 @@ async function shareSnapshot(): Promise<void> {
           Diese Vorschau ist eingefroren. Spätere lokale Änderungen verändern ihren Inhalt nicht.
         </p>
         <p v-if="snapshot.containsUnsyncedChanges" class="mt-3 rounded-lg bg-amber-50 p-3 text-amber-950" role="status">
-          Der lokale Gruppenstand enthält noch nicht synchronisierte Änderungen.
+          Die Übersicht enthält Änderungen, die bisher nur auf diesem Gerät gespeichert sind.
         </p>
-        <label for="statement-text" class="mt-4 block font-medium">Textvorschau</label>
+        <label for="statement-text" class="mt-4 block font-medium">Nachrichtenvorschau</label>
         <textarea
           id="statement-text"
           class="field-input mt-2 min-h-80 resize-y whitespace-pre-wrap font-mono text-sm"
@@ -161,11 +161,11 @@ async function shareSnapshot(): Promise<void> {
           readonly
         />
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <button type="button" class="primary-button" @click="copySnapshot"><AppIcon name="copy" />Text kopieren</button>
-          <button v-if="shareSupported" type="button" class="secondary-button" @click="shareSnapshot"><AppIcon name="share" />Systemdialog öffnen</button>
+          <button type="button" class="primary-button" @click="copySnapshot"><AppIcon name="copy" />Nachricht kopieren</button>
+          <button v-if="shareSupported" type="button" class="secondary-button" @click="shareSnapshot"><AppIcon name="share" />Teilen</button>
         </div>
         <p v-if="!shareSupported" class="mt-3 text-sm text-gray-600">
-          Systemteilen ist auf diesem Gerät nicht verfügbar. Der Text kann kopiert oder manuell markiert werden.
+          Direktes Teilen ist auf diesem Gerät nicht verfügbar. Die Nachricht kann kopiert oder manuell markiert werden.
         </p>
         <p
           v-if="actionMessage"

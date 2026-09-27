@@ -19,7 +19,8 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
 
 async function openCreateGroup(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
 }
 
 async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
@@ -86,7 +87,7 @@ test('the ready Group List is accessible', async ({ page }) => {
   expect(response?.headers()['content-security-policy']).toContain("default-src 'self'")
   expect(response?.headers()['strict-transport-security']).toBe('max-age=31536000; includeSubDomains')
   expect(response?.headers()['x-content-type-options']).toBe('nosniff')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   await expect(page.getByLabel('Beta-Version')).toHaveText('Beta')
   await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
   await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
@@ -117,7 +118,8 @@ test('the durable global setting controls the next form default after reload', a
     page.getByRole('checkbox', { name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen' }),
   ).not.toBeChecked()
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
 
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).not.toBeChecked()
   await expect(page.getByLabel('Mein Name in dieser Gruppe')).toHaveCount(0)
@@ -146,7 +148,8 @@ test('a failed durable settings write restores the visible and effective value',
   await expect(setting).toBeChecked()
 
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).toBeChecked()
 })
 
@@ -238,7 +241,8 @@ test('local creation navigates immediately, then the real API confirms the same 
     await route.continue()
   })
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Zweite Gruppe')
   const laterResponse = page.waitForResponse(
@@ -264,7 +268,7 @@ test('local creation navigates immediately, then the real API confirms the same 
   await expect(page.getByRole('link', { name: /Wochenendtrip/ })).toHaveCount(1)
   await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
   await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Gruppenauswahl' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Meine Gruppen' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Zu meinen Gruppen' })).toHaveAttribute('href', '#gruppen')
   await expect(page.locator('#gruppen')).toBeVisible()
 })
@@ -274,7 +278,8 @@ test('creation without a participant succeeds and offline is distinct from pendi
   await page.goto('/groups/preload')
   await expect(page.getByRole('heading', { level: 1, name: 'Gruppe nicht gefunden' })).toBeVisible()
   await page.getByRole('link', { name: 'Zur Gruppenliste' }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await context.setOffline(true)
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Ohne Teilnehmer')
@@ -400,15 +405,15 @@ test('the server-rendered hydration state is blocked and accessible', async ({ p
   })
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten werden geladen' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Neue Gruppe', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'JoinSplit wird vorbereitet' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Neu', exact: true })).toBeVisible()
   await expect(page.getByText('Noch keine Gruppe')).toHaveCount(0)
   await expectNoAxeViolations(page)
 })
 
 test('malformed durable data blocks domain UI without deleting the record', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('link', { name: 'Neue Gruppe', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Neu', exact: true })).toBeVisible()
   await page.evaluate(async () => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -433,7 +438,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
 
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten nicht verfügbar' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Neue Gruppe', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Neu', exact: true })).toBeVisible()
   const malformedStillExists = await page.evaluate(async () => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -544,7 +549,7 @@ test('v3 settings upgrade to v10 preserves existing preferences and adds the Set
   })
   await page.unroute('**/_nuxt/**')
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
@@ -585,7 +590,7 @@ test('v2 durable state upgrades to v10 without losing existing records', async (
   })
   await page.unroute('**/_nuxt/**')
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
@@ -604,7 +609,7 @@ test('Expense shares reload in stable Participant order despite opposing UUID or
   const stableFirst = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
   const stableSecond = '00000000-0000-4000-8000-000000000001'
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   await page.evaluate(async ({ groupId, expenseId, stableFirst, stableSecond }) => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
@@ -708,6 +713,67 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.reload()
   await expect(page.getByText('Noch keine Ausgaben')).toBeVisible()
   await expectNoAxeViolations(page)
+})
+
+test('Expense split selection stays compact and searchable for larger groups', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Große Runde')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await page.waitForURL(url => /^\/groups\/[0-9a-f-]{36}$/.test(url.pathname))
+  const groupId = new URL(page.url()).pathname.split('/').at(-1)!
+
+  await page.goto(`/groups/${groupId}/participants`)
+  for (const name of ['Bob', 'Carla', 'Dora', 'Emil']) {
+    await page.getByLabel('Teilnehmer hinzufügen').fill(name)
+    await page.getByRole('button', { name: 'Hinzufügen' }).click()
+    await expect(page.getByText(name, { exact: true })).toBeVisible()
+  }
+
+  await page.goto(`/groups/${groupId}/expenses/new`)
+  await expect(page.getByLabel('Ausgewählte Personen')).toContainText('Alice')
+  await expect(page.getByLabel('Ausgewählte Personen')).toContainText('Emil')
+  await expect(page.getByText('Ausgewählt (5)')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Alice aus Aufteilung entfernen' }).click()
+  await expect(page.getByText('Ausgewählt (4)')).toBeVisible()
+  await page.getByText('Personen auswählen', { exact: true }).click()
+  await page.getByLabel('Personen durchsuchen').fill('Ali')
+  const alice = page.getByRole('checkbox', { name: 'Alice' })
+  await expect(alice).not.toBeChecked()
+  await alice.check()
+  await expect(page.getByText('Ausgewählt (5)')).toBeVisible()
+
+  await page.getByLabel('Personen durchsuchen').fill('nicht vorhanden')
+  await expect(page.getByText('Keine passende Person gefunden.')).toBeVisible()
+  await expectNoAxeViolations(page)
+})
+
+test('Expense create can save and immediately prepare the next entry', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Serienerfassung')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await page.getByRole('link', { name: 'Ausgabe hinzufügen' }).click()
+
+  const date = await page.getByLabel('Datum').inputValue()
+  await page.getByLabel('Beschreibung').fill('Frühstück')
+  await page.getByLabel('Betrag in Euro').fill('12,40')
+  const create = page.waitForResponse(response => response.url().endsWith('/expenses') && response.request().method() === 'POST' && response.status() === 201)
+  await page.getByRole('button', { name: 'Speichern & nächste Ausgabe' }).click()
+  await create
+
+  await expect(page).toHaveURL(/\/expenses\/new$/)
+  await expect(page.getByText('Ausgabe gespeichert. Du kannst direkt die nächste Ausgabe erfassen.')).toBeVisible()
+  await expect(page.getByLabel('Beschreibung')).toBeFocused()
+  await expect(page.getByLabel('Beschreibung')).toHaveValue('')
+  await expect(page.getByLabel('Betrag in Euro')).toHaveValue('')
+  await expect(page.getByLabel('Datum')).toHaveValue(date)
+  await expect(page.getByLabel('Bezahlt von')).toHaveValue(/.+/)
+  await expect(page.getByRole('checkbox', { name: 'Alice' })).toBeChecked()
+
+  await page.getByRole('link', { name: '← Gruppe' }).click()
+  await expect(page.getByRole('link', { name: /Frühstück/ })).toContainText('12,40 €')
 })
 
 test('a failed Expense delete stays actionable and ignores repeated activation', async ({ page }) => {
@@ -849,6 +915,13 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await expectNoAxeViolations(page)
   await page.reload()
   await expect(page.getByText('Inaktiv')).toBeVisible()
+
+  const reactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
+  await page.getByRole('button', { name: 'Carol reaktivieren' }).click()
+  await reactivate
+  await expect(page.getByRole('listitem').filter({ hasText: 'Carol' }).getByText('Aktiv', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Carol deaktivieren' })).toBeVisible()
+  await expectNoAxeViolations(page)
 
   await page.getByRole('button', { name: 'Bobby löschen' }).click()
   await expect(page.getByRole('dialog')).toContainText('Teilnehmer „Bobby“ wirklich löschen?')

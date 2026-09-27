@@ -1,5 +1,5 @@
 import type { Group, Participant } from '../domain/create-group'
-import type { PendingAddParticipant, PendingAssociateParticipant, PendingCreateGroup, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
+import type { PendingAddParticipant, PendingAssociateParticipant, PendingCreateGroup, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingReactivateParticipant, PendingRenameParticipant } from '../domain/pending-mutation'
 import type { DurableState } from './database'
 import { normalizeName } from '../domain/create-group'
 import type { Expense } from '../domain/expense'
@@ -11,7 +11,7 @@ import type { PendingPersonMutation } from '../domain/pending-person-mutation'
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const SERVER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const CREDENTIAL = /^[0-9a-f]{64}$/u
-const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'AssociateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement', 'ArchiveGroup', 'ReactivateGroup', 'DeleteGroup'])
+const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'ReactivateParticipant', 'AssociateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement', 'ArchiveGroup', 'ReactivateGroup', 'DeleteGroup'])
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function keys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const actual = Object.keys(value); return actual.length === expected.length && actual.every(key => expected.includes(key))
@@ -78,6 +78,8 @@ function mutation(value: unknown): value is PendingMutation {
     && uuid(payload.participantId) && name(payload.name) && typeof payload.active === 'boolean' && integer(payload.order)
   if (value.type === 'DeactivateParticipant') return keys(payload, ['participantId', 'name', 'active', 'order'])
     && uuid(payload.participantId) && name(payload.name) && payload.active === false && integer(payload.order)
+  if (value.type === 'ReactivateParticipant') return keys(payload, ['participantId', 'name', 'active', 'order'])
+    && uuid(payload.participantId) && name(payload.name) && payload.active === true && integer(payload.order)
   if (value.type === 'AssociateParticipant') return keys(payload, ['participantId', 'personId', 'name', 'active', 'order'])
     && uuid(payload.participantId) && (payload.personId === null || uuid(payload.personId))
     && name(payload.name) && typeof payload.active === 'boolean' && integer(payload.order)
@@ -126,6 +128,10 @@ export function validateDurableState(value: DurableState): DurableState {
     || !value.settlements.every(durableSettlement)
     || (value.settings !== null && (typeof value.settings.addSelfAsParticipantByDefault !== 'boolean'
       || (value.settings.settlementProposalStrategy !== 'deterministic' && value.settings.settlementProposalStrategy !== 'minimum-transfer')
+      || typeof value.settings.settlementRecordingEnabled !== 'boolean'
+      || !Array.isArray(value.settings.settlementRecordingGroupIds)
+      || !value.settings.settlementRecordingGroupIds.every(uuid)
+      || new Set(value.settings.settlementRecordingGroupIds).size !== value.settings.settlementRecordingGroupIds.length
       || (value.settings.colorMode !== 'system' && value.settings.colorMode !== 'light' && value.settings.colorMode !== 'dark')
       || (value.settings.visualDesign !== '2' && value.settings.visualDesign !== '3')))) throw new Error('Invalid persisted state shape')
 
@@ -214,7 +220,7 @@ export function validateDurableState(value: DurableState): DurableState {
   }
 
   const orderedMutations = [...value.pendingMutations].sort((a, b) => a.createdOrder - b.createdOrder)
-  type ParticipantStateMutation = PendingCreateGroup | PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingAssociateParticipant | PendingDeleteParticipant
+  type ParticipantStateMutation = PendingCreateGroup | PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingReactivateParticipant | PendingAssociateParticipant | PendingDeleteParticipant
   const latestParticipantMutation = new Map<string, ParticipantStateMutation>()
   for (const current of orderedMutations) {
     const currentGroup = value.groups.find(item => item.id === current.groupId)

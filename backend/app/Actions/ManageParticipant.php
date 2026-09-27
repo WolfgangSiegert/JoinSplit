@@ -60,8 +60,7 @@ class ManageParticipant
                 $participant = $group->participants()->whereKey($participantId)->lockForUpdate()->firstOrFail();
                 if (array_key_exists('name', $data)) $participant->name = $data['name'];
                 if (array_key_exists('active', $data)) {
-                    if ($data['active'] !== false) throw new ParticipantConflictException;
-                    $participant->is_active = false;
+                    $participant->is_active = $data['active'];
                 }
                 if (array_key_exists('personId', $data)) {
                     if (! $actor->account_id) throw new ParticipantConflictException;

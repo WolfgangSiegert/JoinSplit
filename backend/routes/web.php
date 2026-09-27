@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountSessionController;
+use App\Http\Controllers\AccountPasswordController;
 use App\Http\Controllers\AccountAccessIdentityController;
 use App\Http\Controllers\AccountWorkspaceController;
 use App\Http\Controllers\AccountPersonController;
@@ -21,6 +22,10 @@ Route::prefix('/api/account')->middleware('api.origin')->group(function () {
         ->middleware(['guest:web', 'throttle:account-registration']);
     Route::post('/login', [AccountSessionController::class, 'login'])
         ->middleware(['guest:web', 'throttle:account-login']);
+    Route::post('/password/forgot', [AccountPasswordController::class, 'forgot'])
+        ->middleware(['guest:web', 'throttle:account-password-recovery']);
+    Route::post('/password/reset', [AccountPasswordController::class, 'reset'])
+        ->middleware(['guest:web', 'throttle:account-password-recovery']);
 
     Route::middleware(['auth:web', 'throttle:account-session'])->group(function () {
         Route::get('/', [AccountSessionController::class, 'current']);

@@ -3,21 +3,28 @@ import { expect, test } from '@playwright/test'
 
 test('global header exposes the primary workspace transitions', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('link', { name: 'Neue Gruppe', exact: true })).toHaveAttribute('href', '/groups/new')
+  await expect(page.getByRole('link', { name: 'Gruppen', exact: true })).toHaveAttribute('href', '/#gruppen')
   await expect(page.getByRole('link', { name: 'Personen', exact: true })).toHaveAttribute('href', '/people')
-  await expect(page.getByRole('link', { name: 'Anmelden', exact: true })).toHaveAttribute('href', '/account')
+  await expect(page.getByRole('link', { name: 'Anmelden oder registrieren', exact: true })).toHaveAttribute('href', '/account')
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Neue Gruppe' })).toHaveAttribute('href', '/groups/new')
+  await expect(page.getByRole('menuitem', { name: 'Neue Person' })).toHaveAttribute('href', '/people#person-form')
 })
 
 test('global navigation remains operable at 320 CSS pixels and the Group anchor clears the sticky header', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 })
   await page.goto('/')
-  for (const name of ['Neue Gruppe', 'Personen', 'Anmelden']) {
+  for (const name of ['Gruppen', 'Personen']) {
     const box = await page.getByRole('link', { name, exact: true }).boundingBox()
+    expect(box?.height).toBeGreaterThanOrEqual(44)
+  }
+  for (const name of ['Demo und Daten', 'Anmelden oder registrieren', 'Einstellungen öffnen', 'Dunklen Modus aktivieren']) {
+    const box = await page.getByRole(name === 'Dunklen Modus aktivieren' ? 'button' : 'link', { name, exact: true }).boundingBox()
     expect(box?.height).toBeGreaterThanOrEqual(44)
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
 
-  await page.getByRole('navigation', { name: 'Allgemeine Navigation' }).getByRole('link', { name: 'Gruppen' }).click()
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Gruppen' }).click()
   const positions = await page.evaluate(() => ({
     headerBottom: document.querySelector('.app-header')!.getBoundingClientRect().bottom,
     sectionTop: document.querySelector('#gruppen')!.getBoundingClientRect().top,

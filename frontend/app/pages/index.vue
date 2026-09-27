@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const groupsStore = useGroupsStore()
+const peopleStore = usePeopleStore()
 const route = useRoute()
 const showArchived = ref(false)
 const activeGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'active'))
@@ -15,33 +16,39 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
   <main class="page-shell">
     <div class="page-content">
       <header class="landing-header">
-        <div class="flex flex-wrap items-center justify-end gap-2">
-          <nav class="flex flex-wrap justify-end" aria-label="Allgemeine Navigation">
-            <a href="#gruppen" class="secondary-link"><AppIcon name="users" />Gruppen</a>
-            <NuxtLink to="/demo" class="secondary-link"><AppIcon name="database" />Demo & Daten</NuxtLink>
-            <NuxtLink to="/settings" class="secondary-link -mr-4"><AppIcon name="settings" />Einstellungen</NuxtLink>
-          </nav>
-        </div>
         <div class="landing-hero">
           <p class="eyebrow">Gemeinsame Ausgaben. Klar geregelt.</p>
-          <h1 class="landing-hero__title">Deine Gruppen</h1>
+          <h1 class="landing-hero__title">Gemeinsam den Überblick behalten</h1>
           <p class="landing-hero__lead">Mehr zusammen erleben. Weniger rechnen.</p>
           <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
           <div class="landing-hero__actions">
             <NuxtLink v-if="isFreshStart" to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten"><AppIcon name="plus" />Erste Gruppe starten</NuxtLink>
             <a v-else href="#gruppen" class="primary-button"><AppIcon name="users" />Zu meinen Gruppen</a>
-            <a href="#so-funktionierts" class="secondary-button"><AppIcon name="info" />So funktioniert es</a>
+            <NuxtLink to="/people#person-form" class="secondary-button"><AppIcon name="user" />Person anlegen</NuxtLink>
           </div>
         </div>
         <JoinSplitOverviewGraphic />
       </header>
+
+      <nav class="landing-workspaces" aria-label="Deine Bereiche">
+        <a href="#gruppen" class="landing-workspace-card">
+          <span class="landing-workspace-card__icon"><AppIcon name="users" /></span>
+          <span><strong>Meine Gruppen</strong><small>{{ activeGroups.length }} aktiv</small></span>
+          <AppIcon name="chevron-right" />
+        </a>
+        <NuxtLink to="/people" class="landing-workspace-card">
+          <span class="landing-workspace-card__icon"><AppIcon name="user" /></span>
+          <span><strong>Meine Personen</strong><small>{{ peopleStore.activePeople.length }} aktiv</small></span>
+          <AppIcon name="chevron-right" />
+        </NuxtLink>
+      </nav>
 
       <p v-if="route.query.deleted === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Gruppe lokal zur endgültigen Löschung vorgemerkt.</p>
       <p v-if="route.query.reset === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Lokale Daten wurden zurückgesetzt. Eine neue Browser-Identität wurde erstellt.</p>
 
       <section id="gruppen" class="landing-groups" aria-labelledby="group-selector-title">
         <p class="eyebrow">Dein Bereich</p>
-        <h2 id="group-selector-title" class="mt-2 text-3xl font-bold">Gruppenauswahl</h2>
+        <h2 id="group-selector-title" class="mt-2 text-3xl font-bold">Meine Gruppen</h2>
         <p class="mt-2 text-ink-700">Öffne eine bestehende Gruppe oder starte einen neuen gemeinsamen Stand.</p>
 
         <section v-if="activeGroups.length" class="mt-6" aria-labelledby="active-groups">

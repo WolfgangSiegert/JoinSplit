@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { localToday } from '../domain/expense'
+import { calculateParticipantBalances } from '../domain/balance'
 import { settlementAmountInput, type Settlement, type SettlementDraft, type SettlementErrors } from '../domain/settlement'
+import { proposeDeterministicSettlements, proposeMinimumTransferSettlements } from '../domain/settlement-proposal'
 
 const props = defineProps<{ groupId: string; settlement?: Settlement }>()
 const emit = defineEmits<{ saved: [settlement: Settlement] }>()
 const groupsStore = useGroupsStore()
+const settingsStore = useSettingsStore()
 const { save } = useSettlements()
 const participants = computed(() => groupsStore.participantsForGroup(props.groupId))
 const initial = props.settlement
@@ -25,8 +28,49 @@ const senderSelect = ref<HTMLSelectElement | null>(null)
 const receiverSelect = ref<HTMLSelectElement | null>(null)
 const amountInput = ref<HTMLInputElement | null>(null)
 const dateInput = ref<HTMLInputElement | null>(null)
+const prefillStatus = ref('')
+
+const proposal = computed(() => {
+  const balances = calculateParticipantBalances(
+    props.groupId,
+    participants.value,
+    groupsStore.expensesForGroup(props.groupId),
+    groupsStore.settlementsForGroup(props.groupId),
+  )
+  const input = balances.map((balance) => {
+    const participant = participants.value.find(item => item.id === balance.participantId)
+    return {
+      participantId: balance.participantId,
+      participantOrder: participant?.order ?? -1,
+      status: participant?.status ?? 'active',
+      balanceAmountMinor: balance.balanceAmountMinor.toString(10),
+    }
+  })
+  return settingsStore.settlementProposalStrategy === 'minimum-transfer'
+    ? proposeMinimumTransferSettlements(input)
+    : proposeDeterministicSettlements(input)
+})
 
 watch(draft, () => { confirmationReasons.value = [] }, { deep: true })
+watch(() => draft.senderParticipantId, (senderParticipantId) => {
+  if (props.settlement || !senderParticipantId) return
+  const currentProposal = proposal.value
+  if (currentProposal.status !== 'success') {
+    prefillStatus.value = ''
+    return
+  }
+  const transfer = currentProposal.transfers.find(item => item.senderParticipantId === senderParticipantId)
+  if (!transfer) {
+    prefillStatus.value = 'Für diese Person gibt es im aktuellen Ausgleichsvorschlag keine offene Zahlung.'
+    return
+  }
+  draft.receiverParticipantId = transfer.receiverParticipantId
+  draft.amount = settlementAmountInput(BigInt(transfer.amountMinor))
+  const receiver = participants.value.find(item => item.id === transfer.receiverParticipantId)
+  prefillStatus.value = receiver
+    ? `Vorschlag übernommen: Zahlung an ${receiver.name}. Empfänger und Betrag können geändert werden.`
+    : 'Vorschlag übernommen. Empfänger und Betrag können geändert werden.'
+})
 
 async function submit(confirmationAccepted = false): Promise<void> {
   if (submitting.value) return
@@ -73,7 +117,7 @@ async function cancelConfirmation(): Promise<void> {
 <template>
   <form class="space-y-5" :aria-busy="submitting" @submit.prevent="submit(false)">
     <p v-if="errorAnnouncement" class="sr-only" role="alert">{{ errorAnnouncement }}</p>
-    <div><label for="settlement-sender" class="font-semibold">Gezahlt von</label><select id="settlement-sender" ref="senderSelect" v-model="draft.senderParticipantId" class="field-input mt-2" :aria-invalid="Boolean(errors.senderParticipantId)" :aria-describedby="errors.senderParticipantId ? 'settlement-sender-error' : undefined"><option value="" disabled>Person auswählen</option><option v-for="participant in participants" :key="participant.id" :value="participant.id">{{ participant.name }}{{ participant.status === 'inactive' ? ' (inaktiv)' : '' }}</option></select><p v-if="errors.senderParticipantId" id="settlement-sender-error" class="error-text mt-2">{{ errors.senderParticipantId }}</p></div>
+    <div><label for="settlement-sender" class="font-semibold">Gezahlt von</label><select id="settlement-sender" ref="senderSelect" v-model="draft.senderParticipantId" class="field-input mt-2" :aria-invalid="Boolean(errors.senderParticipantId)" :aria-describedby="errors.senderParticipantId ? 'settlement-sender-error' : undefined"><option value="" disabled>Person auswählen</option><option v-for="participant in participants" :key="participant.id" :value="participant.id">{{ participant.name }}{{ participant.status === 'inactive' ? ' (inaktiv)' : '' }}</option></select><p v-if="errors.senderParticipantId" id="settlement-sender-error" class="error-text mt-2">{{ errors.senderParticipantId }}</p><p v-if="prefillStatus" class="mt-2 text-sm text-gray-600" role="status">{{ prefillStatus }}</p></div>
     <div><label for="settlement-receiver" class="font-semibold">Gezahlt an</label><select id="settlement-receiver" ref="receiverSelect" v-model="draft.receiverParticipantId" class="field-input mt-2" :aria-invalid="Boolean(errors.receiverParticipantId)" :aria-describedby="errors.receiverParticipantId ? 'settlement-receiver-error' : undefined"><option value="" disabled>Person auswählen</option><option v-for="participant in participants" :key="participant.id" :value="participant.id">{{ participant.name }}{{ participant.status === 'inactive' ? ' (inaktiv)' : '' }}</option></select><p v-if="errors.receiverParticipantId" id="settlement-receiver-error" class="error-text mt-2">{{ errors.receiverParticipantId }}</p></div>
     <div><label for="settlement-amount" class="font-semibold">Betrag in Euro</label><input id="settlement-amount" ref="amountInput" v-model="draft.amount" inputmode="decimal" class="field-input mt-2" :aria-invalid="Boolean(errors.amount)" :aria-describedby="errors.amount ? 'settlement-amount-help settlement-amount-error' : 'settlement-amount-help'"><p id="settlement-amount-help" class="mt-2 text-sm text-gray-600">Zum Beispiel 10,50</p><p v-if="errors.amount" id="settlement-amount-error" class="error-text mt-2">{{ errors.amount }}</p></div>
     <div><label for="settlement-date" class="font-semibold">Datum</label><input id="settlement-date" ref="dateInput" v-model="draft.occurredOn" type="date" class="field-input mt-2" :aria-invalid="Boolean(errors.occurredOn)" :aria-describedby="errors.occurredOn ? 'settlement-date-error' : undefined"><p v-if="errors.occurredOn" id="settlement-date-error" class="error-text mt-2">{{ errors.occurredOn }}</p></div>

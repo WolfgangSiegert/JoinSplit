@@ -51,7 +51,8 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
     if (response.url().startsWith('http://127.0.0.1:8001/api/')) apiResponses.push(response)
   })
 
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByLabel('Gruppenname').fill('M3 Offline-Reise')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
@@ -75,7 +76,9 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await page.getByRole('button', { name: 'Bob deaktivieren' }).click()
   await expect(page.getByText('Inaktiv', { exact: true })).toBeVisible()
 
-  await page.goto(`/groups/${groupId}/settlements/new`)
+  await page.goto(`/groups/${groupId}/settlements`)
+  await page.getByRole('button', { name: 'Für diese Gruppe aktivieren' }).click()
+  await page.getByRole('link', { name: 'Zahlung erfassen' }).click()
   await page.getByLabel('Gezahlt von').selectOption(bob.id)
   await page.getByLabel('Gezahlt an').selectOption({ label: 'Alice' })
   await page.getByLabel('Betrag in Euro').fill('2,00')
@@ -83,10 +86,10 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await expect(page.getByRole('heading', { level: 1, name: 'Zahlung', exact: true })).toBeVisible()
 
   await page.goto(`/groups/${groupId}/balances/statement`)
-  await page.getByLabel('Teilnehmer').selectOption(bob.id)
+  await page.getByLabel('Person', { exact: true }).selectOption(bob.id)
   await page.getByRole('button', { name: 'Vorschau erzeugen' }).click()
-  await expect(page.getByText('Der lokale Gruppenstand enthält noch nicht synchronisierte Änderungen.')).toBeVisible()
-  await expect(page.getByLabel('Textvorschau')).toHaveValue(/Offener Saldo: −3,00 €/u)
+  await expect(page.getByText('Die Übersicht enthält Änderungen, die bisher nur auf diesem Gerät gespeichert sind.')).toBeVisible()
+  await expect(page.getByLabel('Nachrichtenvorschau')).toHaveValue(/Dein aktueller Stand: −3,00 €/u)
 
   await page.goto(`/groups/${groupId}`)
   await page.getByRole('button', { name: 'Gruppe archivieren' }).click()
@@ -130,10 +133,10 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('+3,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('−3,00 €')
   await page.goto(`/groups/${groupId}/balances/statement`)
-  await page.getByLabel('Teilnehmer').selectOption(bob.id)
+  await page.getByLabel('Person', { exact: true }).selectOption(bob.id)
   await page.getByRole('button', { name: 'Vorschau erzeugen' }).click()
-  await expect(page.getByText('Der lokale Gruppenstand enthält noch nicht synchronisierte Änderungen.')).toHaveCount(0)
-  await expect(page.getByLabel('Textvorschau')).toHaveValue(/Offener Saldo: −3,00 €/u)
+  await expect(page.getByText('Die Übersicht enthält Änderungen, die bisher nur auf diesem Gerät gespeichert sind.')).toHaveCount(0)
+  await expect(page.getByLabel('Nachrichtenvorschau')).toHaveValue(/Dein aktueller Stand: −3,00 €/u)
 
   await page.goto(`/groups/${groupId}`)
   const reactivateResponse = page.waitForResponse(response =>

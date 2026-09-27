@@ -47,6 +47,7 @@ export function usePendingCreateGroupSync() {
       case 'AddParticipant':
       case 'RenameParticipant':
       case 'DeactivateParticipant':
+      case 'ReactivateParticipant':
       case 'AssociateParticipant':
       case 'DeleteParticipant':
         result = await synchronizeParticipantMutation(options)

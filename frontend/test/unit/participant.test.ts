@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { Group, Participant } from '../../app/domain/create-group'
-import { canDeleteParticipant, hasDuplicateParticipantName, nextParticipantOrder, prepareParticipantAdd, prepareParticipantAssociation, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantRename } from '../../app/domain/participant'
+import { canDeleteParticipant, hasDuplicateParticipantName, nextParticipantOrder, prepareParticipantAdd, prepareParticipantAssociation, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantReactivate, prepareParticipantRename } from '../../app/domain/participant'
 import { migrateLegacyCreateGroupRecords } from '../../app/persistence/database'
 import { sortPendingMutations, type PendingMutation } from '../../app/domain/pending-mutation'
 
@@ -34,7 +34,7 @@ describe('Participant local workflow', () => {
     expect(hasDuplicateParticipantName([alice, carol], '   ')).toBe(false)
   })
 
-  test('renames, deactivates and deletes without changing stable order', () => {
+  test('renames, deactivates, reactivates and deletes without changing stable order', () => {
     const renamed = prepareParticipantRename(carol, [], '\u2003Caroline\u3000', () => MUTATION_ID)
     expect(renamed.ok).toBe(true)
     if (!renamed.ok) return
@@ -43,7 +43,10 @@ describe('Participant local workflow', () => {
     const deactivated = prepareParticipantDeactivate(renamed.value.participant, [renamed.value.mutation], () => DAVE_ID)
     expect(deactivated.participant).toMatchObject({ id: CAROL_ID, order: 2, status: 'inactive' })
     expect(deactivated.mutation.payload).toEqual({ participantId: CAROL_ID, name: 'Caroline', active: false, order: 2 })
-    const deleted = prepareParticipantDelete(group, alice, [renamed.value.mutation, deactivated.mutation], () => ACTOR_ID)
+    const reactivated = prepareParticipantReactivate(deactivated.participant, [renamed.value.mutation, deactivated.mutation], () => ACTOR_ID)
+    expect(reactivated.participant).toMatchObject({ id: CAROL_ID, order: 2, status: 'active' })
+    expect(reactivated.mutation.payload).toEqual({ participantId: CAROL_ID, name: 'Caroline', active: true, order: 2 })
+    const deleted = prepareParticipantDelete(group, alice, [renamed.value.mutation, deactivated.mutation, reactivated.mutation], () => ACTOR_ID)
     expect(deleted.group.participantIds).toEqual([CAROL_ID])
     expect(carol.order).toBe(2)
     expect(canDeleteParticipant(false)).toBe(true)

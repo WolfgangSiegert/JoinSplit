@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
-import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingAssociateParticipant, PendingDeleteParticipant, PendingArchiveGroup, PendingReactivateGroup, PendingDeleteGroup } from '../domain/pending-mutation'
+import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingReactivateParticipant, PendingAssociateParticipant, PendingDeleteParticipant, PendingArchiveGroup, PendingReactivateGroup, PendingDeleteGroup } from '../domain/pending-mutation'
 import type { Expense, ExpenseShare } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 import type { Person } from '../domain/person'
@@ -34,6 +34,8 @@ export interface DurableAdoptionAttempt {
 export interface DurableSettings {
   readonly addSelfAsParticipantByDefault: boolean
   readonly settlementProposalStrategy: 'deterministic' | 'minimum-transfer'
+  readonly settlementRecordingEnabled: boolean
+  readonly settlementRecordingGroupIds: readonly string[]
   readonly colorMode: 'system' | 'light' | 'dark'
   readonly visualDesign: '2' | '3'
 }
@@ -174,6 +176,8 @@ export async function loadDurableState(): Promise<DurableState> {
   if (identities.length > 1 || accountWorkspaces.length > 1 || settingsRecords.length > 1) throw new Error('Invalid persistence singleton records')
   const identity = identities[0]
   const settings = settingsRecords[0] as (SettingsRecord & {
+    settlementRecordingEnabled?: boolean
+    settlementRecordingGroupIds?: readonly string[]
     colorMode?: DurableSettings['colorMode']
     visualDesign?: DurableSettings['visualDesign']
   }) | undefined
@@ -205,6 +209,10 @@ export async function loadDurableState(): Promise<DurableState> {
     settings: settings ? {
       addSelfAsParticipantByDefault: settings.addSelfAsParticipantByDefault,
       settlementProposalStrategy: settings.settlementProposalStrategy,
+      settlementRecordingEnabled: settings.settlementRecordingEnabled === true,
+      settlementRecordingGroupIds: Array.isArray(settings.settlementRecordingGroupIds)
+        ? [...new Set(settings.settlementRecordingGroupIds.filter(id => typeof id === 'string'))]
+        : [],
       colorMode: settings.colorMode === 'light' || settings.colorMode === 'dark' ? settings.colorMode : 'system',
       visualDesign: settings.visualDesign === '3' ? '3' : '2',
     } : null,
@@ -358,7 +366,7 @@ export async function persistParticipantAdd(group: Group, participant: Participa
   await tx.done
 }
 
-export async function persistParticipantUpdate(participant: Participant, mutation: PendingRenameParticipant | PendingDeactivateParticipant | PendingAssociateParticipant): Promise<void> {
+export async function persistParticipantUpdate(participant: Participant, mutation: PendingRenameParticipant | PendingDeactivateParticipant | PendingReactivateParticipant | PendingAssociateParticipant): Promise<void> {
   const db = await database(); const tx = db.transaction(['participants', 'pendingMutations'], 'readwrite')
   await Promise.all([tx.objectStore('participants').put(participant), tx.objectStore('pendingMutations').add(mutation)])
   await tx.done

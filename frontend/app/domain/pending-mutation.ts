@@ -49,6 +49,18 @@ export interface PendingDeactivateParticipant extends PendingMutationBase {
   readonly payload: Readonly<DeactivateParticipantPayload>
 }
 
+export interface ReactivateParticipantPayload {
+  readonly participantId: string
+  readonly name: string
+  readonly active: true
+  readonly order: number
+}
+
+export interface PendingReactivateParticipant extends PendingMutationBase {
+  readonly type: 'ReactivateParticipant'
+  readonly payload: Readonly<ReactivateParticipantPayload>
+}
+
 export interface AssociateParticipantPayload {
   readonly participantId: string
   readonly personId: string | null
@@ -117,6 +129,7 @@ export type PendingMutation =
   | PendingAddParticipant
   | PendingRenameParticipant
   | PendingDeactivateParticipant
+  | PendingReactivateParticipant
   | PendingAssociateParticipant
   | PendingDeleteParticipant
   | PendingCreateExpense

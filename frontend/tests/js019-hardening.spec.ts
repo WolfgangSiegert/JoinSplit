@@ -87,7 +87,8 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
     if (request.url().startsWith('http://127.0.0.1:8001/api/')) apiRequests.push(request)
   })
 
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByLabel('Gruppenname').fill('Offline-Kernflow')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
@@ -221,7 +222,12 @@ test('the mobile core flow stays accessible and free of horizontal overflow', as
   await expectNoAxeViolations(page)
   await expectNoHorizontalOverflow(page)
 
-  const createGroupLink = page.getByRole('link', { name: 'Neue Gruppe', exact: true })
+  const createMenuButton = page.getByRole('button', { name: 'Neu', exact: true })
+  await expectMinimumTargetSize(createMenuButton)
+  await focusWithKeyboard(page, createMenuButton)
+  await expect(createMenuButton).toBeFocused()
+  await page.keyboard.press('Enter')
+  const createGroupLink = page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true })
   await expectMinimumTargetSize(createGroupLink)
   await focusWithKeyboard(page, createGroupLink)
   await expect(createGroupLink).toBeFocused()
@@ -270,7 +276,8 @@ test('the mobile core flow stays accessible and free of horizontal overflow', as
 
 test('Participant hardening prevents duplicate clicks, confirms duplicate names, and explains referenced deletion', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
+  await page.getByRole('button', { name: 'Neu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByLabel('Gruppenname').fill('Participant-Härtung')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   const createGroup = page.waitForResponse(response =>

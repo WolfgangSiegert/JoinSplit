@@ -13,6 +13,7 @@ import {
   logoutAccount,
   persistHydratedWorkspace,
   registerAccount,
+  requestPasswordReset,
   type GroupSnapshot,
 } from '~/services/account'
 import { serializeSettlement } from '~/domain/settlement'
@@ -22,10 +23,11 @@ const accountStore = useAccountStore()
 const identityStore = useAccessIdentityStore()
 const groupsStore = useGroupsStore()
 const peopleStore = usePeopleStore()
-const mode = ref<'login' | 'register'>('login')
+const mode = ref<'login' | 'register' | 'recover'>('login')
 const email = ref('')
 const password = ref('')
 const confirmation = ref(false)
+const recoverySent = ref(false)
 const deletePassword = ref('')
 const conflictDiscardConfirmed = ref(false)
 const pendingCount = computed(() => groupsStore.pendingMutations.length + peopleStore.pendingMutations.length)
@@ -134,6 +136,21 @@ async function submit(): Promise<void> {
   }
 }
 
+async function requestRecovery(): Promise<void> {
+  if (accountStore.busy) return
+  accountStore.begin()
+  recoverySent.value = false
+  try {
+    await requestPasswordReset(config.public.apiBase, email.value)
+    recoverySent.value = true
+    accountStore.succeed()
+  } catch (error) {
+    accountStore.fail(error instanceof AccountRequestError && error.status === 503
+      ? 'Die Passwort-Wiederherstellung ist derzeit nicht verfügbar.'
+      : error instanceof Error ? error.message : 'Die Passwort-Wiederherstellung ist derzeit nicht verfügbar.')
+  }
+}
+
 async function signOut(discardPending = false): Promise<void> {
   if (accountStore.busy) return
   if (pendingCount.value && !discardPending) {
@@ -197,19 +214,27 @@ async function discardConflictsAndRehydrate(): Promise<void> {
           <button type="button" class="secondary-button" :aria-pressed="mode === 'login'" @click="mode = 'login'">Anmelden</button>
           <button type="button" class="secondary-button" :aria-pressed="mode === 'register'" @click="mode = 'register'">Registrieren</button>
         </div>
-        <h2 id="account-form-title" class="mt-5 text-xl font-semibold">{{ mode === 'login' ? 'Account anmelden' : 'Account erstellen' }}</h2>
-        <form class="mt-4 space-y-4" @submit.prevent="submit">
+        <h2 id="account-form-title" class="mt-5 text-xl font-semibold">{{ mode === 'login' ? 'Account anmelden' : mode === 'register' ? 'Account erstellen' : 'Passwort zurücksetzen' }}</h2>
+        <form v-if="mode !== 'recover'" class="mt-4 space-y-4" @submit.prevent="submit">
           <label class="block font-medium">E-Mail<input v-model="email" class="field-input mt-2" type="email" autocomplete="email" required></label>
           <label class="block font-medium">Passwort<input v-model="password" class="field-input mt-2" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" minlength="12" maxlength="128" required></label>
           <label v-if="mode === 'register'" class="flex items-start gap-3">
             <input v-model="confirmation" class="mt-1 size-5" type="checkbox" required>
             <span>Alle {{ groupCount }} lokalen Gruppen und {{ peopleCount }} Personen werden nach der Registrierung übernommen.</span>
           </label>
-          <p class="text-sm text-gray-600">M5 bietet noch keine Passwort-Wiederherstellung. Ein vergessenes Passwort kann derzeit nicht zurückgesetzt werden.</p>
+          <button v-if="mode === 'login'" type="button" class="secondary-link -ml-4" @click="mode = 'recover'; accountStore.clearError()">Passwort vergessen?</button>
           <p v-if="accountStore.error" class="error-text" role="alert">{{ accountStore.error }}</p>
           <button class="primary-button w-full" type="submit" :disabled="accountStore.busy">
             <AppIcon name="users" />{{ accountStore.busy ? 'Wird vorbereitet …' : mode === 'login' ? 'Anmelden und Daten übernehmen' : 'Registrieren und Daten übernehmen' }}
           </button>
+        </form>
+        <form v-else class="mt-4 space-y-4" @submit.prevent="requestRecovery">
+          <label class="block font-medium">E-Mail<input v-model="email" class="field-input mt-2" type="email" autocomplete="email" required></label>
+          <p class="text-sm text-gray-600">Wenn ein Account existiert, senden wir einen zeitlich begrenzten Link. Die Rückmeldung verrät nicht, ob die Adresse registriert ist.</p>
+          <p v-if="recoverySent" class="rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Prüfe dein Postfach. Falls ein Account existiert, wurde ein Link versendet.</p>
+          <p v-if="accountStore.error" class="error-text" role="alert">{{ accountStore.error }}</p>
+          <button class="primary-button w-full" type="submit" :disabled="accountStore.busy"><AppIcon name="refresh" />Link anfordern</button>
+          <button type="button" class="secondary-button w-full" @click="mode = 'login'; recoverySent = false; accountStore.clearError()">Zur Anmeldung</button>
         </form>
       </section>
 

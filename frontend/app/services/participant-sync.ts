@@ -1,4 +1,4 @@
-import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
+import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingReactivateParticipant, PendingRenameParticipant } from '../domain/pending-mutation'
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
 import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
@@ -25,7 +25,7 @@ function failed(kind: MutationSyncError['kind'], message: string, retryable: boo
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function sameUuid(value: unknown, expected: string): boolean { return typeof value === 'string' && value.toLowerCase() === expected.toLowerCase() }
 
-type ParticipantMutation = PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingAssociateParticipant | PendingDeleteParticipant
+type ParticipantMutation = PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingReactivateParticipant | PendingAssociateParticipant | PendingDeleteParticipant
 type ParticipantResponseMutation = Exclude<ParticipantMutation, PendingDeleteParticipant>
 
 function responseMatches(body: unknown, mutation: ParticipantResponseMutation, accountMode: boolean): boolean {
@@ -60,6 +60,7 @@ async function send(mutation: ParticipantMutation, options: Options): Promise<Pa
       }
     : mutation.type === 'RenameParticipant' ? { name: mutation.payload.name }
       : mutation.type === 'DeactivateParticipant' ? { active: false }
+        : mutation.type === 'ReactivateParticipant' ? { active: true }
         : mutation.type === 'AssociateParticipant' ? { personId: mutation.payload.personId } : undefined
   let response: Response
   try {
@@ -90,11 +91,11 @@ async function send(mutation: ParticipantMutation, options: Options): Promise<Pa
 export async function synchronizeParticipantMutation(options: Options): Promise<ParticipantSyncResult> {
   if (!options.online) return { outcome: 'offline' }
   const pending = options.groupsStore.pendingMutations.find(item => item.id === options.mutationId)
-  if (!pending || !['AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'AssociateParticipant', 'DeleteParticipant'].includes(pending.type)) return { outcome: 'not-pending' }
+  if (!pending || !['AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'ReactivateParticipant', 'AssociateParticipant', 'DeleteParticipant'].includes(pending.type)) return { outcome: 'not-pending' }
   if (options.groupsStore.mutationSync[pending.id]?.state === 'syncing') return { outcome: 'busy' }
   const mutation = options.groupsStore.beginMutationSync(pending.id)
   if (!mutation || (mutation.type !== 'AddParticipant' && mutation.type !== 'RenameParticipant'
-    && mutation.type !== 'DeactivateParticipant' && mutation.type !== 'AssociateParticipant'
+    && mutation.type !== 'DeactivateParticipant' && mutation.type !== 'ReactivateParticipant' && mutation.type !== 'AssociateParticipant'
     && mutation.type !== 'DeleteParticipant')) return { outcome: 'busy' }
   if (!options.identity.accessIdentityId) {
     const result = failed('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)

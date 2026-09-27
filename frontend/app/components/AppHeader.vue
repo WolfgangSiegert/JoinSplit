@@ -1,9 +1,11 @@
 <script setup lang="ts">
 const settingsStore = useSettingsStore()
 const accountStore = useAccountStore()
+const route = useRoute()
 const systemPrefersDark = ref(false)
 const saving = ref(false)
 const persistenceError = ref('')
+const createMenu = ref<HTMLDetailsElement | null>(null)
 let colorSchemeQuery: MediaQueryList | undefined
 
 const isDark = computed(() => settingsStore.colorMode === 'dark'
@@ -27,6 +29,12 @@ async function toggleColorMode(): Promise<void> {
   }
 }
 
+function closeCreateMenu(): void {
+  if (createMenu.value) createMenu.value.open = false
+}
+
+watch(() => route.fullPath, closeCreateMenu)
+
 onMounted(() => {
   colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)')
   systemPrefersDark.value = colorSchemeQuery.matches
@@ -46,33 +54,51 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
         </NuxtLink>
         <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
       </div>
-      <nav class="app-header__nav" aria-label="Hauptnavigation">
-        <NuxtLink to="/groups/new" class="app-header__action"><AppIcon name="plus" /><span>Neue Gruppe</span></NuxtLink>
-        <NuxtLink to="/people" class="app-header__action"><AppIcon name="users" /><span>Personen</span></NuxtLink>
-        <NuxtLink to="/account" class="app-header__action"><AppIcon name="user" /><span>{{ accountStore.isAuthenticated ? 'Account' : 'Anmelden' }}</span></NuxtLink>
+      <nav class="app-header__utilities" aria-label="Schnellzugriff">
+        <NuxtLink to="/demo" class="icon-button" aria-label="Demo und Daten" title="Demo und Daten"><AppIcon name="database" /></NuxtLink>
+        <NuxtLink
+          to="/account"
+          class="icon-button"
+          :aria-label="accountStore.isAuthenticated ? 'Account öffnen' : 'Anmelden oder registrieren'"
+          :title="accountStore.isAuthenticated ? 'Account' : 'Anmelden oder registrieren'"
+        ><AppIcon name="user" /></NuxtLink>
+        <NuxtLink to="/settings" class="icon-button" aria-label="Einstellungen öffnen" title="Einstellungen"><AppIcon name="settings" /></NuxtLink>
+        <button
+          type="button"
+          class="theme-toggle"
+          :class="{ 'theme-toggle--dark': isDark }"
+          :aria-label="toggleLabel"
+          :title="toggleLabel"
+          :aria-pressed="isDark"
+          :disabled="saving"
+          @click="toggleColorMode"
+        >
+          <span class="theme-toggle__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
+            </svg>
+          </span>
+          <span class="theme-toggle__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />
+            </svg>
+          </span>
+        </button>
       </nav>
-      <button
-        type="button"
-        class="theme-toggle"
-        :class="{ 'theme-toggle--dark': isDark }"
-        :aria-label="toggleLabel"
-        :title="toggleLabel"
-        :aria-pressed="isDark"
-        :disabled="saving"
-        @click="toggleColorMode"
-      >
-        <span class="theme-toggle__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
-          </svg>
-        </span>
-        <span class="theme-toggle__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />
-          </svg>
-        </span>
-      </button>
+      <nav class="app-header__nav" aria-label="Hauptnavigation">
+        <NuxtLink to="/#gruppen" class="app-header__action"><AppIcon name="users" /><span>Gruppen</span></NuxtLink>
+        <NuxtLink to="/people" class="app-header__action"><AppIcon name="user" /><span>Personen</span></NuxtLink>
+        <details ref="createMenu" class="app-create-menu">
+          <summary class="app-header__action app-create-menu__trigger" role="button" aria-haspopup="menu" aria-label="Neu">
+            <AppIcon name="plus" /><span>Neu</span><AppIcon name="chevron-down" />
+          </summary>
+          <div class="app-create-menu__panel" role="menu" aria-label="Neu anlegen">
+            <NuxtLink to="/groups/new" class="app-create-menu__item" role="menuitem" aria-label="Neue Gruppe" @click="closeCreateMenu"><AppIcon name="users" /><span><strong>Gruppe</strong><small>Gemeinsame Ausgaben starten</small></span></NuxtLink>
+            <NuxtLink to="/people#person-form" class="app-create-menu__item" role="menuitem" aria-label="Neue Person" @click="closeCreateMenu"><AppIcon name="user" /><span><strong>Person</strong><small>Für spätere Gruppen vormerken</small></span></NuxtLink>
+          </div>
+        </details>
+      </nav>
     </div>
     <p v-if="persistenceError" class="app-header__error" role="alert">{{ persistenceError }}</p>
   </header>

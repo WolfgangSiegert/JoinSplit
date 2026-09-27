@@ -7,7 +7,7 @@ import { hasDuplicateParticipantName } from '../../../domain/participant'
 const route = useRoute()
 const groupsStore = useGroupsStore()
 const peopleStore = usePeopleStore()
-const { add, rename, deactivate, associate, remove } = useParticipants()
+const { add, rename, deactivate, reactivate, associate, remove } = useParticipants()
 const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
 const participants = computed(() => groupsStore.participantsForGroup(groupId.value))
@@ -140,6 +140,14 @@ async function submitDeactivate(id: string, name: string) {
   catch { status.value = 'Die Deaktivierung konnte nicht lokal gespeichert werden.'; statusIsError.value = true }
   finally { busyAction.value = null }
 }
+async function submitReactivate(id: string, name: string) {
+  if (busyAction.value) return
+  busyAction.value = `reactivate:${id}`
+  statusIsError.value = false
+  try { await reactivate(id); status.value = `Teilnehmer „${name}“ wurde reaktiviert.` }
+  catch { status.value = 'Die Reaktivierung konnte nicht lokal gespeichert werden.'; statusIsError.value = true }
+  finally { busyAction.value = null }
+}
 function askDelete(id: string, trigger: HTMLButtonElement) {
   if (busyAction.value || hasFinancialReferences(id)) return
   deleteTargetId.value = id; triggerByParticipant.set(id, trigger); deleteDialog.value?.showModal(); nextTick(() => deleteButton.value?.focus())
@@ -238,6 +246,7 @@ async function cancelRename(id: string): Promise<void> {
           <div v-else-if="group.status === 'active'" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <button :ref="(element) => { if (element) renameTriggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} umbenennen`" @click="startRename(participant.id, participant.name)"><AppIcon name="pencil" />Umbenennen</button>
             <button v-if="participant.status === 'active'" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} deaktivieren`" @click="submitDeactivate(participant.id, participant.name)"><AppIcon name="user-minus" />{{ busyAction === `deactivate:${participant.id}` ? 'Wird deaktiviert …' : 'Deaktivieren' }}</button>
+            <button v-else type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} reaktivieren`" @click="submitReactivate(participant.id, participant.name)"><AppIcon name="refresh" />{{ busyAction === `reactivate:${participant.id}` ? 'Wird reaktiviert …' : 'Reaktivieren' }}</button>
             <button v-if="!hasFinancialReferences(participant.id)" :ref="(element) => { if (element) triggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="danger-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} löschen`" @click="askDelete(participant.id, $event.currentTarget as HTMLButtonElement)"><AppIcon name="trash" />Löschen</button>
           </div>
           <div v-if="group.status === 'active'" class="mt-3 rounded-xl border border-gray-200 p-3">

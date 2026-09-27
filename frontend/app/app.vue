@@ -42,9 +42,11 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
     <NuxtPage v-if="lifecycleStore.state === 'ready'" />
 
     <main v-else-if="lifecycleStore.state === 'loading'" class="page-shell" aria-busy="true">
-      <div class="page-content">
-        <h1 class="mt-2 text-3xl font-semibold text-brand-900">Lokale Daten werden geladen</h1>
-        <p class="mt-3 text-gray-600" role="status">Einen Moment bitte.</p>
+      <div class="page-content app-loading-state">
+        <div class="app-loading-state__mark" aria-hidden="true"><img src="/favicon.svg" alt="" width="48" height="48"></div>
+        <h1 class="mt-4 text-3xl font-semibold text-brand-900">JoinSplit wird vorbereitet</h1>
+        <p class="mt-3 text-gray-600" role="status">Deine lokal gespeicherten Gruppen und Personen werden sicher geladen.</p>
+        <span class="app-loading-state__progress" aria-hidden="true"><i /><i /><i /></span>
       </div>
     </main>
 

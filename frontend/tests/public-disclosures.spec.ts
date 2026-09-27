@@ -103,7 +103,7 @@ test('shows the public-demo boundary before data entry and keeps full disclosure
 
 test('local reset requires explicit confirmation and replaces the browser identity without contacting deletion APIs', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   await expect.poll(() => currentIdentityId(page)).not.toBeNull()
   const previousIdentityId = await currentIdentityId(page)
   expect(previousIdentityId).not.toBeNull()

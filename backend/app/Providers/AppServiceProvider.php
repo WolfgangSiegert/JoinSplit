@@ -7,6 +7,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Auth\Notifications\ResetPassword;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +24,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        ResetPassword::createUrlUsing(fn (object $account, string $token): string => rtrim((string) config('app.url'), '/')
+            .'/account/reset?token='.rawurlencode($token).'&email='.rawurlencode((string) $account->email));
+
         if (filter_var(config('production.validate'), FILTER_VALIDATE_BOOL)) {
             app(ProductionConfiguration::class)->ensureValid();
         }
@@ -45,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('account-login', fn (Request $request) => Limit::perMinute(10)
             ->by('account-login:'.$request->ip().'|'.$this->emailKey($request))
+            ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
+
+        RateLimiter::for('account-password-recovery', fn (Request $request) => Limit::perMinute(5)
+            ->by('account-password-recovery:'.$request->ip().'|'.$this->emailKey($request))
             ->response(fn () => response()->json(['message' => 'Too many requests.'], 429)));
 
         RateLimiter::for('account-session', fn (Request $request) => Limit::perMinute(60)

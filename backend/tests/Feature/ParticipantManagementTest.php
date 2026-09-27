@@ -65,12 +65,13 @@ it('renames without changing identity, group, order or active state and permits 
     expect($participant->group_id)->toBe(JS16_GROUP)->and($participant->position)->toBe(0)->and($participant->is_active)->toBeTrue();
 });
 
-it('deactivates idempotently, rejects reactivation, and protects foreign owners', function () {
+it('deactivates and reactivates idempotently while protecting foreign owners', function () {
     js16CreateGroup();
     $url = '/api/groups/'.JS16_GROUP.'/participants/'.JS16_PARTICIPANT;
     test()->withHeaders(js16Headers())->patchJson($url, ['active' => false])->assertOk()->assertJsonPath('data.active', false);
     test()->withHeaders(js16Headers())->patchJson($url, ['active' => false])->assertOk();
-    test()->withHeaders(js16Headers())->patchJson($url, ['active' => true])->assertUnprocessable();
+    test()->withHeaders(js16Headers())->patchJson($url, ['active' => true])->assertOk()->assertJsonPath('data.active', true);
+    test()->withHeaders(js16Headers())->patchJson($url, ['active' => true])->assertOk();
     test()->withHeaders(js16Headers(JS16_OTHER_ACCESS, JS16_OTHER_CREDENTIAL))->patchJson($url, ['name' => 'Eve'])->assertNotFound();
 });
 
