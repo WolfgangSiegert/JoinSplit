@@ -2,8 +2,12 @@
 const groupsStore = useGroupsStore()
 const route = useRoute()
 const showArchived = ref(false)
+const searchQuery = ref('')
 const activeGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'active'))
 const archivedGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'archived'))
+const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLocaleLowerCase('de-DE'))
+const filteredActiveGroups = computed(() => activeGroups.value.filter(group => group.name.toLocaleLowerCase('de-DE').includes(normalizedSearchQuery.value)))
+const filteredArchivedGroups = computed(() => archivedGroups.value.filter(group => group.name.toLocaleLowerCase('de-DE').includes(normalizedSearchQuery.value)))
 const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mutation => ({
   mutation,
   group: groupsStore.findStoredGroup(mutation.groupId),
@@ -13,9 +17,12 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <header>
+      <header class="list-page-heading">
         <p class="eyebrow">Dein Bereich</p>
-        <h1 class="mt-2 text-4xl font-bold">Meine Gruppen</h1>
+        <div class="list-page-heading__title-row">
+          <h1 class="text-4xl font-bold">Meine Gruppen</h1>
+          <ListSearch v-if="activeGroups.length || archivedGroups.length" v-model="searchQuery" label="Gruppen durchsuchen" />
+        </div>
         <p class="mt-2 text-ink-700">Öffne eine bestehende Gruppe oder starte einen neuen gemeinsamen Stand.</p>
       </header>
 
@@ -24,10 +31,10 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
       <section v-if="activeGroups.length" class="mt-6" aria-labelledby="active-groups-title">
         <div class="flex items-end justify-between gap-3">
           <h2 id="active-groups-title" class="text-xl font-bold">Aktive Gruppen</h2>
-          <span class="text-sm text-ink-700">{{ activeGroups.length }}</span>
+          <span class="text-sm text-ink-700">{{ filteredActiveGroups.length }}<span v-if="searchQuery"> von {{ activeGroups.length }}</span></span>
         </div>
-        <ul class="ledger-list mt-3">
-          <li v-for="(group, index) in activeGroups" :key="group.id">
+        <ul v-if="filteredActiveGroups.length" class="ledger-list mt-3">
+          <li v-for="(group, index) in filteredActiveGroups" :key="group.id">
             <NuxtLink :to="`/groups/${group.id}`" class="ledger-row">
               <ParticipantAvatar :name="group.name" :index="index" size="lg" />
               <span class="min-w-0 flex-1">
@@ -38,6 +45,7 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
             </NuxtLink>
           </li>
         </ul>
+        <p v-else class="card mt-3 p-4 text-ink-700" role="status">Keine aktive Gruppe passt zu „{{ searchQuery.trim() }}“.</p>
       </section>
 
       <section v-else class="card mt-6 p-5 text-center" aria-labelledby="empty-groups-title">
@@ -51,14 +59,15 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
           <input v-model="showArchived" type="checkbox" class="size-5">
           Archivierte Gruppen anzeigen
         </label>
-        <ul v-if="showArchived" class="ledger-list mt-3">
-          <li v-for="group in archivedGroups" :key="group.id">
+        <ul v-if="showArchived && filteredArchivedGroups.length" class="ledger-list mt-3">
+          <li v-for="group in filteredArchivedGroups" :key="group.id">
             <NuxtLink :to="`/groups/${group.id}`" class="ledger-row">
               <span class="min-w-0 flex-1"><strong class="block break-words">{{ group.name }}</strong><span class="mt-1 block text-sm text-ink-700">Archiviert · {{ group.currency }}</span></span>
               <AppIcon name="chevron-right" />
             </NuxtLink>
           </li>
         </ul>
+        <p v-else-if="showArchived && searchQuery" class="card mt-3 p-4 text-ink-700" role="status">Keine archivierte Gruppe passt zu „{{ searchQuery.trim() }}“.</p>
         <h2 id="archived-groups-title" class="sr-only">Archivierte Gruppen</h2>
       </section>
 

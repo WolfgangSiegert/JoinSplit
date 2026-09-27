@@ -5,7 +5,7 @@ test('global header exposes the primary workspace transitions', async ({ page })
   await page.goto('/')
   await expect(page.getByRole('link', { name: 'Gruppen', exact: true })).toHaveAttribute('href', '/groups')
   await expect(page.getByRole('link', { name: 'Personen', exact: true })).toHaveAttribute('href', '/people')
-  await expect(page.getByRole('link', { name: 'Anmelden oder registrieren', exact: true })).toHaveAttribute('href', '/account')
+  await expect(page.getByRole('button', { name: 'Anmelden oder registrieren', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Neu', exact: true }).click()
   await expect(page.getByRole('menuitem', { name: 'Neue Gruppe' })).toHaveAttribute('href', '/groups/new')
   await expect(page.getByRole('menuitem', { name: 'Neue Person' })).toHaveAttribute('href', '/people#person-form')
@@ -15,8 +15,8 @@ test('mobile navigation remains operable at 320 CSS pixels', async ({ page }) =>
   await page.setViewportSize({ width: 320, height: 800 })
   await page.goto('/')
   const navigation = page.getByRole('navigation', { name: 'Mobile Hauptnavigation' })
-  for (const name of ['Start', 'Gruppen', 'Neu', 'Personen', 'Konto']) {
-    const role = name === 'Neu' ? 'button' : 'link'
+  for (const name of ['Start', 'Gruppen', 'Neu', 'Personen', 'Einstellungen']) {
+    const role = name === 'Neu' || name === 'Einstellungen' ? 'button' : 'link'
     const box = await navigation.getByRole(role, { name, exact: true }).boundingBox()
     expect(box?.height).toBeGreaterThanOrEqual(44)
   }
@@ -31,6 +31,32 @@ test('mobile navigation remains operable at 320 CSS pixels', async ({ page }) =>
   await expect(dialog).toBeVisible()
   await expect(dialog.getByRole('link', { name: /^Gruppe / })).toHaveAttribute('href', '/groups/new')
   await expect(dialog.getByRole('link', { name: /^Person / })).toHaveAttribute('href', '/people#person-form')
+
+  await dialog.getByRole('button', { name: 'Menü schließen' }).click()
+  await page.getByRole('button', { name: 'Anmelden oder registrieren' }).click()
+  await expect(page.getByRole('heading', { name: 'Konto & Einstellungen' })).toBeVisible()
+  const settingsLink = page.getByRole('link', { name: /App-Einstellungen/ })
+  await expect(settingsLink).toHaveAttribute('href', /^\/settings\?returnTo=/u)
+  expect((await settingsLink.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+
+  await navigation.getByRole('button', { name: 'Einstellungen' }).click()
+  await expect(page).toHaveURL(/\/settings\?returnTo=/)
+  await page.getByRole('button', { name: 'Einstellungen schließen' }).click()
+  await expect(page.getByRole('heading', { name: 'Konto & Einstellungen' })).toBeVisible()
+  await navigation.getByRole('button', { name: 'Einstellungen' }).click()
+  await expect(page).toHaveURL(/\/settings\?returnTo=/)
+  await navigation.getByRole('button', { name: 'Einstellungen' }).click()
+  await expect(page.getByRole('heading', { name: 'Konto & Einstellungen' })).toBeVisible()
+  await page.getByRole('button', { name: 'Konto schließen' }).click()
+  await expect(page).toHaveURL(/\/groups$/)
+  await page.getByRole('button', { name: 'Anmelden oder registrieren' }).click()
+  await expect(page.getByRole('heading', { name: 'Konto & Einstellungen' })).toBeVisible()
+  await page.getByRole('button', { name: 'Anmelden oder registrieren' }).click()
+  await expect(page).toHaveURL(/\/groups$/)
+
+  await page.goto('/settings?returnTo=https%3A%2F%2Fexample.test')
+  await page.getByRole('button', { name: 'Einstellungen schließen' }).click()
+  await expect(page).toHaveURL('/')
 
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])

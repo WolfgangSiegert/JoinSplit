@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{ groupId: string }>()
+const emit = defineEmits<{ areaActivated: [label: string] }>()
 const route = useRoute()
 
 const areas = computed(() => [
@@ -18,6 +19,7 @@ const areas = computed(() => [
           class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-2 text-center text-sm font-bold text-ink-700 transition-colors"
           :class="area.current ? 'bg-brand-50 text-brand-700 shadow-sm' : 'hover:bg-white hover:text-ink-900'"
           :aria-current="area.current ? 'page' : undefined"
+          @click="emit('areaActivated', area.label)"
         >
           <AppIcon :name="area.icon" />
           <span>{{ area.label }}</span>

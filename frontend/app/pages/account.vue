@@ -19,6 +19,8 @@ import {
 import { serializeSettlement } from '~/domain/settlement'
 
 const config = useRuntimeConfig()
+const route = useRoute()
+const { closeUtility } = useUtilityNavigation()
 const accountStore = useAccountStore()
 const identityStore = useAccessIdentityStore()
 const groupsStore = useGroupsStore()
@@ -202,15 +204,28 @@ async function discardConflictsAndRehydrate(): Promise<void> {
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <NuxtLink to="/settings" class="secondary-link -ml-4 mb-3" aria-label="← Einstellungen"><AppIcon name="arrow-left" />Einstellungen</NuxtLink>
-      <header>
-        <p class="eyebrow">Mehrere Geräte</p>
-        <h1 class="text-3xl font-semibold text-brand-900">Account</h1>
-        <p class="mt-2 text-gray-600">Optional anmelden, lokale Gruppen übernehmen und auf anderen Geräten laden.</p>
-      </header>
+      <div class="utility-page-heading">
+        <header>
+          <p class="eyebrow">Dein Bereich</p>
+          <h1 class="text-3xl font-semibold text-brand-900">Konto & Einstellungen</h1>
+          <p class="mt-2 text-gray-600">Verwalte deinen Zugang und passe JoinSplit an deine Nutzung an.</p>
+        </header>
+        <button type="button" class="icon-button utility-page-heading__close" aria-label="Konto schließen" title="Schließen" @click="closeUtility"><AppIcon name="x" /></button>
+      </div>
+
+      <section class="account-settings-entry mt-6" aria-labelledby="app-settings-title">
+        <NuxtLink :to="{ path: '/settings', query: { returnTo: route.fullPath } }" class="account-settings-entry__link">
+          <span class="account-settings-entry__icon" aria-hidden="true"><AppIcon name="settings" /></span>
+          <span class="account-settings-entry__copy">
+            <strong id="app-settings-title">App-Einstellungen</strong>
+            <small>Darstellung, Ausgleichsvorschläge und lokale Daten verwalten</small>
+          </span>
+          <AppIcon name="chevron-right" />
+        </NuxtLink>
+      </section>
 
       <section v-if="!accountStore.isAuthenticated" class="card mt-6 p-5" aria-labelledby="account-form-title">
-        <div class="grid grid-cols-2 gap-2" role="tablist" aria-label="Account-Zugang">
+        <div class="grid grid-cols-2 gap-2" role="group" aria-label="Account-Zugang">
           <button type="button" class="secondary-button" :aria-pressed="mode === 'login'" @click="mode = 'login'">Anmelden</button>
           <button type="button" class="secondary-button" :aria-pressed="mode === 'register'" @click="mode = 'register'">Registrieren</button>
         </div>

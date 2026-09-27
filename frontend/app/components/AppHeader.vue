@@ -3,6 +3,7 @@ const settingsStore = useSettingsStore()
 const accountStore = useAccountStore()
 const groupsStore = useGroupsStore()
 const route = useRoute()
+const { toggleUtility } = useUtilityNavigation()
 const systemPrefersDark = ref(false)
 const saving = ref(false)
 const persistenceError = ref('')
@@ -19,7 +20,7 @@ const mobileTitle = computed(() => {
   if (route.path === '/groups') return 'Gruppen'
   if (route.path === '/groups/new') return 'Neue Gruppe'
   if (route.path === '/people') return 'Personen'
-  if (route.path === '/account' || route.path === '/account-reset') return 'Konto'
+  if (route.path === '/account' || route.path === '/account-reset') return 'Konto & Einstellungen'
   if (route.path === '/settings') return 'Einstellungen'
   if (route.path === '/demo') return 'Demo & Daten'
   return 'JoinSplit'
@@ -64,7 +65,17 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
         <img src="/favicon.svg" alt="" width="32" height="32">
       </NuxtLink>
       <span class="mobile-app-header__title">{{ mobileTitle }}</span>
-      <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
+      <div class="mobile-app-header__actions">
+        <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
+        <button
+          type="button"
+          class="mobile-app-header__action"
+          :aria-label="accountStore.isAuthenticated ? 'Konto öffnen' : 'Anmelden oder registrieren'"
+          :title="accountStore.isAuthenticated ? 'Konto' : 'Anmelden oder registrieren'"
+          :aria-pressed="route.path === '/account'"
+          @click="toggleUtility('/account')"
+        ><AppIcon name="account" /></button>
+      </div>
     </div>
     <div class="app-header__content app-header__content--desktop">
       <div class="app-brand">
@@ -76,13 +87,15 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
       </div>
       <nav class="app-header__utilities" aria-label="Schnellzugriff">
         <NuxtLink to="/demo" class="icon-button" aria-label="Demo und Daten" title="Demo und Daten"><AppIcon name="database" /></NuxtLink>
-        <NuxtLink
-          to="/account"
+        <button
+          type="button"
           class="icon-button"
           :aria-label="accountStore.isAuthenticated ? 'Account öffnen' : 'Anmelden oder registrieren'"
           :title="accountStore.isAuthenticated ? 'Account' : 'Anmelden oder registrieren'"
-        ><AppIcon name="user" /></NuxtLink>
-        <NuxtLink to="/settings" class="icon-button" aria-label="Einstellungen öffnen" title="Einstellungen"><AppIcon name="settings" /></NuxtLink>
+          :aria-pressed="route.path === '/account'"
+          @click="toggleUtility('/account')"
+        ><AppIcon name="user" /></button>
+        <button type="button" class="icon-button" aria-label="Einstellungen öffnen" title="Einstellungen" :aria-pressed="route.path === '/settings'" @click="toggleUtility('/settings')"><AppIcon name="settings" /></button>
         <button
           type="button"
           class="theme-toggle"

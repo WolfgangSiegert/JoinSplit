@@ -9,7 +9,14 @@ const heading = ref<HTMLHeadingElement | null>(null)
 const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
 const expenses = computed(() => groupsStore.expensesForGroup(groupId.value))
+const expenseSearchQuery = ref('')
 const participantNames = computed(() => new Map(groupsStore.participantsForGroup(groupId.value).map(item => [item.id, item.name])))
+const normalizedExpenseSearchQuery = computed(() => expenseSearchQuery.value.trim().toLocaleLowerCase('de-DE'))
+const filteredExpenses = computed(() => expenses.value.filter((expense) => {
+  const payerName = participantNames.value.get(expense.payerParticipantId) ?? ''
+  return [expense.description, payerName, expense.incurredOn]
+    .some(value => value.toLocaleLowerCase('de-DE').includes(normalizedExpenseSearchQuery.value))
+}))
 const participants = computed(() => groupsStore.participantsForGroup(groupId.value))
 const settlements = computed(() => groupsStore.settlementsForGroup(groupId.value))
 const totalExpensesMinor = computed(() => expenses.value.reduce((sum, expense) => sum + expense.amountMinor, 0))
@@ -109,15 +116,15 @@ onMounted(async () => {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <div class="flex items-center justify-between gap-3">
-        <NuxtLink to="/groups" class="secondary-link -ml-4" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
-        <GroupSyncStatus :group-id="group.id" show-synced compact />
-      </div>
+      <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
 
-      <header class="min-w-0">
-        <h1 ref="heading" tabindex="-1" class="mt-2 break-words text-3xl font-bold text-ink-900">
-          {{ group.name }}
-        </h1>
+      <header class="group-view-heading min-w-0">
+        <p class="eyebrow">{{ group.name }}</p>
+        <div class="group-view-heading__title-row">
+          <h1 ref="heading" tabindex="-1" class="break-words text-4xl font-bold text-ink-900">Ausgaben</h1>
+          <GroupSyncStatus :group-id="group.id" show-synced compact mobile-collapsible class="group-view-heading__sync" />
+        </div>
+        <p class="mt-2 text-ink-700">Gemeinsame Ausgaben erfassen und im Blick behalten.</p>
         <p class="mt-2 text-sm font-medium text-ink-700">{{ participants.length }} {{ participants.length === 1 ? 'Person' : 'Personen' }} · {{ group.currency }}</p>
         <p v-if="group.status === 'archived'" class="mt-3 rounded-lg bg-gray-100 p-3 text-gray-800">
           Archiviert und schreibgeschützt. Ausgaben, Salden, Zahlungen und persönliche Stände bleiben lesbar.
@@ -168,9 +175,15 @@ onMounted(async () => {
         <p class="mt-2 text-gray-600">Erfasste Ausgaben erscheinen später hier.</p>
       </section>
       <section v-else class="mt-6 min-w-0" aria-labelledby="expenses-title">
-        <div class="flex items-end justify-between gap-3"><h2 id="expenses-title" class="text-2xl font-bold">Ausgaben</h2><p class="text-sm text-ink-700">Neueste zuerst</p></div>
-        <ul class="expense-ledger ledger-list mt-3">
-          <li v-for="(expense, index) in expenses" :key="expense.id" class="min-w-0">
+        <div class="list-section-heading">
+          <div>
+            <h2 id="expenses-title" class="text-2xl font-bold">Ausgaben</h2>
+            <p class="mt-1 text-sm text-ink-700">{{ filteredExpenses.length }}<span v-if="expenseSearchQuery"> von {{ expenses.length }}</span> · Neueste zuerst</p>
+          </div>
+          <ListSearch v-model="expenseSearchQuery" label="Ausgaben durchsuchen" />
+        </div>
+        <ul v-if="filteredExpenses.length" class="expense-ledger ledger-list mt-3">
+          <li v-for="(expense, index) in filteredExpenses" :key="expense.id" class="min-w-0">
             <NuxtLink :to="`/groups/${group.id}/expenses/${expense.id}`" class="ledger-row min-w-0">
               <ParticipantAvatar :name="participantNames.get(expense.payerParticipantId) ?? '?'" :index="index" size="sm" />
               <span class="min-w-0 flex-1">
@@ -182,6 +195,7 @@ onMounted(async () => {
             </NuxtLink>
           </li>
         </ul>
+        <p v-else class="card mt-3 p-4 text-ink-700" role="status">Keine Ausgabe passt zu „{{ expenseSearchQuery.trim() }}“.</p>
       </section>
 
       <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button mt-6 w-full"><AppIcon name="plus" />Ausgabe hinzufügen</NuxtLink>

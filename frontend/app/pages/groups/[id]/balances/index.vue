@@ -54,6 +54,15 @@ const overviewImageBlob = shallowRef<Blob | null>(null)
 const overviewImageUrl = ref('')
 const overviewImageFilename = ref('')
 const overviewCanShare = ref(false)
+const participantBalancesDetails = ref<HTMLDetailsElement | null>(null)
+
+function closeParticipantBalances(): void {
+  if (participantBalancesDetails.value) participantBalancesDetails.value.open = false
+}
+
+function handleAreaActivation(label: string): void {
+  if (label === 'Salden') closeParticipantBalances()
+}
 
 function balanceText(amountMinor: bigint): string {
   if (amountMinor > 0n) return `Soll erhalten: ${formatSignedAmountMinor(amountMinor)}`
@@ -188,27 +197,20 @@ function downloadBlob(blob: Blob, filename: string): void {
   <main class="page-shell">
     <div v-if="group" class="page-content">
       <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
-      <header>
+      <header class="group-view-heading">
         <p class="eyebrow">{{ group.name }}</p>
-        <h1 class="mt-2 text-4xl font-bold text-ink-900">Salden</h1>
+        <div class="group-view-heading__title-row">
+          <h1 class="text-4xl font-bold text-ink-900">Salden</h1>
+          <GroupSyncStatus :group-id="group.id" mobile-collapsible class="group-view-heading__sync" />
+        </div>
         <p class="mt-2 text-ink-700">Wer bekommt noch Geld, wer zahlt noch?</p>
         <p class="mt-2 text-sm text-ink-700">Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.</p>
       </header>
 
-      <GroupAreaNavigation :group-id="group.id" />
+      <GroupAreaNavigation :group-id="group.id" @area-activated="handleAreaActivation" />
 
-      <GroupSyncStatus :group-id="group.id" class="mt-6" />
-
-      <div class="balance-actions--desktop mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <NuxtLink v-if="settingsStore.isSettlementRecordingEnabled(group.id) || settlements.length" :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
-        <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full text-center"><AppIcon name="share" />Persönlichen Stand teilen</NuxtLink>
-        <button type="button" class="secondary-button w-full text-center" :disabled="sharingOverview" @click="createOverviewImage">
-          <AppIcon name="image" />
-          <span>{{ sharingOverview ? 'Bild wird erstellt …' : overviewImageUrl ? 'Bild aktualisieren' : 'Übersicht als Bild' }}</span>
-        </button>
-      </div>
-      <details class="balance-actions--mobile mt-5">
-        <summary class="secondary-button w-full cursor-pointer"><AppIcon name="share" />Teilen & Exportieren<AppIcon name="chevron-down" /></summary>
+      <details class="balance-actions--mobile balance-actions--sticky">
+        <summary class="icon-button" aria-label="Teilen und exportieren" title="Teilen und exportieren"><AppIcon name="share" /></summary>
         <div class="balance-actions__panel">
           <NuxtLink v-if="settingsStore.isSettlementRecordingEnabled(group.id) || settlements.length" :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
           <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full"><AppIcon name="share" />Persönlichen Stand teilen</NuxtLink>
@@ -218,6 +220,15 @@ function downloadBlob(blob: Blob, filename: string): void {
           </button>
         </div>
       </details>
+
+      <div class="balance-actions--desktop mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <NuxtLink v-if="settingsStore.isSettlementRecordingEnabled(group.id) || settlements.length" :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
+        <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full text-center"><AppIcon name="share" />Persönlichen Stand teilen</NuxtLink>
+        <button type="button" class="secondary-button w-full text-center" :disabled="sharingOverview" @click="createOverviewImage">
+          <AppIcon name="image" />
+          <span>{{ sharingOverview ? 'Bild wird erstellt …' : overviewImageUrl ? 'Bild aktualisieren' : 'Übersicht als Bild' }}</span>
+        </button>
+      </div>
       <p
         v-if="overviewShareMessage"
         class="mt-3 text-sm"
@@ -264,8 +275,14 @@ function downloadBlob(blob: Blob, filename: string): void {
           Alle Teilnehmer sind ausgeglichen.
         </p>
 
-        <section class="mt-6" aria-labelledby="participant-balances">
-          <h2 id="participant-balances" class="text-2xl font-bold">Salden pro Teilnehmer</h2>
+        <details ref="participantBalancesDetails" class="participant-balances mt-6" aria-labelledby="participant-balances">
+          <summary class="participant-balances__summary">
+            <h2 id="participant-balances" class="text-2xl font-bold">Salden pro Teilnehmer</h2>
+            <span class="participant-balances__toggle" aria-hidden="true">
+              <span class="participant-balances__toggle-label">Anzeigen</span>
+              <AppIcon name="chevron-down" />
+            </span>
+          </summary>
           <ul class="ledger-list mt-3">
             <li v-for="(balance, index) in balances" :key="balance.participantId">
               <NuxtLink
@@ -284,7 +301,7 @@ function downloadBlob(blob: Blob, filename: string): void {
               </NuxtLink>
             </li>
           </ul>
-        </section>
+        </details>
 
         <section class="settlement-proposal mt-8" aria-label="Ausgleichsvorschlag">
           <div class="settlement-proposal__heading">

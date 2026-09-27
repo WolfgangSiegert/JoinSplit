@@ -2,6 +2,8 @@
 import { resetDurableState } from '~/persistence/database'
 
 const settingsStore = useSettingsStore()
+const route = useRoute()
+const { closeUtility } = useUtilityNavigation()
 const nativeApp = useRuntimeConfig().public.nativeApp
 const savingAppearance = ref(false)
 const appearancePersistenceError = ref('')
@@ -147,16 +149,17 @@ async function confirmReset(): Promise<void> {
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
-
-      <header>
-        <h1 class="text-3xl font-semibold text-brand-900">Einstellungen</h1>
-      </header>
+      <div class="utility-page-heading">
+        <header>
+          <h1 class="text-3xl font-semibold text-brand-900">Einstellungen</h1>
+        </header>
+        <button type="button" class="icon-button utility-page-heading__close" aria-label="Einstellungen schließen" title="Schließen" @click="closeUtility"><AppIcon name="x" /></button>
+      </div>
 
       <section class="card mt-7 p-5" aria-labelledby="account-settings">
         <h2 id="account-settings" class="text-lg font-semibold">Account & Geräte</h2>
         <p class="mt-2 text-sm text-gray-600">Optional lokale Gruppen sichern und auf weiteren Geräten laden.</p>
-        <NuxtLink to="/account" class="secondary-button mt-4 w-full"><AppIcon name="users" />Account verwalten</NuxtLink>
+        <NuxtLink :to="{ path: '/account', query: { returnTo: route.fullPath } }" class="secondary-button mt-4 w-full"><AppIcon name="users" />Account verwalten</NuxtLink>
       </section>
 
       <ClientOnly v-if="!nativeApp">

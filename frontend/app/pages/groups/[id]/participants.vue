@@ -189,15 +189,16 @@ async function cancelRename(id: string): Promise<void> {
   <main class="page-shell">
     <div v-if="group" class="page-content">
       <NuxtLink :to="`/groups/${group.id}`" class="secondary-link -ml-4 mb-3" aria-label="← Gruppe"><AppIcon name="arrow-left" />Gruppe</NuxtLink>
-      <header>
+      <header class="group-view-heading">
         <p class="eyebrow">{{ group.name }}</p>
-        <h1 class="mt-2 text-4xl font-bold text-brand-900">Personen</h1>
+        <div class="group-view-heading__title-row">
+          <h1 class="text-4xl font-bold text-brand-900">Personen</h1>
+          <GroupSyncStatus :group-id="group.id" mobile-collapsible class="group-view-heading__sync" />
+        </div>
         <p class="mt-2 text-ink-700">Identitäten bleiben über Ausgaben und Salden hinweg klar erkennbar.</p>
       </header>
 
       <GroupAreaNavigation :group-id="group.id" />
-
-      <GroupSyncStatus :group-id="group.id" class="mt-6" />
 
       <p v-if="group.status === 'archived'" class="card mt-6 p-4">
         Diese archivierte Gruppe ist schreibgeschützt. Teilnehmer können nur angesehen werden.

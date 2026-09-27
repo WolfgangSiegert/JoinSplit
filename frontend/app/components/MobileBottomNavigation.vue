@@ -2,6 +2,7 @@
 const route = useRoute()
 const groupsStore = useGroupsStore()
 const settingsStore = useSettingsStore()
+const { toggleUtility } = useUtilityNavigation()
 const createDialog = ref<HTMLDialogElement | null>(null)
 const createTrigger = ref<HTMLButtonElement | null>(null)
 
@@ -21,7 +22,7 @@ const currentSection = computed(() => {
   if (route.path === '/') return 'start'
   if (route.path === '/groups' || route.path.startsWith('/groups/')) return 'groups'
   if (route.path === '/people') return 'people'
-  if (route.path === '/account' || route.path === '/account-reset' || route.path === '/settings') return 'account'
+  if (route.path === '/settings') return 'settings'
   return ''
 })
 
@@ -59,10 +60,10 @@ watch(() => route.fullPath, () => createDialog.value?.close())
       <AppIcon name="user" />
       <span>Personen</span>
     </NuxtLink>
-    <NuxtLink to="/account" class="mobile-bottom-navigation__item" :aria-current="currentSection === 'account' ? 'page' : undefined">
-      <AppIcon name="account" />
-      <span>Konto</span>
-    </NuxtLink>
+    <button type="button" class="mobile-bottom-navigation__item mobile-bottom-navigation__item--settings" :aria-current="currentSection === 'settings' ? 'page' : undefined" :aria-pressed="currentSection === 'settings'" @click="toggleUtility('/settings')">
+      <AppIcon name="settings" />
+      <span>Einstellungen</span>
+    </button>
   </nav>
 
   <dialog ref="createDialog" class="mobile-create-dialog" aria-labelledby="mobile-create-title" @cancel.prevent="closeCreateDialog" @click.self="closeCreateDialog">

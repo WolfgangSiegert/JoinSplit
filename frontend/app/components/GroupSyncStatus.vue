@@ -4,10 +4,12 @@ const props = withDefaults(defineProps<{
   showSynced?: boolean
   pendingDeletion?: boolean
   compact?: boolean
+  mobileCollapsible?: boolean
 }>(), {
   showSynced: false,
   pendingDeletion: false,
   compact: false,
+  mobileCollapsible: false,
 })
 
 const groupId = computed(() => props.groupId)
@@ -50,38 +52,58 @@ const stateLabel = computed(() => {
 </script>
 
 <template>
-  <div
-    v-if="message"
-    :data-state="visibleState"
-    :class="[
-      'group-sync-status',
-      props.compact && visibleState === 'synced' ? 'inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-sm font-bold' : 'status-panel',
-      statusClass,
-    ]"
-    role="status"
-    aria-live="polite"
-    aria-atomic="true"
-  >
-    <template v-if="props.compact && visibleState === 'synced'">
-      <span>Synchronisiert</span>
-    </template>
-    <template v-else>
-      <div class="group-sync-status__content">
-        <AppIcon :name="visibleState === 'syncing' ? 'refresh' : 'info'" class="mt-0.5" />
-        <span>
-          <strong class="block text-xs font-extrabold uppercase tracking-wider">{{ stateLabel }}</strong>
-          <span class="group-sync-status__message">{{ message }}</span>
-        </span>
+  <div v-if="message" :class="['group-sync-status', { 'group-sync-status--mobile-collapsible': props.mobileCollapsible }]" :data-state="visibleState">
+    <span v-if="props.mobileCollapsible" class="sr-only" role="status" aria-live="polite">{{ stateLabel }}: {{ message }}</span>
+    <details v-if="props.mobileCollapsible" class="group-sync-status__mobile-details">
+      <summary :class="['group-sync-status__mobile-summary', statusClass]" :aria-label="`${stateLabel}: Details anzeigen`">
+        <AppIcon :name="visibleState === 'syncing' ? 'refresh' : 'info'" />
+        <span>{{ stateLabel }}</span>
+        <AppIcon name="chevron-down" />
+      </summary>
+      <div :class="['group-sync-status__mobile-panel', statusClass]">
+        <p class="group-sync-status__message">{{ message }}</p>
+        <button
+          v-if="canRetry"
+          type="button"
+          class="secondary-button group-sync-status__retry mt-3"
+          aria-label="Synchronisierung erneut versuchen"
+          @click="attemptSync"
+        >
+          <AppIcon name="refresh" />Erneut versuchen
+        </button>
       </div>
-    </template>
-    <button
-      v-if="canRetry"
-      type="button"
-      class="secondary-button group-sync-status__retry mt-3"
-      aria-label="Synchronisierung erneut versuchen"
-      @click="attemptSync"
+    </details>
+    <div
+      :class="[
+        'group-sync-status__full',
+        props.compact && visibleState === 'synced' ? 'inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-sm font-bold' : 'status-panel',
+        statusClass,
+      ]"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
     >
-      <AppIcon name="refresh" /><span class="group-sync-status__retry-full">Synchronisierung erneut versuchen</span><span class="group-sync-status__retry-short">Erneut</span>
-    </button>
+      <template v-if="props.compact && visibleState === 'synced'">
+        <span>Synchronisiert</span>
+      </template>
+      <template v-else>
+        <div class="group-sync-status__content">
+          <AppIcon :name="visibleState === 'syncing' ? 'refresh' : 'info'" class="mt-0.5" />
+          <span>
+            <strong class="block text-xs font-extrabold uppercase tracking-wider">{{ stateLabel }}</strong>
+            <span class="group-sync-status__message">{{ message }}</span>
+          </span>
+        </div>
+      </template>
+      <button
+        v-if="canRetry"
+        type="button"
+        class="secondary-button group-sync-status__retry mt-3"
+        aria-label="Synchronisierung erneut versuchen"
+        @click="attemptSync"
+      >
+        <AppIcon name="refresh" /><span class="group-sync-status__retry-full">Synchronisierung erneut versuchen</span><span class="group-sync-status__retry-short">Erneut</span>
+      </button>
+    </div>
   </div>
 </template>

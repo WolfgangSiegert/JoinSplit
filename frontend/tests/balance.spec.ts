@@ -15,6 +15,18 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
   expect(accessibility.violations).toEqual([])
 }
 
+function participantBalances(page: Page) {
+  return page.locator('details[aria-labelledby="participant-balances"]')
+}
+
+async function openParticipantBalances(page: Page): Promise<void> {
+  const details = participantBalances(page)
+  if (!await details.evaluate(element => (element as HTMLDetailsElement).open)) {
+    await details.locator('summary').click()
+  }
+  await expect(details).toHaveAttribute('open', '')
+}
+
 async function seedBalanceState(
   page: Page,
   options: { participants?: boolean; expenses?: 'none' | 'mixed' | 'balanced'; archived?: boolean } = {},
@@ -106,7 +118,9 @@ test('balance overview and participant composition use local data, stable order,
 
   await expect(page.getByRole('heading', { level: 1, name: 'Salden' })).toBeVisible()
   await expect(page.getByText('Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.')).toBeVisible()
-  const items = page.locator('section[aria-labelledby="participant-balances"] li')
+  await expect(participantBalances(page)).not.toHaveAttribute('open', '')
+  await openParticipantBalances(page)
+  const items = participantBalances(page).locator('li')
   await expect(items).toHaveCount(3)
   await expect(items.nth(0)).toContainText('Alice')
   await expect(items.nth(0)).toContainText('Soll erhalten: +5,00 €')
@@ -123,6 +137,22 @@ test('balance overview and participant composition use local data, stable order,
 
   await page.setViewportSize({ width: 320, height: 700 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await expect(page.locator('.balance-actions--sticky')).toHaveCSS('position', 'sticky')
+  await page.evaluate(() => window.scrollTo(0, 500))
+  const stickyGeometry = await page.evaluate(() => {
+    const navigation = document.querySelector('.group-area-navigation')?.getBoundingClientRect()
+    const actions = document.querySelector('.balance-actions--sticky')?.getBoundingClientRect()
+    return {
+      navigationBottom: navigation?.bottom ?? 0,
+      actionsTop: actions?.top ?? 0,
+    }
+  })
+  expect(stickyGeometry.actionsTop).toBeGreaterThanOrEqual(stickyGeometry.navigationBottom - 1)
+  expect(stickyGeometry.actionsTop - stickyGeometry.navigationBottom).toBeLessThanOrEqual(12)
+
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Salden' }).click()
+  await expect(participantBalances(page)).not.toHaveAttribute('open', '')
+  await openParticipantBalances(page)
 
   await context.setOffline(true)
   await expect(items.nth(0)).toContainText('Soll erhalten: +5,00 €')
@@ -150,7 +180,8 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await page.getByLabel('Gruppenname').fill('CRUD-Balance')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'CRUD-Balance' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
+  await expect(page.locator('.group-view-heading').getByText('CRUD-Balance', { exact: true })).toBeVisible()
 
   await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
@@ -167,6 +198,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
 
   await page.getByRole('link', { name: '← Ausgaben' }).click()
   await page.getByRole('link', { name: 'Salden' }).click()
+  await openParticipantBalances(page)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Soll erhalten: +5,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('Soll zahlen: −5,00 €')
 
@@ -179,6 +211,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
 
   await page.getByRole('link', { name: '← Ausgaben' }).click()
   await page.getByRole('link', { name: 'Salden' }).click()
+  await openParticipantBalances(page)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Soll erhalten: +6,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('Soll zahlen: −6,00 €')
 
@@ -189,6 +222,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await expect(page.getByRole('heading', { level: 2, name: 'Noch keine Ausgaben' })).toBeVisible()
   await page.getByRole('link', { name: 'Salden' }).click()
   await expect(page.getByText('Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
+  await openParticipantBalances(page)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Ausgeglichen: 0,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('Ausgeglichen: 0,00 €')
 })
@@ -197,9 +231,11 @@ test('reload preserves balances and an archived Group remains readable', async (
   await seedBalanceState(page, { archived: true })
   await page.goto(`/groups/${GROUP_ID}/balances`)
   await expect(page.getByText('Diese archivierte Gruppe ist schreibgeschützt. Ihre Salden bleiben lesbar.')).toBeVisible()
+  await openParticipantBalances(page)
   await expect(page.getByText('Soll erhalten: +5,00 €')).toBeVisible()
 
   await page.reload()
+  await openParticipantBalances(page)
   await expect(page.getByText('Soll zahlen: −5,00 €')).toBeVisible()
   await page.getByRole('link', { name: /Carol/ }).click()
   await expect(page.getByText('Inaktiver Teilnehmer')).toBeVisible()
@@ -217,11 +253,13 @@ test('empty Participant, no Expense, and all-balanced states are distinct and ac
   await seedBalanceState(page, { expenses: 'none' })
   await page.goto(`/groups/${GROUP_ID}/balances`)
   await expect(page.getByText('Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
+  await openParticipantBalances(page)
   await expect(page.getByText('Ausgeglichen: 0,00 €')).toHaveCount(3)
 
   await seedBalanceState(page, { expenses: 'balanced' })
   await page.goto(`/groups/${GROUP_ID}/balances`)
   await expect(page.getByText('Alle Teilnehmer sind ausgeglichen.', { exact: true })).toBeVisible()
+  await openParticipantBalances(page)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Ausgeglichen: 0,00 €')
   await expectNoAxeViolations(page)
 })

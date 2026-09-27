@@ -40,7 +40,7 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await expect(page.getByText('Ada Account', { exact: true })).toBeVisible()
 
   await page.goto('/account')
-  await page.getByRole('button', { name: 'Registrieren' }).click()
+  await page.getByRole('button', { name: 'Registrieren', exact: true }).click()
   await page.getByLabel('E-Mail').fill(email)
   await page.getByLabel('Passwort').fill(password)
   await page.getByRole('checkbox').check()

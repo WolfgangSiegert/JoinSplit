@@ -105,8 +105,7 @@ test('the frontend liveness endpoint is independent of application state', async
 
 test('the durable global setting controls the next form default after reload', async ({ page }) => {
   await openCreateGroup(page)
-  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('link', { name: 'Einstellungen' }).click()
+  await page.goto('/settings')
   const setting = page.getByRole('checkbox', {
     name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
   })
@@ -117,9 +116,7 @@ test('the durable global setting controls the next form default after reload', a
   await expect(
     page.getByRole('checkbox', { name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen' }),
   ).not.toBeChecked()
-  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('button', { name: 'Neu', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
+  await page.goto('/groups/new')
 
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).not.toBeChecked()
   await expect(page.getByLabel('Mein Name in dieser Gruppe')).toHaveCount(0)
@@ -147,9 +144,7 @@ test('a failed durable settings write restores the visible and effective value',
   )
   await expect(setting).toBeChecked()
 
-  await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('button', { name: 'Neu', exact: true }).click()
-  await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
+  await page.goto('/groups/new')
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).toBeChecked()
 })
 
@@ -203,12 +198,13 @@ test('local creation navigates immediately, then the real API confirms the same 
   await page.getByLabel('Mein Name in dieser Gruppe').fill('  Wolfgang  ')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).dblclick()
 
-  const heading = page.getByRole('heading', { level: 1, name: 'Wochenendtrip' })
+  const heading = page.getByRole('heading', { level: 1, name: 'Ausgaben' })
   await expect(heading).toBeVisible()
   await expect(heading).toBeFocused()
+  await expect(page.locator('.group-view-heading').getByText('Wochenendtrip', { exact: true })).toBeVisible()
   await expect(page).toHaveURL(/\/groups\/[0-9a-f-]+\?created=1$/)
   await expect(page.getByText('Gruppe lokal erstellt.')).toBeVisible()
-  await expect(page.getByText('Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.')).toBeVisible()
+  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.')).toBeVisible()
   await expect(page.getByRole('heading', { level: 2, name: 'Noch keine Ausgaben' })).toBeVisible()
 
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
@@ -228,7 +224,8 @@ test('local creation navigates immediately, then the real API confirms the same 
   expect(snapshotBeforeReload.credentialIsIsolated).toBe(true)
 
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Wochenendtrip' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
+  await expect(page.locator('.group-view-heading').getByText('Wochenendtrip', { exact: true })).toBeVisible()
   const snapshotAfterReload = await durableSnapshot(page)
   expect(snapshotAfterReload.groups[0]?.id).toBe(groupId)
   expect(snapshotAfterReload.participants[0]?.id).toBe(participantId)
@@ -285,8 +282,9 @@ test('creation without a participant succeeds and offline is distinct from pendi
   await page.getByLabel('Gruppenname').fill('Ohne Teilnehmer')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Ohne Teilnehmer' })).toBeFocused()
-  await expect(page.getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeFocused()
+  await expect(page.locator('.group-view-heading').getByText('Ohne Teilnehmer', { exact: true })).toBeVisible()
+  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')).toBeVisible()
   await expectNoAxeViolations(page)
 
   const reconnectResponse = page.waitForResponse(
@@ -315,9 +313,10 @@ test('a failed request keeps the local group and retries the identical operation
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Wolfgang')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
 
-  const heading = page.getByRole('heading', { level: 1, name: 'Retry-Reise' })
+  const heading = page.getByRole('heading', { level: 1, name: 'Ausgaben' })
   await expect(heading).toBeVisible()
-  await expect(page.getByText('Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.')).toBeVisible()
+  await expect(page.locator('.group-view-heading').getByText('Retry-Reise', { exact: true })).toBeVisible()
+  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.')).toBeVisible()
   const retry = page.getByRole('button', { name: 'Synchronisierung erneut versuchen' })
   await expect(retry).toBeVisible()
   await expectNoAxeViolations(page)
@@ -343,8 +342,9 @@ test('network-blocked creation survives reload and resumes the same mutation wit
   await page.getByLabel('Gruppenname').fill('Offline-Reise')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Wolfgang')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Offline-Reise' })).toBeVisible()
-  await expect(page.getByText(
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
+  await expect(page.locator('.group-view-heading').getByText('Offline-Reise', { exact: true })).toBeVisible()
+  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText(
     'Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.',
   )).toBeVisible()
 
@@ -354,7 +354,8 @@ test('network-blocked creation survives reload and resumes the same mutation wit
   expect(beforeReload.pendingGroupIds).toEqual([groupId])
 
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Offline-Reise' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
+  await expect(page.locator('.group-view-heading').getByText('Offline-Reise', { exact: true })).toBeVisible()
   const afterReload = await durableSnapshot(page)
   expect(afterReload.groups[0]?.id).toBe(groupId)
   expect(afterReload.participants[0]?.id).toBe(participantId)
@@ -374,7 +375,8 @@ test('network-blocked creation survives reload and resumes the same mutation wit
   expect((await durableSnapshot(page)).pendingGroupIds).toEqual([])
 
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Offline-Reise' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
+  await expect(page.locator('.group-view-heading').getByText('Offline-Reise', { exact: true })).toBeVisible()
   expect((await durableSnapshot(page)).pendingGroupIds).toEqual([])
   await page.waitForLoadState('networkidle')
 
