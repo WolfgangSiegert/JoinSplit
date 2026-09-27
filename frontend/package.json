@@ -13,6 +13,8 @@
     "native:copy": "pnpm build:native && cap copy",
     "native:assets": "node scripts/generate-native-assets.mjs",
     "native:sync": "pnpm build:native && pnpm native:assets && cap sync",
+    "native:verify:android": "node scripts/verify-android-runtime.mjs",
+    "native:verify:android-lifecycle": "node scripts/verify-android-lifecycle.mjs",
     "native:open:android": "cap open android",
     "native:open:ios": "cap open ios",
     "preview": "nuxt preview --host 127.0.0.1",

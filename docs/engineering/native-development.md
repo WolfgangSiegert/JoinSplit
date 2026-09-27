@@ -88,6 +88,12 @@ pnpm native:open:android
 `native:sync` rebuilds and verifies the native Nuxt artifact, regenerates the
 versioned icons and splash images, and synchronizes both platform projects.
 `native:copy` is available when only the bundled web artifact changed.
+`native:verify:android` exercises the Account/session boundary in a running
+Android WebView through its local DevTools endpoint. The three-phase
+`native:verify:android-lifecycle` command uses
+`JOIN_SPLIT_ANDROID_LIFECYCLE_PHASE=seed|verify|reconnect` to keep the network
+transition and process restart explicit rather than simulating them in page
+JavaScript.
 
 The asset generator uses the already approved Playwright development tooling;
 it does not add an image-generation dependency.
@@ -113,6 +119,38 @@ native backup/restore contract for its local financial and session state. The
 only declared Android permission in this foundation is internet access for the
 canonical Laravel API.
 
+## Android runtime evidence
+
+On 27 September 2026, the versioned Android project was built with OpenJDK 21,
+Android SDK Platform 36 and Build Tools 35.0.0. The debug APK installed and
+launched on the existing Pixel 3a API 33 emulator (Android 13). The app loaded
+from the bundled `https://localhost` origin without a Service Worker.
+
+The emulator evidence covers:
+
+- registration, local Person adoption and authenticated mutation,
+- logout, login and device hydration,
+- an intentionally expired server session returning 401 and subsequent login,
+- absence of Account credentials in IndexedDB and localStorage,
+- Account deletion,
+- offline creation of one Group, two Participants, one Expense and one
+  Settlement,
+- survival of all records and four pending mutations across a forced process
+  stop and relaunch,
+- foreground reconnect draining the queue exactly once without local
+  duplication.
+
+The lifecycle run exposed and now regresses an Account hydration defect:
+workspace ExpenseShares must be serialized in Participant position order, not
+UUID order. UUID ordering had made the previous test fixture pass only by
+coincidence.
+
+Capacitor 8 can emit an early SystemBars safe-area injection error before the
+WebView document element exists. Later injection succeeds and the inspected
+layout is correct. This remains an upstream framework issue rather than a local
+permission to disable edge-to-edge handling:
+<https://github.com/ionic-team/capacitor/issues/8530>.
+
 ## Verification limit
 
 Successful `native:sync` proves deterministic generation and synchronization;
@@ -122,3 +160,11 @@ transport configuration and automated origin/session regressions are necessary
 evidence, but registration/login, authenticated reads and mutations, logout,
 deletion and expired-session behavior still require checks on both native
 platforms before JS-051 can close.
+
+The Android evidence above narrows, but does not remove, that limit. Hardware
+back, keyboard/focus and external-link escape are not yet recorded. Physical
+device coverage remains outstanding when a device is available. On iOS, Xcode
+26.2 currently stalls while resolving the already pinned Swift package graph,
+including with automatic package resolution disabled. Until an iOS build and
+runtime session complete, JS-051, JS-053 and JS-054 must not be reported as
+fully done.
