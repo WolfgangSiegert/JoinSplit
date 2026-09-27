@@ -90,6 +90,8 @@ class AccountWorkspaceController extends Controller
     /** @return array<string, mixed> */
     private function snapshot(Group $group): array
     {
+        $participantPositions = $group->participants->pluck('position', 'id');
+
         return [
             'revision' => $group->revision,
             'group' => [
@@ -108,9 +110,15 @@ class AccountWorkspaceController extends Controller
                 'amountMinor' => $expense->amount_minor, 'incurredOn' => $expense->incurred_on->format('Y-m-d'),
                 'payerParticipantId' => $expense->payer_participant_id,
                 'creatorAccessIdentityId' => $expense->creator_access_identity_id, 'splitMethod' => 'equal',
-                'shares' => $expense->shares->sortBy('participant_id')->map(fn ($share): array => [
-                    'participantId' => $share->participant_id, 'amountMinor' => $share->amount_minor,
-                ])->values(),
+                'shares' => $expense->shares
+                    ->sort(fn ($left, $right): int => [
+                        $participantPositions->get($left->participant_id, PHP_INT_MAX), $left->participant_id,
+                    ] <=> [
+                        $participantPositions->get($right->participant_id, PHP_INT_MAX), $right->participant_id,
+                    ])
+                    ->map(fn ($share): array => [
+                        'participantId' => $share->participant_id, 'amountMinor' => $share->amount_minor,
+                    ])->values(),
             ])->values(),
             'settlements' => $group->settlements->sortBy('id')->map(fn ($settlement): array => [
                 'id' => $settlement->id, 'groupId' => $settlement->group_id,
