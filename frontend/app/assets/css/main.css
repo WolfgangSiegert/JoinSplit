@@ -73,6 +73,7 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   position: sticky;
   z-index: 40;
   top: 0;
+  padding-top: env(safe-area-inset-top);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   background: color-mix(in srgb, var(--page) 88%, transparent);
   backdrop-filter: blur(14px);
@@ -87,7 +88,7 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   align-items: center;
   gap: 0.45rem 0.75rem;
   margin-inline: auto;
-  padding: 0.45rem 1rem 0.55rem;
+  padding: 0.45rem max(1rem, env(safe-area-inset-right)) 0.55rem max(1rem, env(safe-area-inset-left));
 }
 
 .app-header__nav {
@@ -218,7 +219,7 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 
 .page-shell {
   min-height: 100dvh;
-  padding: 1.1rem 1rem 7rem;
+  padding: 1.1rem max(1rem, env(safe-area-inset-right)) max(7rem, calc(5rem + env(safe-area-inset-bottom))) max(1rem, env(safe-area-inset-left));
 }
 
 .page-content {
@@ -959,7 +960,11 @@ html[data-theme="dark"] .status-panel[data-state="synced"] { border-color: #3e80
 html[data-theme="dark"] .status-panel[data-state="pending"],
 html[data-theme="dark"] .status-panel[data-state="syncing"] { border-color: #846d2e !important; background: #392f18 !important; color: #ffe9aa !important; }
 
-@media (min-width: 640px) { .page-shell { padding: 2rem 1.5rem 6rem; } }
+@media (min-width: 640px) {
+  .page-shell {
+    padding: 2rem max(1.5rem, env(safe-area-inset-right)) max(6rem, calc(4rem + env(safe-area-inset-bottom))) max(1.5rem, env(safe-area-inset-left));
+  }
+}
 
 @media (min-width: 720px) {
   .landing-groups,

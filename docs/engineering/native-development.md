@@ -53,6 +53,26 @@ canonical API URL. A failure of this additional cookie cleanup does not block
 local Account-data removal; the remaining cookie value refers to an already
 invalid session. iOS declares `joinsplit.tiny-bits.org` as an app-bound domain.
 
+## Lifecycle and layout boundary
+
+JoinSplit keeps its existing IndexedDB database and foreground synchronization
+queue in the native WebView. It does not add a second native store, background
+sync engine or hidden replay worker. A terminated WebView rehydrates the same
+durable state on the next bundled-app launch. While the WebView remains alive,
+connectivity is refreshed on browser online/offline events and again when the
+document becomes visible or receives a pageshow event. Existing foreground
+watchers then retry pending mutations using their idempotency identifiers.
+
+The viewport uses `viewport-fit=cover`. The persistent header and page shell
+apply the platform safe-area insets without reducing their existing mobile
+spacing. Native builds continue to suppress Service Worker registration and
+PWA install/update UI.
+
+These code boundaries do not prove native runtime behavior. Airplane-mode cold
+start, termination/relaunch, in-place update, hardware back, keyboard/focus,
+external-link escape and exact-once reconnect still require the JS-054 and
+JS-055 platform checks.
+
 ## Commands
 
 From `frontend/`, after selecting the repository's Node 24 runtime:
