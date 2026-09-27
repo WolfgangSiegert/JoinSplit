@@ -44,7 +44,8 @@ test('a real waiting worker never reloads silently and preserves pending Indexed
     await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
     await page.getByLabel('Gruppenname').fill('Update bleibt lokal')
     await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Update bleibt lokal' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
+    await expect(page.locator('.group-view-heading > .eyebrow')).toHaveText('Update bleibt lokal')
     await expect.poll(() => localState(page)).toEqual({ groups: ['Update bleibt lokal'], pendingMutations: 1 })
 
     page.on('framenavigated', frame => {
@@ -68,7 +69,8 @@ test('a real waiting worker never reloads silently and preserves pending Indexed
 
     await applyUpdate.click()
     await expect.poll(() => navigationCount).toBeGreaterThan(0)
-    await expect(page.getByRole('heading', { level: 1, name: 'Update bleibt lokal' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
+    await expect(page.locator('.group-view-heading > .eyebrow')).toHaveText('Update bleibt lokal')
     expect(await localState(page)).toEqual({ groups: ['Update bleibt lokal'], pendingMutations: 1 })
   } finally {
     await writeFile(serviceWorkerPath, originalServiceWorker)

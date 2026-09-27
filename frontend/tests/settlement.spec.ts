@@ -89,6 +89,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   await expect(page.getByText('4,00 €')).toBeVisible()
 
   await page.goto(`/groups/${GROUP_ID}/balances`)
+  await page.locator('details.participant-balances > summary').click()
   await expect(page.getByText('−6,00 €', { exact: true })).toBeVisible()
   await expect(page.getByText('+6,00 €', { exact: true })).toBeVisible()
 

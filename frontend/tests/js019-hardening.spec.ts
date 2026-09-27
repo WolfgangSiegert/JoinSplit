@@ -92,7 +92,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   await page.getByLabel('Gruppenname').fill('Offline-Kernflow')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await expect(page.getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')).toBeVisible()
+  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.', { exact: true })).toBeVisible()
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
   await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
@@ -123,6 +123,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
 
   await page.goto(`/groups/${groupId}/balances`)
   await expect(page.getByText('Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
+  await page.locator('details.participant-balances > summary').click()
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Ausgeglichen: 0,00 €')
   await expect(page.getByRole('link', { name: /Bobby/ })).toContainText('Ausgeglichen: 0,00 €')
 
@@ -146,6 +147,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
 
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Salden' })).toBeVisible()
+  await page.locator('details.participant-balances > summary').click()
   await expect(page.getByRole('link', { name: /Bobby/ })).toContainText('Ausgeglichen: 0,00 €')
   const afterReload = await durableSnapshot(page)
   expect(afterReload).toEqual(beforeReload)
@@ -205,6 +207,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   })
 
   await page.reload()
+  await page.locator('details.participant-balances > summary').click()
   await expect(page.getByRole('link', { name: /Bobby/ })).toContainText('Ausgeglichen: 0,00 €')
   const afterSync = await durableSnapshot(page)
   expect(afterSync.pending).toEqual([])
@@ -271,6 +274,7 @@ test('the mobile core flow stays accessible and free of horizontal overflow', as
 
   await page.goto(`/groups/${groupId}/balances`)
   await expect(page.getByText('Alle Teilnehmer sind ausgeglichen.', { exact: true })).toBeVisible()
+  await page.locator('details.participant-balances > summary').click()
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Ausgeglichen: 0,00 €')
   await expectNoAxeViolations(page)
   await expectNoHorizontalOverflow(page)

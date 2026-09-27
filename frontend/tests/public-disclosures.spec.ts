@@ -110,7 +110,7 @@ test('local reset requires explicit confirmation and replaces the browser identi
   await seedPendingLocalGroup(page, previousIdentityId!)
   expect(await localRecordCounts(page)).toEqual({ groups: 1, pendingMutations: 1 })
 
-  await page.getByRole('link', { name: 'Einstellungen' }).click()
+  await page.goto('/settings')
   const trigger = page.getByRole('button', { name: 'Lokale Daten zurücksetzen' })
   await trigger.click()
   const dialog = page.getByRole('alertdialog', { name: 'Lokale Daten endgültig zurücksetzen?' })

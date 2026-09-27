@@ -410,6 +410,7 @@ test('keeps the all-zero proposal and archived inactive participants readable', 
 
   await expect(page.getByText('Diese archivierte Gruppe ist schreibgeschützt. Ihre Salden bleiben lesbar.')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Ausgleichsvorschlag' }).getByText('Es ist keine Ausgleichszahlung nötig.')).toBeVisible()
+  await page.locator('details.participant-balances > summary').click()
   await expect(page.getByRole('link', { name: /Carol/ })).toContainText('Inaktiv')
   await expectNoAxeViolations(page)
 })

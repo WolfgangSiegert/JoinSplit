@@ -508,6 +508,7 @@ test('v1 pending CreateGroup data upgrades atomically through v10', async ({ pag
 
 test('a fresh database is created directly at schema v10', async ({ page }) => {
   await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
   const schema = await page.evaluate(async () => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {

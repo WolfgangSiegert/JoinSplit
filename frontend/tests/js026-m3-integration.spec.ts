@@ -130,6 +130,7 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   expect(apiResponses.map(response => response.status())).toEqual([201, 201, 201, 201, 200, 201, 200])
 
   await page.goto(`/groups/${groupId}/balances`)
+  await page.locator('details.participant-balances > summary').click()
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('+3,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('−3,00 €')
   await page.goto(`/groups/${groupId}/balances/statement`)
