@@ -180,9 +180,17 @@ try {
   await removePreviousSmokeAccount()
 
   await navigate('/people')
-  await fill('Name', 'Ada Native Android')
-  await clickControl('Person anlegen')
-  await waitForText('Ada Native Android')
+  const existingSmokePerson = await evaluate(`(() => {
+    const text = document.body.textContent ?? ''
+    if (text.includes('Ada Native Synced')) return 'synced'
+    if (text.includes('Ada Native Android')) return 'android'
+    return null
+  })()`)
+  if (!existingSmokePerson) {
+    await fill('Name', 'Ada Native Android')
+    await clickControl('Person anlegen')
+    await waitForText('Ada Native Android')
+  }
 
   await navigate('/account')
   await clickControl('Registrieren')
@@ -197,9 +205,11 @@ try {
   await waitForText(email)
 
   await navigate('/people')
-  await clickControl('Ada Native Android bearbeiten')
-  await fill('Name', 'Ada Native Synced')
-  await clickControl('Änderung speichern')
+  if (existingSmokePerson !== 'synced') {
+    await clickControl('Ada Native Android bearbeiten')
+    await fill('Name', 'Ada Native Synced')
+    await clickControl('Änderung speichern')
+  }
   await waitForText('Ada Native Synced')
   await waitForPendingPeopleToClear()
 
