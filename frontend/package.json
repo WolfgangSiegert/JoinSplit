@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "nuxt dev --host 127.0.0.1",
     "build": "nuxt build",
+    "build:native": "JOIN_SPLIT_NATIVE_BUILD=true NUXT_PUBLIC_API_BASE=https://joinsplit.tiny-bits.org nuxt generate && node scripts/verify-native-build.mjs",
     "preview": "nuxt preview --host 127.0.0.1",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck && vue-tsc --noEmit -p tsconfig.tests.json",

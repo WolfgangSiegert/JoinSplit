@@ -167,6 +167,25 @@ cd backend
 composer test
 ```
 
+## Native-compatible web artifact
+
+M7 uses a separate, deterministic Nuxt generation target before Capacitor is
+introduced. From `frontend/`, run:
+
+```sh
+pnpm build:native
+```
+
+The command generates `.output/public`, targets the canonical production API,
+marks the runtime as native and verifies that the artifact contains no web app
+manifest, Service Worker or remote boot asset. PWA installation and update UI
+are disabled for this target. The generated output and Nuxt's `dist` symlink
+remain unversioned build artifacts.
+
+This command verifies the web artifact only. Airplane-mode cold start,
+platform storage persistence and native session transport require the later
+Capacitor development builds and are not proven by JS-050.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs for pushes and pull requests targeting `main`.

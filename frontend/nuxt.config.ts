@@ -4,15 +4,20 @@ import {
   isNetworkOnlyRequest,
 } from './pwa/runtime-caching'
 
+const nativeBuild = process.env.JOIN_SPLIT_NATIVE_BUILD === 'true'
+const nativeApiOrigin = 'https://joinsplit.tiny-bits.org'
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-09',
   devtools: { enabled: false },
   telemetry: false,
+  ssr: !nativeBuild,
   modules: ['@pinia/nuxt', '@nuxt/ui', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
       apiBase: 'http://127.0.0.1:8000',
+      nativeApp: nativeBuild,
       operatorName: 'Wolfgang Siegert',
       privacyContactUrl: 'mailto:WoSiegert@hotmail.com',
     },
@@ -26,6 +31,7 @@ export default defineNuxtConfig({
     colorMode: false,
   },
   pwa: {
+    disable: nativeBuild,
     registerType: 'prompt',
     client: {
       installPrompt: true,
@@ -112,6 +118,12 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'Gemeinsame Ausgaben mit JoinSplit.' },
         { name: 'theme-color', content: '#c44332' },
+        ...(nativeBuild
+          ? [{
+              'http-equiv': 'Content-Security-Policy',
+              content: `default-src 'self'; base-uri 'self'; connect-src 'self' ${nativeApiOrigin}; font-src 'self' data:; form-action 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'`,
+            }]
+          : []),
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },

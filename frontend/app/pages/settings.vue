@@ -2,6 +2,7 @@
 import { resetDurableState } from '~/persistence/database'
 
 const settingsStore = useSettingsStore()
+const nativeApp = useRuntimeConfig().public.nativeApp
 const savingAppearance = ref(false)
 const appearancePersistenceError = ref('')
 const visibleColorModeOverride = ref<'system' | 'light' | 'dark' | null>(null)
@@ -137,7 +138,7 @@ async function confirmReset(): Promise<void> {
         <NuxtLink to="/account" class="secondary-button mt-4 w-full"><AppIcon name="users" />Account verwalten</NuxtLink>
       </section>
 
-      <ClientOnly>
+      <ClientOnly v-if="!nativeApp">
         <PwaSettingsPanel class="mt-5" />
         <template #fallback>
           <section class="card mt-5 p-5" aria-labelledby="app-installation-loading">

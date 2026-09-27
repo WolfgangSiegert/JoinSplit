@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const lifecycleStore = useApplicationLifecycleStore()
 const settingsStore = useSettingsStore()
+const nativeApp = useRuntimeConfig().public.nativeApp
 const { synchronizePending } = usePendingCreateGroupSync()
 usePendingPersonSync()
 
@@ -32,10 +33,10 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
 </script>
 
 <template>
-  <VitePwaManifest />
+  <VitePwaManifest v-if="!nativeApp" />
   <UApp>
     <AppHeader />
-    <ClientOnly>
+    <ClientOnly v-if="!nativeApp">
       <PwaExperience :synchronize-pending="synchronizePending" />
     </ClientOnly>
     <NuxtPage v-if="lifecycleStore.state === 'ready'" />
