@@ -54,6 +54,7 @@ const stateLabel = computed(() => {
     v-if="message"
     :data-state="visibleState"
     :class="[
+      'group-sync-status',
       props.compact && visibleState === 'synced' ? 'inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-sm font-bold' : 'status-panel',
       statusClass,
     ]"
@@ -65,16 +66,22 @@ const stateLabel = computed(() => {
       <span>Synchronisiert</span>
     </template>
     <template v-else>
-      <p class="text-xs font-extrabold uppercase tracking-wider">{{ stateLabel }}</p>
-      <p class="mt-1 text-sm font-medium">{{ message }}</p>
+      <div class="group-sync-status__content">
+        <AppIcon :name="visibleState === 'syncing' ? 'refresh' : 'info'" class="mt-0.5" />
+        <span>
+          <strong class="block text-xs font-extrabold uppercase tracking-wider">{{ stateLabel }}</strong>
+          <span class="group-sync-status__message">{{ message }}</span>
+        </span>
+      </div>
     </template>
     <button
       v-if="canRetry"
       type="button"
-      class="secondary-button mt-3"
+      class="secondary-button group-sync-status__retry mt-3"
+      aria-label="Synchronisierung erneut versuchen"
       @click="attemptSync"
     >
-      <AppIcon name="refresh" />Synchronisierung erneut versuchen
+      <AppIcon name="refresh" /><span class="group-sync-status__retry-full">Synchronisierung erneut versuchen</span><span class="group-sync-status__retry-short">Erneut</span>
     </button>
   </div>
 </template>

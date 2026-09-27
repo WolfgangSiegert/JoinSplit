@@ -88,7 +88,7 @@ test('the ready Group List is accessible', async ({ page }) => {
   expect(response?.headers()['strict-transport-security']).toBe('max-age=31536000; includeSubDomains')
   expect(response?.headers()['x-content-type-options']).toBe('nosniff')
   await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
-  await expect(page.getByLabel('Beta-Version')).toHaveText('Beta')
+  await expect(page.getByLabel('Beta-Version').filter({ visible: true })).toHaveText('Beta')
   await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
   await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Von der ersten Ausgabe zum klaren Ausgleich' })).toBeVisible()
@@ -266,10 +266,11 @@ test('local creation navigates immediately, then the real API confirms the same 
 
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await expect(page.getByRole('link', { name: /Wochenendtrip/ })).toHaveCount(1)
+  await page.getByRole('link', { name: 'JoinSplit – Startseite' }).click()
   await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
   await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Meine Gruppen' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Zu meinen Gruppen' })).toHaveAttribute('href', '#gruppen')
+  await expect(page.getByRole('link', { name: 'Zu meinen Gruppen' })).toHaveAttribute('href', '/groups')
   await expect(page.locator('#gruppen')).toBeVisible()
 })
 

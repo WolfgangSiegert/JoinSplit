@@ -146,11 +146,28 @@ async function addParticipant(duplicateConfirmed = false) {
       <p v-if="errors.participantIds" id="shares-error" role="alert" class="error-text mt-2">{{ errors.participantIds }}</p>
     </fieldset>
     <section class="card min-w-0 p-4" aria-labelledby="split-preview"><h2 id="split-preview" class="text-lg font-semibold">Vorschau der Aufteilung</h2><p v-if="!preview.length" class="mt-2 text-gray-600">Betrag und mindestens eine Person auswählen.</p><ul v-else class="mt-3 space-y-2"><li v-for="share in preview" :key="share.participantId" class="flex min-w-0 flex-wrap justify-between gap-4"><span class="min-w-0 break-words">{{ names.get(share.participantId) }}</span><strong>{{ formatAmountMinor(share.amountMinor) }}</strong></li></ul></section>
-    <section class="card min-w-0 p-4" aria-labelledby="add-during-expense" :aria-busy="addingParticipant"><h2 id="add-during-expense" class="font-semibold">Weitere Person hinzufügen</h2><div class="mt-2 flex flex-col gap-2 sm:flex-row"><label for="draft-participant" class="sr-only">Name der neuen Person</label><input id="draft-participant" ref="addInput" v-model="addName" class="field-input" :disabled="addingParticipant || submitting" :aria-invalid="Boolean(addError)" :aria-describedby="addError ? 'draft-participant-error' : undefined"><button type="button" class="secondary-button shrink-0" :disabled="addingParticipant || submitting" @click="addParticipant()">{{ addingParticipant ? 'Wird hinzugefügt …' : 'Hinzufügen' }}</button></div><p v-if="addError" id="draft-participant-error" class="error-text mt-2">{{ addError }}</p><div v-if="duplicateParticipantName" class="mt-3 min-w-0 rounded-lg bg-amber-50 p-3 text-amber-950" role="alert"><p class="font-semibold">Name bereits vorhanden</p><p class="mt-1 break-words">Der Name „{{ duplicateParticipantName }}“ wird in dieser Gruppe bereits verwendet.</p><button ref="duplicateConfirmButton" type="button" class="secondary-button mt-3" :disabled="addingParticipant || submitting" @click="addParticipant(true)">Trotzdem hinzufügen</button></div></section>
+    <details class="card min-w-0 p-4" :aria-busy="addingParticipant">
+      <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold">
+        <span>Weitere Person hinzufügen</span><AppIcon name="chevron-down" />
+      </summary>
+      <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+        <label for="draft-participant" class="sr-only">Name der neuen Person</label>
+        <input id="draft-participant" ref="addInput" v-model="addName" class="field-input" :disabled="addingParticipant || submitting" :aria-invalid="Boolean(addError)" :aria-describedby="addError ? 'draft-participant-error' : undefined">
+        <button type="button" class="secondary-button shrink-0" :disabled="addingParticipant || submitting" @click="addParticipant()">{{ addingParticipant ? 'Wird hinzugefügt …' : 'Hinzufügen' }}</button>
+      </div>
+      <p v-if="addError" id="draft-participant-error" class="error-text mt-2">{{ addError }}</p>
+      <div v-if="duplicateParticipantName" class="mt-3 min-w-0 rounded-lg bg-amber-50 p-3 text-amber-950" role="alert"><p class="font-semibold">Name bereits vorhanden</p><p class="mt-1 break-words">Der Name „{{ duplicateParticipantName }}“ wird in dieser Gruppe bereits verwendet.</p><button ref="duplicateConfirmButton" type="button" class="secondary-button mt-3" :disabled="addingParticipant || submitting" @click="addParticipant(true)">Trotzdem hinzufügen</button></div>
+    </details>
     <p v-if="status" :class="status.includes('konnte nicht') ? 'error-text' : 'text-brand-900'" :role="status.includes('konnte nicht') ? 'alert' : 'status'">{{ status }}</p>
-    <div class="grid gap-2" :class="expense ? '' : 'sm:grid-cols-2'">
+    <div class="form-action-bar" :class="expense ? 'grid-cols-1' : ''">
       <button type="submit" class="primary-button w-full" :disabled="submitting || addingParticipant"><AppIcon name="save" />{{ expense ? 'Änderungen speichern' : 'Ausgabe speichern' }}</button>
-      <button v-if="!expense" type="button" class="secondary-button w-full" :disabled="submitting || addingParticipant" @click="submit(true)"><AppIcon name="plus" />Speichern & nächste Ausgabe</button>
+      <button v-if="!expense" type="button" class="secondary-button form-action-secondary--desktop" :disabled="submitting || addingParticipant" @click="submit(true)"><AppIcon name="plus" />Speichern & nächste Ausgabe</button>
+      <details v-if="!expense" class="form-action-menu form-action-menu--mobile">
+        <summary class="secondary-button" role="button" aria-label="Weitere Speicheroptionen"><AppIcon name="chevron-down" /></summary>
+        <div class="form-action-menu__panel">
+          <button type="button" class="secondary-button" :disabled="submitting || addingParticipant" @click="submit(true)"><AppIcon name="plus" />Speichern & nächste Ausgabe</button>
+        </div>
+      </details>
     </div>
   </form>
 </template>

@@ -36,6 +36,13 @@ const availablePeople = computed(() => {
   return peopleStore.activePeople.filter(person => !linked.has(person.id))
 })
 
+onMounted(async () => {
+  if (route.hash !== '#participant-form') return
+  await nextTick()
+  addInput.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  addInput.value?.focus()
+})
+
 function hasFinancialReferences(participantId: string): boolean {
   return participantHasFinancialReferences(participantId, groupsStore.expenses)
     || participantHasSettlementReferences(participantId, groupsStore.settlements)
@@ -196,7 +203,7 @@ async function cancelRename(id: string): Promise<void> {
         Diese archivierte Gruppe ist schreibgeschützt. Teilnehmer können nur angesehen werden.
       </p>
 
-      <form v-if="group.status === 'active'" class="card mt-6 p-5" :aria-busy="busyAction === 'add'" @submit.prevent="submitAdd()">
+      <form v-if="group.status === 'active'" id="participant-form" class="card mt-6 scroll-mt-28 p-5" :aria-busy="busyAction === 'add'" @submit.prevent="submitAdd()">
         <label for="participant-name" class="font-semibold">Teilnehmer hinzufügen</label>
         <input id="participant-name" ref="addInput" v-model="addName" class="field-input mt-2" :disabled="Boolean(busyAction)" :aria-invalid="Boolean(addError)" :aria-describedby="addError ? 'add-error' : undefined">
         <p v-if="addError" id="add-error" class="error-text mt-2">{{ addError }}</p>

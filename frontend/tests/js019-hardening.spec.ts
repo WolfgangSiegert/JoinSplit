@@ -222,12 +222,14 @@ test('the mobile core flow stays accessible and free of horizontal overflow', as
   await expectNoAxeViolations(page)
   await expectNoHorizontalOverflow(page)
 
-  const createMenuButton = page.getByRole('button', { name: 'Neu', exact: true })
+  const mobileNavigation = page.getByRole('navigation', { name: 'Mobile Hauptnavigation' })
+  const createMenuButton = mobileNavigation.getByRole('button', { name: 'Neu', exact: true })
   await expectMinimumTargetSize(createMenuButton)
-  await focusWithKeyboard(page, createMenuButton)
+  await focusWithKeyboard(page, createMenuButton, 20)
   await expect(createMenuButton).toBeFocused()
   await page.keyboard.press('Enter')
-  const createGroupLink = page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true })
+  const createDialog = page.getByRole('dialog', { name: 'Was möchtest du anlegen?' })
+  const createGroupLink = createDialog.getByRole('link', { name: /^Gruppe / })
   await expectMinimumTargetSize(createGroupLink)
   await focusWithKeyboard(page, createGroupLink)
   await expect(createGroupLink).toBeFocused()
@@ -317,6 +319,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
       inlineParticipantPosts.push(request)
     }
   })
+  await page.getByText('Weitere Person hinzufügen', { exact: true }).click()
   await page.getByLabel('Name der neuen Person').fill('Cara')
   const addCara = page.waitForResponse(response =>
     response.url().endsWith('/participants') && response.status() === 201,

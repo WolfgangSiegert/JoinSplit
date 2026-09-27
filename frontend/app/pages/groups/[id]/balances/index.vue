@@ -187,7 +187,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+      <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
       <header>
         <p class="eyebrow">{{ group.name }}</p>
         <h1 class="mt-2 text-4xl font-bold text-ink-900">Salden</h1>
@@ -199,14 +199,25 @@ function downloadBlob(blob: Blob, filename: string): void {
 
       <GroupSyncStatus :group-id="group.id" class="mt-6" />
 
-      <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <NuxtLink :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
+      <div class="balance-actions--desktop mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <NuxtLink v-if="settingsStore.isSettlementRecordingEnabled(group.id) || settlements.length" :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
         <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full text-center"><AppIcon name="share" />Persönlichen Stand teilen</NuxtLink>
         <button type="button" class="secondary-button w-full text-center" :disabled="sharingOverview" @click="createOverviewImage">
           <AppIcon name="image" />
           <span>{{ sharingOverview ? 'Bild wird erstellt …' : overviewImageUrl ? 'Bild aktualisieren' : 'Übersicht als Bild' }}</span>
         </button>
       </div>
+      <details class="balance-actions--mobile mt-5">
+        <summary class="secondary-button w-full cursor-pointer"><AppIcon name="share" />Teilen & Exportieren<AppIcon name="chevron-down" /></summary>
+        <div class="balance-actions__panel">
+          <NuxtLink v-if="settingsStore.isSettlementRecordingEnabled(group.id) || settlements.length" :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
+          <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full"><AppIcon name="share" />Persönlichen Stand teilen</NuxtLink>
+          <button type="button" class="secondary-button w-full" :disabled="sharingOverview" @click="createOverviewImage">
+            <AppIcon name="image" />
+            <span>{{ sharingOverview ? 'Bild wird erstellt …' : overviewImageUrl ? 'Bild aktualisieren' : 'Übersicht als Bild' }}</span>
+          </button>
+        </div>
+      </details>
       <p
         v-if="overviewShareMessage"
         class="mt-3 text-sm"
@@ -386,7 +397,7 @@ function downloadBlob(blob: Blob, filename: string): void {
     <div v-else class="page-content">
       <h1 class="text-3xl font-semibold">Gruppe nicht gefunden</h1>
       <p class="mt-3 text-gray-600">Der lokale Gruppenstand ist nicht vorhanden.</p>
-      <NuxtLink to="/" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
+      <NuxtLink to="/groups" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
     </div>
   </main>
 </template>

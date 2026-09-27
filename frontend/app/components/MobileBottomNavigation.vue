@@ -1,0 +1,110 @@
+<script setup lang="ts">
+const route = useRoute()
+const groupsStore = useGroupsStore()
+const settingsStore = useSettingsStore()
+const createDialog = ref<HTMLDialogElement | null>(null)
+const createTrigger = ref<HTMLButtonElement | null>(null)
+
+const groupId = computed(() => {
+  const value = route.params.id
+  return typeof value === 'string' && value !== 'new' ? value : null
+})
+const group = computed(() => groupId.value ? groupsStore.findGroup(groupId.value) : undefined)
+const canAddToGroup = computed(() => group.value?.status === 'active')
+const canRecordSettlement = computed(() => Boolean(
+  groupId.value
+  && canAddToGroup.value
+  && settingsStore.isSettlementRecordingEnabled(groupId.value),
+))
+
+const currentSection = computed(() => {
+  if (route.path === '/') return 'start'
+  if (route.path === '/groups' || route.path.startsWith('/groups/')) return 'groups'
+  if (route.path === '/people') return 'people'
+  if (route.path === '/account' || route.path === '/account-reset' || route.path === '/settings') return 'account'
+  return ''
+})
+
+function openCreateDialog(): void {
+  createDialog.value?.showModal()
+}
+
+function closeCreateDialog(): void {
+  createDialog.value?.close()
+  nextTick(() => createTrigger.value?.focus())
+}
+
+function closeAfterNavigation(): void {
+  createDialog.value?.close()
+}
+
+watch(() => route.fullPath, () => createDialog.value?.close())
+</script>
+
+<template>
+  <nav class="mobile-bottom-navigation" aria-label="Mobile Hauptnavigation">
+    <NuxtLink to="/" class="mobile-bottom-navigation__item" :aria-current="currentSection === 'start' ? 'page' : undefined">
+      <AppIcon name="home" />
+      <span>Start</span>
+    </NuxtLink>
+    <NuxtLink to="/groups" class="mobile-bottom-navigation__item" :aria-current="currentSection === 'groups' ? 'page' : undefined">
+      <AppIcon name="users" />
+      <span>Gruppen</span>
+    </NuxtLink>
+    <button ref="createTrigger" type="button" class="mobile-bottom-navigation__item mobile-bottom-navigation__create" aria-haspopup="dialog" @click="openCreateDialog">
+      <span class="mobile-bottom-navigation__create-icon"><AppIcon name="plus" /></span>
+      <span>Neu</span>
+    </button>
+    <NuxtLink to="/people" class="mobile-bottom-navigation__item" :aria-current="currentSection === 'people' ? 'page' : undefined">
+      <AppIcon name="user" />
+      <span>Personen</span>
+    </NuxtLink>
+    <NuxtLink to="/account" class="mobile-bottom-navigation__item" :aria-current="currentSection === 'account' ? 'page' : undefined">
+      <AppIcon name="account" />
+      <span>Konto</span>
+    </NuxtLink>
+  </nav>
+
+  <dialog ref="createDialog" class="mobile-create-dialog" aria-labelledby="mobile-create-title" @cancel.prevent="closeCreateDialog" @click.self="closeCreateDialog">
+    <section class="mobile-create-sheet">
+      <div class="mobile-create-sheet__handle" aria-hidden="true" />
+      <div class="mobile-create-sheet__heading">
+        <div>
+          <p class="eyebrow">Neu anlegen</p>
+          <h2 id="mobile-create-title" class="mt-1 text-xl font-bold">
+            {{ group ? `In „${group.name}“` : 'Was möchtest du anlegen?' }}
+          </h2>
+        </div>
+        <button type="button" class="icon-button" aria-label="Menü schließen" @click="closeCreateDialog"><AppIcon name="x" /></button>
+      </div>
+
+      <div class="mobile-create-sheet__actions">
+        <NuxtLink v-if="canAddToGroup" :to="`/groups/${groupId}/expenses/new`" class="mobile-create-sheet__action mobile-create-sheet__action--primary" @click="closeAfterNavigation">
+          <AppIcon name="receipt" />
+          <span><strong>Ausgabe</strong><small>Eine gemeinsame Ausgabe erfassen</small></span>
+          <AppIcon name="chevron-right" />
+        </NuxtLink>
+        <NuxtLink v-if="canAddToGroup" :to="`/groups/${groupId}/participants#participant-form`" class="mobile-create-sheet__action" @click="closeAfterNavigation">
+          <AppIcon name="user" />
+          <span><strong>Person für diese Gruppe</strong><small>Teilnehmer hinzufügen oder übernehmen</small></span>
+          <AppIcon name="chevron-right" />
+        </NuxtLink>
+        <NuxtLink v-if="canRecordSettlement" :to="`/groups/${groupId}/settlements/new`" class="mobile-create-sheet__action" @click="closeAfterNavigation">
+          <AppIcon name="wallet" />
+          <span><strong>Ausgleichszahlung</strong><small>Eine tatsächlich erfolgte Zahlung festhalten</small></span>
+          <AppIcon name="chevron-right" />
+        </NuxtLink>
+        <NuxtLink to="/groups/new" class="mobile-create-sheet__action" @click="closeAfterNavigation">
+          <AppIcon name="users" />
+          <span><strong>Gruppe</strong><small>Gemeinsame Ausgaben starten</small></span>
+          <AppIcon name="chevron-right" />
+        </NuxtLink>
+        <NuxtLink to="/people#person-form" class="mobile-create-sheet__action" @click="closeAfterNavigation">
+          <AppIcon name="user" />
+          <span><strong>Person</strong><small>Für spätere Gruppen vormerken</small></span>
+          <AppIcon name="chevron-right" />
+        </NuxtLink>
+      </div>
+    </section>
+  </dialog>
+</template>

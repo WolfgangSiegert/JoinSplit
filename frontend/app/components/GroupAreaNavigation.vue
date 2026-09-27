@@ -10,8 +10,8 @@ const areas = computed(() => [
 </script>
 
 <template>
-  <nav class="group-area-navigation mt-6 overflow-x-auto rounded-2xl bg-white/65 p-1" aria-label="Gruppenbereiche">
-    <ul class="grid min-w-[20rem] grid-cols-3 gap-1">
+  <nav class="group-area-navigation mt-6 rounded-2xl bg-white/65 p-1" aria-label="Gruppenbereiche">
+    <ul class="grid grid-cols-3 gap-1">
       <li v-for="area in areas" :key="area.to">
         <NuxtLink
           :to="area.to"

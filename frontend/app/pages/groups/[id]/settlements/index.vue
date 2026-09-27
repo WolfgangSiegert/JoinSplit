@@ -44,7 +44,7 @@ async function disableRecordingForGroup(): Promise<void> {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink to="/" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+      <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
       <header class="min-w-0">
         <p class="break-words text-sm font-semibold tracking-wide text-brand-700">{{ group.name }}</p>
         <h1 class="mt-2 text-3xl font-semibold text-brand-900">Zahlungen</h1>

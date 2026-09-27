@@ -73,7 +73,7 @@ async function confirmLifecycle(): Promise<void> {
       await archive(groupId.value); focusAfterDialogClose.value = 'reactivate'
       lifecycleDialog.value?.close(); requestedAction.value = null
     } else {
-      await remove(groupId.value); lifecycleDialog.value?.close(); await router.push('/?deleted=1')
+      await remove(groupId.value); lifecycleDialog.value?.close(); await router.push('/groups?deleted=1')
     }
   } catch {
     lifecycleError.value = requestedAction.value === 'archive'
@@ -110,7 +110,7 @@ onMounted(async () => {
   <main class="page-shell">
     <div v-if="group" class="page-content">
       <div class="flex items-center justify-between gap-3">
-        <NuxtLink to="/" class="secondary-link -ml-4" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+        <NuxtLink to="/groups" class="secondary-link -ml-4" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
         <GroupSyncStatus :group-id="group.id" show-synced compact />
       </div>
 
@@ -184,7 +184,7 @@ onMounted(async () => {
         </ul>
       </section>
 
-      <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button sticky bottom-4 z-10 mt-6 w-full"><AppIcon name="plus" />Ausgabe hinzufügen</NuxtLink>
+      <NuxtLink v-if="group.status === 'active'" :to="`/groups/${group.id}/expenses/new`" class="primary-button mt-6 w-full"><AppIcon name="plus" />Ausgabe hinzufügen</NuxtLink>
 
       <section class="card mt-7 p-5" aria-labelledby="group-lifecycle-title">
         <h2 id="group-lifecycle-title" class="text-xl font-semibold">Gruppe verwalten</h2>
@@ -225,7 +225,7 @@ onMounted(async () => {
     <div v-else class="page-content">
       <h1 class="text-3xl font-semibold">Gruppe nicht gefunden</h1>
       <p class="mt-3 text-gray-600">Der lokale Gruppenstand ist in dieser Sitzung nicht vorhanden.</p>
-      <NuxtLink to="/" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
+      <NuxtLink to="/groups" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
     </div>
   </main>
 </template>

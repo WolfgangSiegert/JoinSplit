@@ -152,6 +152,14 @@ test('direct Settlement entry is gated and global Settings activation unlocks ev
 
   await page.goto('/settings#settlement-recording')
   await page.getByLabel('Ausgleichszahlungen in allen Gruppen erfassen').check()
+  await expect.poll(() => page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 10)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+    const settingsRequest = db.transaction('settings').objectStore('settings').get('preferences')
+    const settings = await new Promise<{ settlementRecordingEnabled?: boolean } | undefined>((resolve, reject) => { settingsRequest.onsuccess = () => resolve(settingsRequest.result); settingsRequest.onerror = () => reject(settingsRequest.error) })
+    db.close()
+    return settings?.settlementRecordingEnabled
+  })).toBe(true)
   await page.reload()
   await expect(page.getByLabel('Ausgleichszahlungen in allen Gruppen erfassen')).toBeChecked()
 

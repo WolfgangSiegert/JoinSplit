@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const settingsStore = useSettingsStore()
 const accountStore = useAccountStore()
+const groupsStore = useGroupsStore()
 const route = useRoute()
 const systemPrefersDark = ref(false)
 const saving = ref(false)
@@ -11,6 +12,18 @@ let colorSchemeQuery: MediaQueryList | undefined
 const isDark = computed(() => settingsStore.colorMode === 'dark'
   || (settingsStore.colorMode === 'system' && systemPrefersDark.value))
 const toggleLabel = computed(() => isDark.value ? 'Hellen Modus aktivieren' : 'Dunklen Modus aktivieren')
+const mobileTitle = computed(() => {
+  const groupId = typeof route.params.id === 'string' ? route.params.id : null
+  const currentGroup = groupId && groupId !== 'new' ? groupsStore.findGroup(groupId) : undefined
+  if (currentGroup) return currentGroup.name
+  if (route.path === '/groups') return 'Gruppen'
+  if (route.path === '/groups/new') return 'Neue Gruppe'
+  if (route.path === '/people') return 'Personen'
+  if (route.path === '/account' || route.path === '/account-reset') return 'Konto'
+  if (route.path === '/settings') return 'Einstellungen'
+  if (route.path === '/demo') return 'Demo & Daten'
+  return 'JoinSplit'
+})
 
 function updateSystemColorScheme(event: MediaQueryListEvent): void {
   systemPrefersDark.value = event.matches
@@ -46,7 +59,14 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
 
 <template>
   <header class="app-header">
-    <div class="app-header__content">
+    <div class="mobile-app-header">
+      <NuxtLink to="/" class="mobile-app-header__brand" aria-label="JoinSplit – Startseite">
+        <img src="/favicon.svg" alt="" width="32" height="32">
+      </NuxtLink>
+      <span class="mobile-app-header__title">{{ mobileTitle }}</span>
+      <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
+    </div>
+    <div class="app-header__content app-header__content--desktop">
       <div class="app-brand">
         <NuxtLink to="/" class="app-wordmark" aria-label="JoinSplit – Startseite">
           <img class="app-wordmark__icon" src="/favicon.svg" alt="" width="32" height="32">
@@ -87,7 +107,7 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
         </button>
       </nav>
       <nav class="app-header__nav" aria-label="Hauptnavigation">
-        <NuxtLink to="/#gruppen" class="app-header__action"><AppIcon name="users" /><span>Gruppen</span></NuxtLink>
+        <NuxtLink to="/groups" class="app-header__action"><AppIcon name="users" /><span>Gruppen</span></NuxtLink>
         <NuxtLink to="/people" class="app-header__action"><AppIcon name="user" /><span>Personen</span></NuxtLink>
         <details ref="createMenu" class="app-create-menu">
           <summary class="app-header__action app-create-menu__trigger" role="button" aria-haspopup="menu" aria-label="Neu">

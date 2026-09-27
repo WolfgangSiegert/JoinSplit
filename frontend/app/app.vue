@@ -36,6 +36,7 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
   <VitePwaManifest v-if="!nativeApp" />
   <UApp>
     <AppHeader />
+    <MobileBottomNavigation />
     <ClientOnly v-if="!nativeApp">
       <PwaExperience :synchronize-pending="synchronizePending" />
     </ClientOnly>

@@ -180,7 +180,7 @@ async function shareSnapshot(): Promise<void> {
     <div v-else class="page-content">
       <h1 class="text-3xl font-semibold">Gruppe nicht gefunden</h1>
       <p class="mt-3 text-gray-600">Der lokale Gruppenstand ist nicht vorhanden.</p>
-      <NuxtLink to="/" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
+      <NuxtLink to="/groups" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
     </div>
   </main>
 </template>

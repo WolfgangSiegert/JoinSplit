@@ -76,7 +76,7 @@ test('a controlled app relaunches offline from presentation caches without cachi
   await context.setOffline(true)
   await page.reload()
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Meine Gruppen' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Offline App Shell/ })).toBeVisible()
 
   await page.getByRole('button', { name: 'Neu', exact: true }).click()

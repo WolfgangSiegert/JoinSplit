@@ -23,7 +23,7 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
           <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
           <div class="landing-hero__actions">
             <NuxtLink v-if="isFreshStart" to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten"><AppIcon name="plus" />Erste Gruppe starten</NuxtLink>
-            <a v-else href="#gruppen" class="primary-button"><AppIcon name="users" />Zu meinen Gruppen</a>
+            <NuxtLink v-else to="/groups" class="primary-button"><AppIcon name="users" />Zu meinen Gruppen</NuxtLink>
             <NuxtLink to="/people#person-form" class="secondary-button"><AppIcon name="user" />Person anlegen</NuxtLink>
           </div>
         </div>
@@ -31,11 +31,11 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
       </header>
 
       <nav class="landing-workspaces" aria-label="Deine Bereiche">
-        <a href="#gruppen" class="landing-workspace-card">
+        <NuxtLink to="/groups" class="landing-workspace-card">
           <span class="landing-workspace-card__icon"><AppIcon name="users" /></span>
           <span><strong>Meine Gruppen</strong><small>{{ activeGroups.length }} aktiv</small></span>
           <AppIcon name="chevron-right" />
-        </a>
+        </NuxtLink>
         <NuxtLink to="/people" class="landing-workspace-card">
           <span class="landing-workspace-card__icon"><AppIcon name="user" /></span>
           <span><strong>Meine Personen</strong><small>{{ peopleStore.activePeople.length }} aktiv</small></span>

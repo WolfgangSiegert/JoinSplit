@@ -11,6 +11,7 @@ defineProps<{
     | 'database'
     | 'download'
     | 'image'
+    | 'home'
     | 'info'
     | 'link'
     | 'plus'
@@ -23,11 +24,13 @@ defineProps<{
     | 'settings'
     | 'share'
     | 'user'
+    | 'account'
     | 'trash'
     | 'unlink'
     | 'users'
     | 'user-minus'
     | 'wallet'
+    | 'x'
 }>()
 </script>
 
@@ -75,6 +78,9 @@ defineProps<{
     <template v-else-if="name === 'image'">
       <rect width="18" height="18" x="3" y="3" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
     </template>
+    <template v-else-if="name === 'home'">
+      <path d="m3 11 9-8 9 8" /><path d="M5 10v10h14V10M9 20v-6h6v6" />
+    </template>
     <template v-else-if="name === 'info'">
       <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
     </template>
@@ -120,11 +126,17 @@ defineProps<{
     <template v-else-if="name === 'user'">
       <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
     </template>
+    <template v-else-if="name === 'account'">
+      <circle cx="12" cy="12" r="9" /><circle cx="12" cy="9" r="3" /><path d="M6.5 19a6 6 0 0 1 11 0" />
+    </template>
     <template v-else-if="name === 'user-minus'">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M16 11h6" />
     </template>
     <template v-else-if="name === 'wallet'">
       <path d="M20 7V5a2 2 0 0 0-2-2H5a3 3 0 0 0 0 6h15v12H5a3 3 0 0 1-3-3V6" /><path d="M16 13h4" />
+    </template>
+    <template v-else-if="name === 'x'">
+      <path d="M18 6 6 18M6 6l12 12" />
     </template>
   </svg>
 </template>
