@@ -19,7 +19,9 @@
 ## Guardrails
 
 - Build web first and mobile first.
-- Future PWA/native distribution may use Capacitor; do not install or configure it yet.
+- Native development uses the approved Capacitor 8 boundary in
+  `docs/architecture/native-distribution.md`; do not add plugins or permissions
+  outside an explicitly approved native task.
 - Choose the smallest understandable solution. Add no unnecessary abstractions or dependencies.
 - Keep business logic out of Laravel controllers.
 - Keep business logic out of Vue components.
@@ -34,7 +36,7 @@
   next publishing step.
 - Never force-push or rewrite published history unless the human explicitly
   authorizes that exact operation.
-- Do not install Laravel, Nuxt, Capacitor, PWA tooling, or any dependencies until explicitly requested.
+- Do not install or update dependencies until explicitly requested.
 - Do not create speculative files or application code.
 
 ## Context efficiency

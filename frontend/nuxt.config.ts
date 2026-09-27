@@ -118,6 +118,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'Gemeinsame Ausgaben mit JoinSplit.' },
         { name: 'theme-color', content: '#c44332' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         ...(nativeBuild
           ? [{
               'http-equiv': 'Content-Security-Policy',

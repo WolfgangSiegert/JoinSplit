@@ -186,6 +186,9 @@ This command verifies the web artifact only. Airplane-mode cold start,
 platform storage persistence and native session transport require the later
 Capacitor development builds and are not proven by JS-050.
 
+See [native development](native-development.md) for the Capacitor project,
+asset, synchronization and version-control workflow.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs for pushes and pull requests targeting `main`.

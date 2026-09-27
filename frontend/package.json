@@ -10,6 +10,11 @@
     "dev": "nuxt dev --host 127.0.0.1",
     "build": "nuxt build",
     "build:native": "JOIN_SPLIT_NATIVE_BUILD=true NUXT_PUBLIC_API_BASE=https://joinsplit.tiny-bits.org nuxt generate && node scripts/verify-native-build.mjs",
+    "native:copy": "pnpm build:native && cap copy",
+    "native:assets": "node scripts/generate-native-assets.mjs",
+    "native:sync": "pnpm build:native && pnpm native:assets && cap sync",
+    "native:open:android": "cap open android",
+    "native:open:ios": "cap open ios",
     "preview": "nuxt preview --host 127.0.0.1",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck && vue-tsc --noEmit -p tsconfig.tests.json",
@@ -17,6 +22,7 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
+    "@capacitor/core": "8.5.2",
     "@nuxt/ui": "^4.11.1",
     "@pinia/nuxt": "^1.0.2",
     "idb": "^8.0.3",
@@ -26,6 +32,9 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
+    "@capacitor/android": "8.5.2",
+    "@capacitor/cli": "8.5.2",
+    "@capacitor/ios": "8.5.2",
     "@playwright/test": "^1.58.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24",
