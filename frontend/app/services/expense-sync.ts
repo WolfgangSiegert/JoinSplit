@@ -3,6 +3,7 @@ import type { PendingCreateExpense, PendingDeleteExpense, PendingUpdateExpense }
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
 import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
+import { applicationFetch } from './http-transport'
 
 type ExpenseMutation = PendingCreateExpense | PendingUpdateExpense | PendingDeleteExpense
 interface Options {
@@ -45,7 +46,7 @@ export async function synchronizeExpenseMutation(options: Options): Promise<Expe
   }
   let response: Response
   try {
-    const fetcher = options.fetcher ?? globalThis.fetch
+    const fetcher = options.fetcher ?? applicationFetch
     const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
     const collection = `${context.urlPrefix}/groups/${mutation.groupId}/expenses`
     const url = mutation.type === 'CreateExpense' ? collection : `${collection}/${mutation.payload.expense.id}`

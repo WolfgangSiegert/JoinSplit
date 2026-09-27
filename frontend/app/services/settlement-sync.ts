@@ -4,6 +4,7 @@ import { acknowledgeAccountMutation, removePendingMutation } from '../persistenc
 import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { durableSettlement } from '../persistence/validation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
+import { applicationFetch } from './http-transport'
 
 type SettlementMutation = PendingCreateSettlement | PendingUpdateSettlement | PendingDeleteSettlement
 interface Options {
@@ -43,7 +44,7 @@ export async function synchronizeSettlementMutation(options: Options): Promise<S
   }
   let response: Response
   try {
-    const fetcher = options.fetcher ?? globalThis.fetch
+    const fetcher = options.fetcher ?? applicationFetch
     const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
     const collection = `${context.urlPrefix}/groups/${mutation.groupId}/settlements`
     const url = mutation.type === 'CreateSettlement' ? collection : `${collection}/${mutation.payload.settlement.id}`

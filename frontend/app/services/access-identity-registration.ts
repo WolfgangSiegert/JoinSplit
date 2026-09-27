@@ -1,6 +1,7 @@
 import { persistAccessIdentity, type DurableAccessIdentity } from '../persistence/database'
 import type { AccessIdentitySynchronizationStatus, useAccessIdentityStore } from '../stores/access-identity'
 import type { MutationSyncError } from '../stores/groups'
+import { applicationFetch } from './http-transport'
 
 interface IdentityStoreLike {
   readonly accessIdentityId: string | null
@@ -41,7 +42,7 @@ async function registerAccessIdentity(
 
   let response: Response
   try {
-    response = await (options.fetcher ?? globalThis.fetch)(
+    response = await (options.fetcher ?? applicationFetch)(
       `${options.apiBase.replace(/\/$/u, '')}/api/access-identities`,
       {
         method: 'POST',

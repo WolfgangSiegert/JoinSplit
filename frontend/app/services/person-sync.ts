@@ -1,6 +1,7 @@
 import type { PendingPersonMutation } from '../domain/pending-person-mutation'
 import { acknowledgePersonMutation } from '../persistence/database'
 import type { usePeopleStore } from '../stores/people'
+import { applicationFetch } from './http-transport'
 
 async function csrf(apiBase: string, fetcher: typeof fetch): Promise<string> {
   const response = await fetcher(`${apiBase.replace(/\/$/u, '')}/api/account/csrf`, {
@@ -17,7 +18,7 @@ export async function synchronizePersonMutation(options: {
   peopleStore: ReturnType<typeof usePeopleStore>
   fetcher?: typeof fetch
 }): Promise<'synced' | 'conflict' | 'failed'> {
-  const fetcher = options.fetcher ?? globalThis.fetch
+  const fetcher = options.fetcher ?? applicationFetch
   try {
     const token = await csrf(options.apiBase, fetcher)
     const mutation = options.mutation

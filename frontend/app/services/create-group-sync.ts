@@ -6,6 +6,7 @@ import {
 } from '../stores/groups'
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
 import { accountMutationContext, applyAccountMutationResponse, type AccountMutationContext } from './account-mutation'
+import { applicationFetch } from './http-transport'
 
 interface AccessIdentityForSync {
   readonly accessIdentityId: string | null
@@ -188,7 +189,7 @@ export async function synchronizeCreateGroup(
     return result
   }
 
-  const fetcher = options.fetcher ?? globalThis.fetch
+  const fetcher = options.fetcher ?? applicationFetch
   let result: CreateGroupSyncResult
   try {
     const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)

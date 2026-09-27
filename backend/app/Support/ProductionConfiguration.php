@@ -31,8 +31,8 @@ class ProductionConfiguration
         if ($appOrigin !== $canonicalOrigin) {
             $errors[] = 'APP_URL';
         }
-        if (config('cors.allowed_origins') !== [$canonicalOrigin]) {
-            $errors[] = 'JOIN_SPLIT_CLIENT_ORIGIN';
+        if (config('cors.allowed_origins') !== [$canonicalOrigin, 'capacitor://localhost', 'https://localhost']) {
+            $errors[] = 'JOIN_SPLIT_CLIENT_ORIGINS';
         }
         if (config('database.default') !== 'pgsql') {
             $errors[] = 'DB_CONNECTION';

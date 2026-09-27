@@ -2,6 +2,7 @@ import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactiv
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
 import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
+import { applicationFetch } from './http-transport'
 
 interface Options {
   readonly mutationId: string
@@ -45,7 +46,7 @@ function responseMatches(body: unknown, mutation: ParticipantResponseMutation, a
 }
 
 async function send(mutation: ParticipantMutation, options: Options): Promise<ParticipantSyncResult> {
-  const fetcher = options.fetcher ?? globalThis.fetch
+  const fetcher = options.fetcher ?? applicationFetch
   const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
   const participantId = mutation.payload.participantId
   const collection = `${context.urlPrefix}/groups/${mutation.groupId}/participants`

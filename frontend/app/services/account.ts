@@ -8,6 +8,7 @@ import {
   type DurableAccountWorkspace,
 } from '../persistence/database'
 import { validateDurableState } from '../persistence/validation'
+import { applicationFetch, clearNativeApiCookies } from './http-transport'
 
 interface AccountData { readonly id: string; readonly email: string }
 export interface GroupSnapshot {
@@ -63,19 +64,19 @@ async function mutate(apiBase: string, path: string, method: string, body: unkno
   return response
 }
 
-export async function registerAccount(apiBase: string, email: string, password: string, fetcher: typeof fetch = globalThis.fetch): Promise<AccountData> {
+export async function registerAccount(apiBase: string, email: string, password: string, fetcher: typeof fetch = applicationFetch): Promise<AccountData> {
   const response = await mutate(apiBase, '/api/account/register', 'POST', {
     email, password, password_confirmation: password, dataAdoptionConfirmed: true,
   }, fetcher)
   return ((await json(response)) as { data: AccountData }).data
 }
 
-export async function loginAccount(apiBase: string, email: string, password: string, fetcher: typeof fetch = globalThis.fetch): Promise<AccountData> {
+export async function loginAccount(apiBase: string, email: string, password: string, fetcher: typeof fetch = applicationFetch): Promise<AccountData> {
   const response = await mutate(apiBase, '/api/account/login', 'POST', { email, password }, fetcher)
   return ((await json(response)) as { data: AccountData }).data
 }
 
-export async function linkAnonymousIdentity(apiBase: string, identityId: string, credential: string, fetcher: typeof fetch = globalThis.fetch): Promise<void> {
+export async function linkAnonymousIdentity(apiBase: string, identityId: string, credential: string, fetcher: typeof fetch = applicationFetch): Promise<void> {
   const token = await csrf(apiBase, fetcher)
   const response = await fetcher(`${base(apiBase)}/api/account/access-identities/link`, {
     method: 'POST', credentials: 'include',
@@ -84,11 +85,11 @@ export async function linkAnonymousIdentity(apiBase: string, identityId: string,
   if (!response.ok) throw new AccountRequestError(response.status, 'Die Browser-Identität konnte nicht übernommen werden.')
 }
 
-export async function createAccountIdentity(apiBase: string, identityId: string, fetcher: typeof fetch = globalThis.fetch): Promise<void> {
+export async function createAccountIdentity(apiBase: string, identityId: string, fetcher: typeof fetch = applicationFetch): Promise<void> {
   await mutate(apiBase, '/api/account/access-identities', 'POST', { identityId }, fetcher)
 }
 
-export async function importAccountGroup(apiBase: string, adoptionId: string, importId: string, snapshot: Omit<GroupSnapshot, 'revision'>, fetcher: typeof fetch = globalThis.fetch): Promise<void> {
+export async function importAccountGroup(apiBase: string, adoptionId: string, importId: string, snapshot: Omit<GroupSnapshot, 'revision'>, fetcher: typeof fetch = applicationFetch): Promise<void> {
   await mutate(apiBase, `/api/account/adoptions/${adoptionId}/groups/${snapshot.group.id}/import`, 'POST', { importId, snapshot }, fetcher)
 }
 
@@ -98,14 +99,14 @@ export async function importAccountPeople(
   importId: string,
   people: readonly Pick<Person, 'id' | 'name' | 'status'>[],
   associations: readonly PersonAssociation[],
-  fetcher: typeof fetch = globalThis.fetch,
+  fetcher: typeof fetch = applicationFetch,
 ): Promise<void> {
   await mutate(apiBase, `/api/account/adoptions/${adoptionId}/people/import`, 'POST', {
     importId, people, associations,
   }, fetcher)
 }
 
-export async function fetchAccountWorkspace(apiBase: string, fetcher: typeof fetch = globalThis.fetch): Promise<AccountWorkspaceResponse> {
+export async function fetchAccountWorkspace(apiBase: string, fetcher: typeof fetch = applicationFetch): Promise<AccountWorkspaceResponse> {
   const response = await fetcher(`${base(apiBase)}/api/account/workspace`, {
     headers: { Accept: 'application/json' }, credentials: 'include',
   })
@@ -146,10 +147,12 @@ export async function persistHydratedWorkspace(response: AccountWorkspaceRespons
   return hydration
 }
 
-export async function logoutAccount(apiBase: string, fetcher: typeof fetch = globalThis.fetch): Promise<void> {
+export async function logoutAccount(apiBase: string, fetcher: typeof fetch = applicationFetch): Promise<boolean> {
   await mutate(apiBase, '/api/account/logout', 'POST', undefined, fetcher)
+  return clearNativeApiCookies(apiBase)
 }
 
-export async function deleteAccount(apiBase: string, password: string, fetcher: typeof fetch = globalThis.fetch): Promise<void> {
+export async function deleteAccount(apiBase: string, password: string, fetcher: typeof fetch = applicationFetch): Promise<boolean> {
   await mutate(apiBase, '/api/account', 'DELETE', { password }, fetcher)
+  return clearNativeApiCookies(apiBase)
 }

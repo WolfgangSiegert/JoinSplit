@@ -72,7 +72,7 @@ it('updates activity only in the transaction of an accepted mutation or idempote
 it('allows only the configured same origin and returns no-store API responses', function () {
     config([
         'app.url' => 'https://joinsplit.tiny-bits.org',
-        'cors.allowed_origins' => ['https://joinsplit.tiny-bits.org'],
+        'cors.allowed_origins' => ['https://joinsplit.tiny-bits.org', 'capacitor://localhost', 'https://localhost'],
     ]);
 
     test()->withHeaders(js28Headers() + ['Origin' => 'https://attacker.example'])
@@ -87,6 +87,14 @@ it('allows only the configured same origin and returns no-store API responses', 
         ->assertHeader('Access-Control-Allow-Origin', 'https://joinsplit.tiny-bits.org')
         ->assertHeader('Access-Control-Allow-Credentials', 'true')
         ->assertHeader('Cache-Control', 'no-store, private');
+
+    foreach (['capacitor://localhost', 'https://localhost'] as $nativeOrigin) {
+        test()->withHeaders(js28Headers() + ['Origin' => $nativeOrigin])
+            ->postJson('/api/access-identities')
+            ->assertOk()
+            ->assertHeader('Access-Control-Allow-Origin', $nativeOrigin)
+            ->assertHeader('Access-Control-Allow-Credentials', 'true');
+    }
 });
 
 it('rate limits public registration with a generic response', function () {

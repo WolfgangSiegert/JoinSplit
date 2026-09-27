@@ -5,6 +5,10 @@ const config: CapacitorConfig = {
   appName: 'JoinSplit',
   webDir: '.output/public',
   backgroundColor: '#fbf7ef',
+  plugins: {
+    CapacitorCookies: { enabled: true },
+    CapacitorHttp: { enabled: true },
+  },
 }
 
 export default config

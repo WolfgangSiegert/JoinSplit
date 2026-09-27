@@ -25,6 +25,25 @@ it('starts an account session with a non-cacheable CSRF bootstrap response', fun
     expect($response->json('data.csrfToken'))->toBeString()->not->toBeEmpty();
 });
 
+it('allows only the approved web and native origins to bootstrap an Account session', function () {
+    config(['cors.allowed_origins' => [
+        'https://joinsplit.tiny-bits.org',
+        'capacitor://localhost',
+        'https://localhost',
+    ]]);
+
+    foreach (['https://joinsplit.tiny-bits.org', 'capacitor://localhost', 'https://localhost'] as $origin) {
+        $this->withHeader('Origin', $origin)->getJson('/api/account/csrf')
+            ->assertOk()
+            ->assertHeader('Access-Control-Allow-Origin', $origin)
+            ->assertHeader('Access-Control-Allow-Credentials', 'true');
+    }
+
+    $this->withHeader('Origin', 'https://attacker.example')->getJson('/api/account/csrf')
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'Request origin is not allowed.']);
+});
+
 it('registers a normalized Account and never returns its password', function () {
     $response = $this->postJson('/api/account/register', accountPayload([
         'email' => '  Owner@Example.Test ',

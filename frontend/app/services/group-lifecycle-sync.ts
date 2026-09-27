@@ -2,6 +2,7 @@ import type { PendingArchiveGroup, PendingDeleteGroup, PendingReactivateGroup } 
 import { acknowledgeAccountGroupDelete, acknowledgeAccountMutation, acknowledgeGroupDelete, removePendingMutation } from '../persistence/database'
 import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
+import { applicationFetch } from './http-transport'
 
 type GroupLifecycleMutation = PendingArchiveGroup | PendingReactivateGroup | PendingDeleteGroup
 interface Options {
@@ -51,7 +52,7 @@ export async function synchronizeGroupLifecycleMutation(options: Options): Promi
 
   let response: Response
   try {
-    const fetcher = options.fetcher ?? globalThis.fetch
+    const fetcher = options.fetcher ?? applicationFetch
     const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
     const url = `${context.urlPrefix}/groups/${mutation.groupId}`
     response = await fetcher(url, {

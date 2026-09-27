@@ -32,6 +32,27 @@ The native target connects to `https://joinsplit.tiny-bits.org`, contains no
 remote boot asset and does not register the PWA Service Worker or show PWA
 installation/update UI.
 
+## Native Account transport
+
+Capacitor HTTP patches the shared application `fetch` boundary inside native
+containers, and Capacitor Cookies supplies the native cookie store. Browser and
+PWA builds continue to use the browser implementations. Laravel keeps the
+Account session in its Secure, HttpOnly, SameSite=Lax cookie; no Account token
+or session identifier is copied into IndexedDB or localStorage.
+
+The API allows only these explicit client origins when an `Origin` header is
+present:
+
+- `https://joinsplit.tiny-bits.org` for Web/PWA,
+- `capacitor://localhost` for iOS,
+- `https://localhost` for Android.
+
+There is no wildcard credential origin. Logout and Account deletion first
+invalidate the Laravel session and then try to clear native cookies only for the
+canonical API URL. A failure of this additional cookie cleanup does not block
+local Account-data removal; the remaining cookie value refers to an already
+invalid session. iOS declares `joinsplit.tiny-bits.org` as an app-bound domain.
+
 ## Commands
 
 From `frontend/`, after selecting the repository's Node 24 runtime:
@@ -76,5 +97,8 @@ canonical Laravel API.
 
 Successful `native:sync` proves deterministic generation and synchronization;
 it does not prove that either native application compiles, launches, persists
-data across lifecycle changes or transports Account sessions correctly. Those
-claims require the later M7 platform and device checks.
+data across lifecycle changes or transports Account sessions correctly. The
+transport configuration and automated origin/session regressions are necessary
+evidence, but registration/login, authenticated reads and mutations, logout,
+deletion and expired-session behavior still require checks on both native
+platforms before JS-051 can close.

@@ -13,9 +13,12 @@ class EnforceApiOrigin
     {
         $origin = $request->headers->get('Origin');
         $allowedOrigins = config('cors.allowed_origins', []);
-        $canonicalOrigin = $this->origin(is_array($allowedOrigins) ? (string) ($allowedOrigins[0] ?? '') : '');
+        $normalizedOrigins = is_array($allowedOrigins)
+            ? array_values(array_filter(array_map(fn (mixed $value): string => $this->origin((string) $value), $allowedOrigins)))
+            : [];
+        $requestOrigin = is_string($origin) ? $this->origin($origin) : '';
 
-        if (is_string($origin) && $this->origin($origin) !== $canonicalOrigin) {
+        if (is_string($origin) && ! in_array($requestOrigin, $normalizedOrigins, true)) {
             return new JsonResponse(['message' => 'Request origin is not allowed.'], 403, [
                 'Cache-Control' => 'no-store',
             ]);
@@ -24,7 +27,7 @@ class EnforceApiOrigin
         $response = $next($request);
         $response->headers->set('Cache-Control', 'no-store');
         if (is_string($origin) && $origin !== '') {
-            $response->headers->set('Access-Control-Allow-Origin', $canonicalOrigin);
+            $response->headers->set('Access-Control-Allow-Origin', $requestOrigin);
             $response->headers->set('Access-Control-Allow-Credentials', 'true');
             $response->headers->set('Vary', 'Origin');
         }
