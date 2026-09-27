@@ -18,6 +18,7 @@ class AddParticipantRequest extends FormRequest
     {
         return [
             'participantId' => ['required', 'string', 'uuid:4'],
+            'personId' => ['sometimes', 'string', 'uuid:4'],
             'name' => ['required', 'string', 'max:100'],
             'order' => ['required', 'integer', 'min:0'],
             'ownerId' => ['prohibited'], 'owner_id' => ['prohibited'], 'ownerAccessIdentityId' => ['prohibited'],

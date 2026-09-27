@@ -12,6 +12,7 @@ class ParticipantResource extends JsonResource
         return [
             'id' => $this->id,
             'groupId' => $this->group_id,
+            ...($this->person_id ? ['personId' => $this->person_id] : []),
             'name' => $this->name,
             'active' => $this->is_active,
             'order' => $this->position,

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountSessionController;
 use App\Http\Controllers\AccountAccessIdentityController;
 use App\Http\Controllers\AccountWorkspaceController;
+use App\Http\Controllers\AccountPersonController;
 use App\Http\Controllers\CreateGroupController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\GroupLifecycleController;
@@ -33,6 +34,9 @@ Route::prefix('/api/account')->middleware('api.origin')->group(function () {
         Route::post('/adoptions/{adoption}/groups/{group}/import', [AccountWorkspaceController::class, 'import'])
             ->whereUuid('adoption')->whereUuid('group')
             ->middleware('throttle:account-adoption');
+        Route::post('/adoptions/{adoption}/people/import', [AccountWorkspaceController::class, 'importPeople'])
+            ->whereUuid('adoption')
+            ->middleware('throttle:account-adoption');
 
         Route::prefix('/workspace')->middleware(['throttle:authenticated-mutations', 'account.mutation'])->group(function () {
             Route::post('/groups', CreateGroupController::class);
@@ -47,6 +51,11 @@ Route::prefix('/api/account')->middleware('api.origin')->group(function () {
             Route::post('/groups/{group}/settlements', [SettlementController::class, 'store']);
             Route::put('/groups/{group}/settlements/{settlement}', [SettlementController::class, 'update']);
             Route::delete('/groups/{group}/settlements/{settlement}', [SettlementController::class, 'destroy']);
+        });
+        Route::prefix('/workspace/people')->middleware('throttle:authenticated-mutations')->group(function () {
+            Route::post('/', [AccountPersonController::class, 'store']);
+            Route::put('/{person}', [AccountPersonController::class, 'update'])->whereUuid('person');
+            Route::delete('/{person}', [AccountPersonController::class, 'destroy'])->whereUuid('person');
         });
     });
 });

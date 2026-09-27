@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { Group, Participant } from '../../app/domain/create-group'
-import { canDeleteParticipant, hasDuplicateParticipantName, nextParticipantOrder, prepareParticipantAdd, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantRename } from '../../app/domain/participant'
+import { canDeleteParticipant, hasDuplicateParticipantName, nextParticipantOrder, prepareParticipantAdd, prepareParticipantAssociation, prepareParticipantDeactivate, prepareParticipantDelete, prepareParticipantRename } from '../../app/domain/participant'
 import { migrateLegacyCreateGroupRecords } from '../../app/persistence/database'
 import { sortPendingMutations, type PendingMutation } from '../../app/domain/pending-mutation'
 
@@ -50,6 +50,18 @@ describe('Participant local workflow', () => {
     expect(canDeleteParticipant(true)).toBe(false)
   })
 
+  test('links and unlinks without changing the Participant identity or display name', () => {
+    const linked = prepareParticipantAssociation(alice, [], DAVE_ID, () => MUTATION_ID)
+    expect(linked.participant).toEqual({ ...alice, personId: DAVE_ID })
+    expect(linked.mutation).toMatchObject({
+      type: 'AssociateParticipant',
+      payload: { participantId: ALICE_ID, personId: DAVE_ID, name: 'Alice', active: true, order: 0 },
+    })
+    const unlinked = prepareParticipantAssociation(linked.participant, [linked.mutation], null, () => ACTOR_ID)
+    expect(unlinked.participant).toEqual(alice)
+    expect(unlinked.mutation.payload.personId).toBeNull()
+  })
+
   test('sorts explicit mutations FIFO without coalescing', () => {
     const ids = [DAVE_ID, MUTATION_ID]
     const add = prepareParticipantAdd(group, [alice, carol], [], 'Dave', () => ids.shift()!)
@@ -72,6 +84,6 @@ describe('Participant local workflow', () => {
   test('allows a durable delete mutation to reference an absent local Participant', async () => {
     const mutation: PendingMutation = { id: MUTATION_ID, type: 'DeleteParticipant', groupId: GROUP_ID, createdOrder: 0, payload: { participantId: ALICE_ID } }
     const { validateDurableState } = await import('../../app/persistence/validation')
-    expect(() => validateDurableState({ accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32), synchronizationStatus: 'registered' }, groups: [{ ...group, participantIds: [CAROL_ID] }], participants: [carol], pendingMutations: [mutation], expenses: [], settlements: [], settings: null })).not.toThrow()
+    expect(() => validateDurableState({ accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32), synchronizationStatus: 'registered' }, groups: [{ ...group, participantIds: [CAROL_ID] }], participants: [carol], people: [], pendingPersonMutations: [], pendingMutations: [mutation], expenses: [], settlements: [], settings: null })).not.toThrow()
   })
 })

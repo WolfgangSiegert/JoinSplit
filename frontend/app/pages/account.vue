@@ -7,6 +7,7 @@ import {
   deleteAccount,
   fetchAccountWorkspace,
   importAccountGroup,
+  importAccountPeople,
   linkAnonymousIdentity,
   loginAccount,
   logoutAccount,
@@ -20,18 +21,22 @@ const config = useRuntimeConfig()
 const accountStore = useAccountStore()
 const identityStore = useAccessIdentityStore()
 const groupsStore = useGroupsStore()
+const peopleStore = usePeopleStore()
 const mode = ref<'login' | 'register'>('login')
 const email = ref('')
 const password = ref('')
 const confirmation = ref(false)
 const deletePassword = ref('')
 const conflictDiscardConfirmed = ref(false)
-const pendingCount = computed(() => groupsStore.pendingMutations.length)
+const pendingCount = computed(() => groupsStore.pendingMutations.length + peopleStore.pendingMutations.length)
 const groupCount = computed(() => groupsStore.groups.length)
+const peopleCount = computed(() => peopleStore.people.length)
 const conflictedGroupIds = computed(() => Object.keys(groupsStore.conflictedGroups))
+const conflictedPersonIds = computed(() => peopleStore.conflictedPersonIds)
+const hasConflicts = computed(() => conflictedGroupIds.value.length > 0 || conflictedPersonIds.value.length > 0)
 const hasUnrelatedPendingMutations = computed(() => groupsStore.pendingMutations.some(
   mutation => !groupsStore.conflictedGroups[mutation.groupId],
-))
+) || peopleStore.pendingMutations.some(mutation => !conflictedPersonIds.value.includes(mutation.personId)))
 
 function localSnapshots(): GroupSnapshot[] {
   return groupsStore.groups.map(group => ({
@@ -49,7 +54,18 @@ function localSnapshots(): GroupSnapshot[] {
 
 async function adoptionAttempt(): Promise<DurableAdoptionAttempt> {
   const existing = await loadAdoptionAttempt()
-  if (existing) return existing
+  if (existing?.peopleImport) return existing
+  const peopleImport = {
+    importId: crypto.randomUUID(),
+    people: peopleStore.people.map(({ id, name, status }) => ({ id, name, status })),
+    associations: groupsStore.participants.flatMap(participant => participant.personId
+      ? [{ participantId: participant.id, personId: participant.personId }] : []),
+  }
+  if (existing) {
+    const upgraded = { ...existing, peopleImport }
+    await persistAdoptionAttempt(upgraded)
+    return upgraded
+  }
   const attempt: DurableAdoptionAttempt = {
     adoptionId: crypto.randomUUID(),
     imports: localSnapshots().map(snapshot => ({
@@ -57,6 +73,7 @@ async function adoptionAttempt(): Promise<DurableAdoptionAttempt> {
       importId: crypto.randomUUID(),
       snapshot: { group: snapshot.group, participants: snapshot.participants, expenses: snapshot.expenses, settlements: snapshot.settlements },
     })),
+    peopleImport,
   }
   await persistAdoptionAttempt(attempt)
   return attempt
@@ -65,9 +82,9 @@ async function adoptionAttempt(): Promise<DurableAdoptionAttempt> {
 async function adoptAndHydrate(): Promise<void> {
   const identityId = identityStore.accessIdentityId
   if (!identityId) throw new Error('Die lokale Browser-Identität fehlt.')
+  const attempt = await adoptionAttempt()
 
   if (identityStore.synchronizationStatus === 'expired-local-only') {
-    const attempt = await adoptionAttempt()
     if (!attempt.imports.length) await createAccountIdentity(config.public.apiBase, identityId)
     for (const item of attempt.imports) {
       await importAccountGroup(config.public.apiBase, attempt.adoptionId, item.importId, item.snapshot as Omit<GroupSnapshot, 'revision'>)
@@ -80,6 +97,15 @@ async function adoptAndHydrate(): Promise<void> {
     if (!identityStore.credential) throw new Error('Die Browser-Berechtigung fehlt.')
     await linkAnonymousIdentity(config.public.apiBase, identityId, identityStore.credential)
   }
+
+  if (!attempt.peopleImport) throw new Error('Die Personenübernahme konnte nicht vorbereitet werden.')
+  await importAccountPeople(
+    config.public.apiBase,
+    attempt.adoptionId,
+    attempt.peopleImport.importId,
+    attempt.peopleImport.people as Parameters<typeof importAccountPeople>[3],
+    attempt.peopleImport.associations as Parameters<typeof importAccountPeople>[4],
+  )
 
   const remote = await fetchAccountWorkspace(config.public.apiBase)
   await persistHydratedWorkspace(remote, identityId)
@@ -177,7 +203,7 @@ async function discardConflictsAndRehydrate(): Promise<void> {
           <label class="block font-medium">Passwort<input v-model="password" class="field-input mt-2" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" minlength="12" maxlength="128" required></label>
           <label v-if="mode === 'register'" class="flex items-start gap-3">
             <input v-model="confirmation" class="mt-1 size-5" type="checkbox" required>
-            <span>Alle {{ groupCount }} lokalen Gruppen werden nach der Registrierung übernommen.</span>
+            <span>Alle {{ groupCount }} lokalen Gruppen und {{ peopleCount }} Personen werden nach der Registrierung übernommen.</span>
           </label>
           <p class="text-sm text-gray-600">M5 bietet noch keine Passwort-Wiederherstellung. Ein vergessenes Passwort kann derzeit nicht zurückgesetzt werden.</p>
           <p v-if="accountStore.error" class="error-text" role="alert">{{ accountStore.error }}</p>
@@ -196,10 +222,10 @@ async function discardConflictsAndRehydrate(): Promise<void> {
           <button type="button" class="secondary-button mt-4 w-full" :disabled="accountStore.busy" @click="signOut(false)">Abmelden</button>
           <button v-if="pendingCount" type="button" class="danger-button mt-3 w-full" :disabled="accountStore.busy" @click="signOut(true)">Lokale Änderungen verwerfen und abmelden</button>
         </section>
-        <section v-if="conflictedGroupIds.length" class="card mt-5 border-amber-300 p-5">
+        <section v-if="hasConflicts" class="card mt-5 border-amber-300 p-5">
           <h2 class="text-xl font-semibold">Konflikt auf einem anderen Gerät</h2>
           <p class="mt-2 text-sm text-gray-600">
-            {{ conflictedGroupIds.length }} Gruppe(n) wurden inzwischen auf einem anderen Gerät geändert. JoinSplit führt diese Stände nicht automatisch zusammen.
+            {{ conflictedGroupIds.length }} Gruppe(n) und {{ conflictedPersonIds.length }} Person(en) wurden inzwischen auf einem anderen Gerät geändert. JoinSplit führt diese Stände nicht automatisch zusammen.
           </p>
           <p v-if="hasUnrelatedPendingMutations" class="error-text mt-3" role="alert">Weitere, konfliktfreie Änderungen müssen zuerst synchronisiert werden.</p>
           <label class="mt-4 flex items-start gap-3">

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 async function pendingMutationCount(page: import('@playwright/test').Page): Promise<number> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -31,7 +31,7 @@ test('a controlled app relaunches offline from presentation caches without cachi
 
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Offline App Shell')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
@@ -78,7 +78,7 @@ test('a controlled app relaunches offline from presentation caches without cachi
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Offline App Shell/ })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Offline Mutation')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()

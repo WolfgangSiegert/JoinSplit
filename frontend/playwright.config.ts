@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const laravelTestServerCommand = [
   'php artisan config:clear --env=testing',
+  'php artisan cache:clear --env=testing',
   'php tests/Support/guard-playwright-database.php',
   'php artisan migrate:fresh --env=testing --force',
   'php artisan serve --env=testing --host=127.0.0.1 --port=8001',

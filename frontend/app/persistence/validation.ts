@@ -1,15 +1,17 @@
 import type { Group, Participant } from '../domain/create-group'
-import type { PendingAddParticipant, PendingCreateGroup, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
+import type { PendingAddParticipant, PendingAssociateParticipant, PendingCreateGroup, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
 import type { DurableState } from './database'
 import { normalizeName } from '../domain/create-group'
 import type { Expense } from '../domain/expense'
 import { isCalendarDate } from '../domain/expense'
 import { isCanonicalPositiveMinor, type DurableSettlementSnapshot } from '../domain/settlement'
+import type { Person } from '../domain/person'
+import type { PendingPersonMutation } from '../domain/pending-person-mutation'
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const SERVER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const CREDENTIAL = /^[0-9a-f]{64}$/u
-const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement', 'ArchiveGroup', 'ReactivateGroup', 'DeleteGroup'])
+const TYPES = new Set(['CreateGroup', 'AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'AssociateParticipant', 'DeleteParticipant', 'CreateExpense', 'UpdateExpense', 'DeleteExpense', 'CreateSettlement', 'UpdateSettlement', 'DeleteSettlement', 'ArchiveGroup', 'ReactivateGroup', 'DeleteGroup'])
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function keys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const actual = Object.keys(value); return actual.length === expected.length && actual.every(key => expected.includes(key))
@@ -26,9 +28,25 @@ function group(value: unknown): value is Group {
 }
 
 function participant(value: unknown): value is Participant {
-  return record(value) && keys(value, ['id', 'groupId', 'name', 'status', 'order'])
+  return record(value) && (keys(value, ['id', 'groupId', 'name', 'status', 'order'])
+    || keys(value, ['id', 'groupId', 'personId', 'name', 'status', 'order']))
     && uuid(value.id) && uuid(value.groupId) && name(value.name)
+    && (value.personId === undefined || uuid(value.personId))
     && (value.status === 'active' || value.status === 'inactive') && integer(value.order)
+}
+
+function person(value: unknown): value is Person {
+  return record(value) && keys(value, ['id', 'name', 'status', 'revision'])
+    && uuid(value.id) && name(value.name) && (value.status === 'active' || value.status === 'inactive') && integer(value.revision)
+}
+
+function personMutation(value: unknown): value is PendingPersonMutation {
+  if (!record(value) || !['SavePerson', 'DeletePerson'].includes(value.type as string)
+    || !uuid(value.id) || !uuid(value.personId) || !integer(value.createdOrder)
+    || !integer(value.baseRevision) || !record(value.payload)) return false
+  if (value.type === 'DeletePerson') return keys(value.payload, [])
+  return keys(value.payload, ['person']) && person(value.payload.person)
+    && value.payload.person.id === value.personId
 }
 
 function mutation(value: unknown): value is PendingMutation {
@@ -52,11 +70,17 @@ function mutation(value: unknown): value is PendingMutation {
   if (value.type === 'ArchiveGroup') return keys(payload, ['status']) && payload.status === 'archived'
   if (value.type === 'ReactivateGroup') return keys(payload, ['status']) && payload.status === 'active'
   if (value.type === 'DeleteGroup') return keys(payload, [])
-  if (value.type === 'AddParticipant') return keys(payload, ['participantId', 'name', 'order']) && uuid(payload.participantId) && name(payload.name) && integer(payload.order)
+  if (value.type === 'AddParticipant') return (keys(payload, ['participantId', 'name', 'order'])
+    || keys(payload, ['participantId', 'personId', 'name', 'order']))
+    && uuid(payload.participantId) && (payload.personId === undefined || uuid(payload.personId))
+    && name(payload.name) && integer(payload.order)
   if (value.type === 'RenameParticipant') return keys(payload, ['participantId', 'name', 'active', 'order'])
     && uuid(payload.participantId) && name(payload.name) && typeof payload.active === 'boolean' && integer(payload.order)
   if (value.type === 'DeactivateParticipant') return keys(payload, ['participantId', 'name', 'active', 'order'])
     && uuid(payload.participantId) && name(payload.name) && payload.active === false && integer(payload.order)
+  if (value.type === 'AssociateParticipant') return keys(payload, ['participantId', 'personId', 'name', 'active', 'order'])
+    && uuid(payload.participantId) && (payload.personId === null || uuid(payload.personId))
+    && name(payload.name) && typeof payload.active === 'boolean' && integer(payload.order)
   return keys(payload, ['participantId']) && uuid(payload.participantId)
 }
 
@@ -90,11 +114,14 @@ export function validateDurableState(value: DurableState): DurableState {
     || !Array.isArray(workspace.accessIdentityIds) || !workspace.accessIdentityIds.every(uuid)
     || new Set(workspace.accessIdentityIds).size !== workspace.accessIdentityIds.length
     || !record(workspace.groupRevisions) || Object.entries(workspace.groupRevisions).some(([id, revision]) => !uuid(id) || !integer(revision))
+    || !record(workspace.personRevisions) || Object.entries(workspace.personRevisions).some(([id, revision]) => !uuid(id) || !integer(revision))
     || !Array.isArray(workspace.conflictedGroupIds) || !workspace.conflictedGroupIds.every(uuid))) {
     throw new Error('Invalid persisted Account workspace')
   }
   if ((workspace === null) !== (identity?.synchronizationStatus !== 'account-linked')) throw new Error('Account workspace and identity mode mismatch')
-  if (!value.groups.every(group) || !value.participants.every(participant) || !value.pendingMutations.every(mutation)
+  if (value.pendingPersonMutations.length && workspace === null) throw new Error('Person mutation requires an Account workspace')
+  if (!value.groups.every(group) || !value.participants.every(participant) || !value.people.every(person)
+    || !value.pendingPersonMutations.every(personMutation) || !value.pendingMutations.every(mutation)
     || !value.expenses.every(expense)
     || !value.settlements.every(durableSettlement)
     || (value.settings !== null && (typeof value.settings.addSelfAsParticipantByDefault !== 'boolean'
@@ -103,13 +130,18 @@ export function validateDurableState(value: DurableState): DurableState {
       || (value.settings.visualDesign !== '2' && value.settings.visualDesign !== '3')))) throw new Error('Invalid persisted state shape')
 
   const groupIds = new Set(value.groups.map(item => item.id)); const participantIds = new Set(value.participants.map(item => item.id))
+  const personIds = new Set(value.people.map(item => item.id))
   const expenseIds = new Set(value.expenses.map(item => item.id))
   const settlementIds = new Set(value.settlements.map(item => item.id))
   const mutationIds = new Set(value.pendingMutations.map(item => item.id)); const createdOrders = new Set(value.pendingMutations.map(item => item.createdOrder))
-  if (groupIds.size !== value.groups.length || participantIds.size !== value.participants.length
+  const personMutationIds = new Set(value.pendingPersonMutations.map(item => item.id))
+  const personMutationOrders = new Set(value.pendingPersonMutations.map(item => item.createdOrder))
+  if (groupIds.size !== value.groups.length || participantIds.size !== value.participants.length || personIds.size !== value.people.length
     || expenseIds.size !== value.expenses.length || settlementIds.size !== value.settlements.length
-    || mutationIds.size !== value.pendingMutations.length || createdOrders.size !== value.pendingMutations.length) throw new Error('Duplicate persisted identifiers or queue order')
+    || mutationIds.size !== value.pendingMutations.length || createdOrders.size !== value.pendingMutations.length
+    || personMutationIds.size !== value.pendingPersonMutations.length || personMutationOrders.size !== value.pendingPersonMutations.length) throw new Error('Duplicate persisted identifiers or queue order')
   if ([...groupIds].some(id => participantIds.has(id))) throw new Error('Persisted group and participant identifiers collide')
+  if ([...groupIds].some(id => personIds.has(id)) || [...participantIds].some(id => personIds.has(id))) throw new Error('Persisted domain identifiers collide')
   if (!identity && (value.groups.length || value.participants.length || value.pendingMutations.length || value.expenses.length || value.settlements.length)) throw new Error('Persisted domain state has no access identity')
   const authorizedIdentityIds = new Set(workspace?.accessIdentityIds ?? (identity ? [identity.id] : []))
   if (identity && !authorizedIdentityIds.has(identity.id)) throw new Error('Current identity is not part of the Account workspace')
@@ -143,6 +175,24 @@ export function validateDurableState(value: DurableState): DurableState {
     }
   }
   if (value.participants.some(item => !groupIds.has(item.groupId))) throw new Error('Persisted participant has no group')
+  if (value.participants.some(item => item.personId !== undefined && !personIds.has(item.personId))) throw new Error('Persisted Participant references missing Person')
+  for (const currentGroup of value.groups) {
+    const linkedPersonIds = value.participants.filter(item => item.groupId === currentGroup.id && item.personId).map(item => item.personId)
+    if (new Set(linkedPersonIds).size !== linkedPersonIds.length) throw new Error('Persisted Person occurs more than once in a Group')
+  }
+  for (const personId of new Set(value.pendingPersonMutations.map(item => item.personId))) {
+    const mutations = value.pendingPersonMutations.filter(item => item.personId === personId)
+      .sort((left, right) => left.createdOrder - right.createdOrder)
+    if (mutations.some((mutation, index) => index > 0 && mutation.baseRevision !== mutations[index - 1]!.baseRevision + 1)) {
+      throw new Error('Persisted Person mutation revision chain mismatch')
+    }
+    const latest = mutations.at(-1)!
+    const local = value.people.find(item => item.id === personId)
+    if (latest.type === 'DeletePerson' ? local !== undefined
+      : !local || local.name !== latest.payload.person.name || local.status !== latest.payload.person.status) {
+      throw new Error('Persisted Person mutation local state mismatch')
+    }
+  }
   for (const currentExpense of value.expenses) {
     const currentGroup = value.groups.find(item => item.id === currentExpense.groupId)
     if (!currentGroup || !authorizedIdentityIds.has(currentExpense.creatorAccessIdentityId)) throw new Error('Persisted Expense ownership mismatch')
@@ -164,7 +214,7 @@ export function validateDurableState(value: DurableState): DurableState {
   }
 
   const orderedMutations = [...value.pendingMutations].sort((a, b) => a.createdOrder - b.createdOrder)
-  type ParticipantStateMutation = PendingCreateGroup | PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingDeleteParticipant
+  type ParticipantStateMutation = PendingCreateGroup | PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingAssociateParticipant | PendingDeleteParticipant
   const latestParticipantMutation = new Map<string, ParticipantStateMutation>()
   for (const current of orderedMutations) {
     const currentGroup = value.groups.find(item => item.id === current.groupId)
@@ -236,7 +286,8 @@ export function validateDurableState(value: DurableState): DurableState {
     const expectedName = latest.payload.name
     const expectedActive = latest.type === 'AddParticipant' ? true : latest.payload.active
     if (local.groupId !== latest.groupId || local.name !== expectedName
-      || (local.status === 'active') !== expectedActive || local.order !== latest.payload.order) {
+      || (local.status === 'active') !== expectedActive || local.order !== latest.payload.order
+      || (latest.type === 'AssociateParticipant' && (local.personId ?? null) !== latest.payload.personId)) {
       throw new Error(`Persisted ${latest.type} local state mismatch`)
     }
   }

@@ -97,8 +97,11 @@ class AccountSessionController extends Controller
             DB::table('expenses')->whereIn('group_id', $groupIds)->delete();
             DB::table('participants')->whereIn('group_id', $groupIds)->delete();
             DB::table('account_group_imports')->where('account_id', $account->getKey())->delete();
+            DB::table('account_people_imports')->where('account_id', $account->getKey())->delete();
+            DB::table('account_person_mutations')->where('account_id', $account->getKey())->delete();
             DB::table('account_mutations')->where('account_id', $account->getKey())->delete();
             DB::table('groups')->whereIn('id', $groupIds)->delete();
+            DB::table('people')->where('account_id', $account->getKey())->delete();
             DB::table('access_identities')->whereIn('id', $identityIds)->delete();
             DB::table('sessions')->where('user_id', $account->getKey())->delete();
             $account->delete();

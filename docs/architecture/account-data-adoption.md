@@ -319,6 +319,18 @@ as having a complete Account data-lifecycle contract.
 - SLA, durable backup or guaranteed restore
 - migration of arbitrary external files or data formats
 
+## M6.5 People extension
+
+M6.5 erweitert den Account-Workspace um wiederverwendbare People, ohne die
+M5-Trennung von Account, Access Identity und Participant aufzuheben. People
+bleiben ohne Account gerätelokal. Bei Account-Adoption werden ihre stabilen IDs
+und ausdrücklichen Participant-Verknüpfungen idempotent übernommen und auf
+weiteren Geräten rehydriert. Gleichlautende Namen erzeugen niemals automatisch
+dieselbe Identität.
+
+Der ergänzende Vertrag steht im
+[`Navigation and Reusable People Contract`](navigation-people-contract.md).
+
 ## JS-035 acceptance criteria
 
 JS-035 is complete because:

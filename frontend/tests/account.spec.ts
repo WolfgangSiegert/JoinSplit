@@ -5,6 +5,11 @@ const password = 'correct horse battery staple'
 test('registers, rehydrates on a new signed-in device, and deletes the Account', async ({ page }) => {
   const email = `account-${Date.now()}@example.test`
 
+  await page.goto('/people')
+  await page.getByLabel('Name').fill('Ada Account')
+  await page.getByRole('button', { name: 'Person anlegen' }).click()
+  await expect(page.getByText('Ada Account', { exact: true })).toBeVisible()
+
   await page.goto('/account')
   await page.getByRole('button', { name: 'Registrieren' }).click()
   await page.getByLabel('E-Mail').fill(email)
@@ -16,6 +21,45 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await page.goto('/account')
   await expect(page.getByRole('heading', { name: 'Angemeldet' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
+  await page.goto('/people')
+  await expect(page.getByText('Ada Account', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Ada Account bearbeiten' }).click()
+  await page.getByLabel('Name').fill('Ada Synced')
+  await page.getByRole('button', { name: 'Änderung speichern' }).click()
+  await expect(page.getByText('Ada Synced', { exact: true })).toBeVisible()
+  await expect.poll(() => page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit')
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+    })
+    const count = database.transaction('pendingPersonMutations').objectStore('pendingPersonMutations').count()
+    return await new Promise<number>((resolve, reject) => {
+      count.onsuccess = () => resolve(count.result); count.onerror = () => reject(count.error)
+    })
+  })).toBe(0)
+
+  await page.goto('/groups/new')
+  await page.getByLabel('Gruppenname').fill('Account Group')
+  await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await expect(page).toHaveURL(/\/groups\/[0-9a-f-]+\?created=1$/u)
+  const groupId = new URL(page.url()).pathname.split('/').at(-1)!
+  await page.goto(`/groups/${groupId}/participants`)
+  await page.getByLabel('Person', { exact: true }).selectOption({ label: 'Ada Synced' })
+  await page.getByRole('button', { name: 'Ausgewählte Person hinzufügen' }).click()
+  await expect(page.getByText('Aktiv · Aus Personenverzeichnis')).toBeVisible()
+  await expect.poll(() => page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit')
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+    })
+    const count = database.transaction('pendingMutations').objectStore('pendingMutations').count()
+    return await new Promise<number>((resolve, reject) => {
+      count.onsuccess = () => resolve(count.result); count.onerror = () => reject(count.error)
+    })
+  })).toBe(0)
+
+  await page.goto('/account')
   const clientStorage = await page.evaluate(async () => {
     const request = indexedDB.open('joinsplit')
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -44,6 +88,10 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await page.getByLabel('Passwort').fill(password)
   await page.getByRole('button', { name: 'Anmelden und Daten übernehmen' }).click()
   await expect(page).toHaveURL('/')
+  await page.goto('/people')
+  await expect(page.getByText('Ada Synced', { exact: true })).toBeVisible()
+  await page.goto(`/groups/${groupId}/participants`)
+  await expect(page.getByText('Aktiv · Aus Personenverzeichnis')).toBeVisible()
   await page.goto('/account')
   await expect(page.getByText(email)).toBeVisible()
 

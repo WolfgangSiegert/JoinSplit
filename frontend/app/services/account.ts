@@ -1,6 +1,7 @@
 import type { Group, Participant } from '../domain/create-group'
 import type { Expense } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
+import type { Person } from '../domain/person'
 import {
   replaceWithAccountHydration,
   type AccountHydration,
@@ -19,7 +20,13 @@ export interface GroupSnapshot {
 
 export interface AccountWorkspaceResponse {
   readonly account: AccountData
+  readonly people: Person[]
   readonly groups: GroupSnapshot[]
+}
+
+export interface PersonAssociation {
+  readonly participantId: string
+  readonly personId: string
 }
 
 export class AccountRequestError extends Error {
@@ -85,6 +92,19 @@ export async function importAccountGroup(apiBase: string, adoptionId: string, im
   await mutate(apiBase, `/api/account/adoptions/${adoptionId}/groups/${snapshot.group.id}/import`, 'POST', { importId, snapshot }, fetcher)
 }
 
+export async function importAccountPeople(
+  apiBase: string,
+  adoptionId: string,
+  importId: string,
+  people: readonly Pick<Person, 'id' | 'name' | 'status'>[],
+  associations: readonly PersonAssociation[],
+  fetcher: typeof fetch = globalThis.fetch,
+): Promise<void> {
+  await mutate(apiBase, `/api/account/adoptions/${adoptionId}/people/import`, 'POST', {
+    importId, people, associations,
+  }, fetcher)
+}
+
 export async function fetchAccountWorkspace(apiBase: string, fetcher: typeof fetch = globalThis.fetch): Promise<AccountWorkspaceResponse> {
   const response = await fetcher(`${base(apiBase)}/api/account/workspace`, {
     headers: { Accept: 'application/json' }, credentials: 'include',
@@ -105,6 +125,7 @@ export async function persistHydratedWorkspace(response: AccountWorkspaceRespons
     email: response.account.email,
     accessIdentityIds: identityIds,
     groupRevisions: Object.fromEntries(response.groups.map(item => [item.group.id, item.revision])),
+    personRevisions: Object.fromEntries(response.people.map(person => [person.id, person.revision])),
     conflictedGroupIds: [],
   }
   const hydration: AccountHydration = {
@@ -112,12 +133,13 @@ export async function persistHydratedWorkspace(response: AccountWorkspaceRespons
     workspace,
     groups,
     participants: response.groups.flatMap(item => item.participants),
+    people: response.people,
     expenses: response.groups.flatMap(item => item.expenses),
     settlements: response.groups.flatMap(item => item.settlements),
   }
   validateDurableState({
     accessIdentity: hydration.identity, accountWorkspace: workspace,
-    groups: [...hydration.groups], participants: [...hydration.participants], pendingMutations: [],
+    groups: [...hydration.groups], participants: [...hydration.participants], people: [...hydration.people], pendingPersonMutations: [], pendingMutations: [],
     expenses: [...hydration.expenses], settlements: [...hydration.settlements], settings: null,
   })
   await replaceWithAccountHydration(hydration)

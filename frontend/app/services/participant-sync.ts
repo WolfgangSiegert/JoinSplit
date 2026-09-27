@@ -1,4 +1,4 @@
-import type { PendingAddParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
+import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingRenameParticipant } from '../domain/pending-mutation'
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
 import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
@@ -24,17 +24,24 @@ function failed(kind: MutationSyncError['kind'], message: string, retryable: boo
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) }
 function sameUuid(value: unknown, expected: string): boolean { return typeof value === 'string' && value.toLowerCase() === expected.toLowerCase() }
 
-type ParticipantMutation = PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingDeleteParticipant
+type ParticipantMutation = PendingAddParticipant | PendingRenameParticipant | PendingDeactivateParticipant | PendingAssociateParticipant | PendingDeleteParticipant
 type ParticipantResponseMutation = Exclude<ParticipantMutation, PendingDeleteParticipant>
 
-function responseMatches(body: unknown, mutation: ParticipantResponseMutation): boolean {
+function responseMatches(body: unknown, mutation: ParticipantResponseMutation, accountMode: boolean): boolean {
   if (!object(body) || !object(body.data)) return false
   const participant = body.data
   if (!sameUuid(participant.id, mutation.payload.participantId) || !sameUuid(participant.groupId, mutation.groupId)) return false
-  if (mutation.type === 'AddParticipant') return participant.name === mutation.payload.name && participant.active === true && participant.order === mutation.payload.order
+  if (mutation.type === 'AddParticipant') return participant.name === mutation.payload.name
+    && participant.active === true && participant.order === mutation.payload.order
+    && (!accountMode || mutation.payload.personId === undefined
+      ? participant.personId === undefined
+      : sameUuid(participant.personId, mutation.payload.personId))
   return participant.name === mutation.payload.name
     && participant.active === mutation.payload.active
     && participant.order === mutation.payload.order
+    && (mutation.type !== 'AssociateParticipant' || (mutation.payload.personId === null
+      ? participant.personId === undefined
+      : sameUuid(participant.personId, mutation.payload.personId)))
 }
 
 async function send(mutation: ParticipantMutation, options: Options): Promise<ParticipantSyncResult> {
@@ -44,8 +51,15 @@ async function send(mutation: ParticipantMutation, options: Options): Promise<Pa
   const collection = `${context.urlPrefix}/groups/${mutation.groupId}/participants`
   const url = mutation.type === 'AddParticipant' ? collection : `${collection}/${participantId}`
   const method = mutation.type === 'AddParticipant' ? 'POST' : mutation.type === 'DeleteParticipant' ? 'DELETE' : 'PATCH'
-  const body = mutation.type === 'AddParticipant' ? mutation.payload
-    : mutation.type === 'RenameParticipant' ? { name: mutation.payload.name } : mutation.type === 'DeactivateParticipant' ? { active: false } : undefined
+  const body = mutation.type === 'AddParticipant'
+    ? context.accountMode ? mutation.payload : {
+        participantId: mutation.payload.participantId,
+        name: mutation.payload.name,
+        order: mutation.payload.order,
+      }
+    : mutation.type === 'RenameParticipant' ? { name: mutation.payload.name }
+      : mutation.type === 'DeactivateParticipant' ? { active: false }
+        : mutation.type === 'AssociateParticipant' ? { personId: mutation.payload.personId } : undefined
   let response: Response
   try {
     response = await fetcher(url, {
@@ -59,7 +73,7 @@ async function send(mutation: ParticipantMutation, options: Options): Promise<Pa
   if (mutation.type === 'DeleteParticipant' && response.status === 204) return { outcome: 'synced', status: 204 }
   if ((response.status === 200 || response.status === 201) && mutation.type !== 'DeleteParticipant') {
     try {
-      if (responseMatches(await response.json(), mutation)) return { outcome: 'synced', status: response.status }
+      if (responseMatches(await response.json(), mutation, context.accountMode)) return { outcome: 'synced', status: response.status }
     } catch { /* mapped below */ }
     return failed('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Änderung.', false)
   }
@@ -75,11 +89,12 @@ async function send(mutation: ParticipantMutation, options: Options): Promise<Pa
 export async function synchronizeParticipantMutation(options: Options): Promise<ParticipantSyncResult> {
   if (!options.online) return { outcome: 'offline' }
   const pending = options.groupsStore.pendingMutations.find(item => item.id === options.mutationId)
-  if (!pending || !['AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'DeleteParticipant'].includes(pending.type)) return { outcome: 'not-pending' }
+  if (!pending || !['AddParticipant', 'RenameParticipant', 'DeactivateParticipant', 'AssociateParticipant', 'DeleteParticipant'].includes(pending.type)) return { outcome: 'not-pending' }
   if (options.groupsStore.mutationSync[pending.id]?.state === 'syncing') return { outcome: 'busy' }
   const mutation = options.groupsStore.beginMutationSync(pending.id)
   if (!mutation || (mutation.type !== 'AddParticipant' && mutation.type !== 'RenameParticipant'
-    && mutation.type !== 'DeactivateParticipant' && mutation.type !== 'DeleteParticipant')) return { outcome: 'busy' }
+    && mutation.type !== 'DeactivateParticipant' && mutation.type !== 'AssociateParticipant'
+    && mutation.type !== 'DeleteParticipant')) return { outcome: 'busy' }
   if (!options.identity.accessIdentityId) {
     const result = failed('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)
     if (result.outcome === 'failed') options.groupsStore.failMutationSync(mutation.id, result.error)

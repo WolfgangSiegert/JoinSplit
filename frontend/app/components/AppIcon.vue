@@ -12,6 +12,7 @@ defineProps<{
     | 'download'
     | 'image'
     | 'info'
+    | 'link'
     | 'plus'
     | 'pencil'
     | 'receipt'
@@ -21,7 +22,9 @@ defineProps<{
     | 'scale'
     | 'settings'
     | 'share'
+    | 'user'
     | 'trash'
+    | 'unlink'
     | 'users'
     | 'user-minus'
     | 'wallet'
@@ -75,6 +78,9 @@ defineProps<{
     <template v-else-if="name === 'info'">
       <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
     </template>
+    <template v-else-if="name === 'link'">
+      <path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1.1M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1" />
+    </template>
     <template v-else-if="name === 'plus'">
       <path d="M12 5v14M5 12h14" />
     </template>
@@ -105,8 +111,14 @@ defineProps<{
     <template v-else-if="name === 'trash'">
       <path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v5M14 11v5" />
     </template>
+    <template v-else-if="name === 'unlink'">
+      <path d="m18.8 18.8.7-.7a5 5 0 0 0-7-7l-.7.7M5.2 5.2l-.7.7a5 5 0 0 0 7 7l.7-.7M2 2l20 20" />
+    </template>
     <template v-else-if="name === 'users'">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" />
+    </template>
+    <template v-else-if="name === 'user'">
+      <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
     </template>
     <template v-else-if="name === 'user-minus'">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M16 11h6" />

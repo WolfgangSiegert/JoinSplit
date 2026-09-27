@@ -15,6 +15,7 @@ export interface PendingCreateGroup extends PendingMutationBase {
 
 export interface AddParticipantPayload {
   readonly participantId: string
+  readonly personId?: string
   readonly name: string
   readonly order: number
 }
@@ -46,6 +47,19 @@ export interface DeactivateParticipantPayload {
 export interface PendingDeactivateParticipant extends PendingMutationBase {
   readonly type: 'DeactivateParticipant'
   readonly payload: Readonly<DeactivateParticipantPayload>
+}
+
+export interface AssociateParticipantPayload {
+  readonly participantId: string
+  readonly personId: string | null
+  readonly name: string
+  readonly active: boolean
+  readonly order: number
+}
+
+export interface PendingAssociateParticipant extends PendingMutationBase {
+  readonly type: 'AssociateParticipant'
+  readonly payload: Readonly<AssociateParticipantPayload>
 }
 
 export interface PendingDeleteParticipant extends PendingMutationBase {
@@ -103,6 +117,7 @@ export type PendingMutation =
   | PendingAddParticipant
   | PendingRenameParticipant
   | PendingDeactivateParticipant
+  | PendingAssociateParticipant
   | PendingDeleteParticipant
   | PendingCreateExpense
   | PendingUpdateExpense

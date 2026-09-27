@@ -73,7 +73,13 @@ async function registerAccessIdentity(
 
 export async function ensureAccessIdentityRegistered(options: Options): Promise<IdentityRegistrationResult> {
   const { identity } = options
-  if (!identity.accessIdentityId || !identity.credential) {
+  if (!identity.accessIdentityId) {
+    return failure('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)
+  }
+  if (identity.synchronizationStatus === 'account-linked' && !identity.credential) {
+    return { outcome: 'ready' }
+  }
+  if (!identity.credential) {
     return failure('identity', 'Die lokale Zugriffsidentität ist nicht verfügbar.', false)
   }
   if (identity.synchronizationStatus === 'expired-local-only') {

@@ -19,8 +19,9 @@ class UpdateParticipantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:100', 'required_without:active'],
-            'active' => ['sometimes', 'required', Rule::in([false]), 'required_without:name'],
+            'name' => ['sometimes', 'required', 'string', 'max:100'],
+            'active' => ['sometimes', 'required', Rule::in([false])],
+            'personId' => ['sometimes', 'nullable', 'string', 'uuid:4'],
             'participantId' => ['prohibited'], 'groupId' => ['prohibited'], 'order' => ['prohibited'],
             'ownerId' => ['prohibited'], 'owner_id' => ['prohibited'], 'ownerAccessIdentityId' => ['prohibited'],
         ];
@@ -29,8 +30,9 @@ class UpdateParticipantRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
-            if ($this->has('name') && $this->has('active')) {
-                $validator->errors()->add('active', 'Rename and deactivate must be separate operations.');
+            $fields = array_filter(['name', 'active', 'personId'], fn (string $field): bool => array_key_exists($field, $this->all()));
+            if (count($fields) !== 1) {
+                $validator->errors()->add('participant', 'Rename, deactivate and Person association must be separate operations.');
             }
         }];
     }

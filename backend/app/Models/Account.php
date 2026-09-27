@@ -23,4 +23,9 @@ class Account extends Authenticatable
     {
         return $this->hasMany(AccessIdentity::class);
     }
+
+    public function people(): HasMany
+    {
+        return $this->hasMany(Person::class);
+    }
 }

@@ -12,9 +12,10 @@ return [
         'X-Access-Identity-ID',
         'X-CSRF-TOKEN',
         'X-Group-Revision',
+        'X-Person-Revision',
         'X-Mutation-ID',
     ],
-    'exposed_headers' => ['X-Group-Revision'],
+    'exposed_headers' => ['X-Group-Revision', 'X-Person-Revision'],
     'max_age' => 0,
     'supports_credentials' => true,
 ];

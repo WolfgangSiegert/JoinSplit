@@ -7,7 +7,7 @@ interface DurableState {
 
 async function durableState(page: Page): Promise<DurableState> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -51,14 +51,14 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
     if (response.url().startsWith('http://127.0.0.1:8001/api/')) apiResponses.push(response)
   })
 
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByLabel('Gruppenname').fill('M3 Offline-Reise')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await page.waitForURL(url => /^\/groups\/[0-9a-f-]{36}$/.test(url.pathname))
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   const bob = (await durableState(page)).participants.find(participant => participant.name === 'Bob')!

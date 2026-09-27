@@ -4,6 +4,7 @@ import { generateAccessIdentity, useAccessIdentityStore } from './access-identit
 import { useGroupsStore } from './groups'
 import { useSettingsStore } from './settings'
 import { useAccountStore } from './account'
+import { usePeopleStore } from './people'
 import {
   loadDurableState,
   persistAccessIdentity,
@@ -39,6 +40,7 @@ export const useApplicationLifecycleStore = defineStore('applicationLifecycle', 
 
       useAccessIdentityStore().hydrate(identity)
       useAccountStore().hydrate(durableState.accountWorkspace ?? null)
+      usePeopleStore().hydrate(durableState.people, durableState.pendingPersonMutations)
       useGroupsStore().hydrate({
         groups: durableState.groups,
         participants: durableState.participants,

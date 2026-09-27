@@ -9,6 +9,7 @@ import {
 import { useCreateGroup } from '../../app/composables/use-create-group'
 import { useGroupsStore } from '../../app/stores/groups'
 import { useAccessIdentityStore } from '../../app/stores/access-identity'
+import { useAccountStore } from '../../app/stores/account'
 
 const GROUP_ID = '11111111-1111-4111-8111-111111111111'
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222'
@@ -236,5 +237,39 @@ describe('local Create Group workflow', () => {
     await expect(result).resolves.toMatchObject({ ok: true })
     expect(store.groups).toHaveLength(1)
     expect(store.pendingCreateGroups).toHaveLength(1)
+  })
+
+  test('creates a local group for an authenticated account without an anonymous credential', async () => {
+    useAccessIdentityStore().hydrate({
+      id: ACTOR_ID,
+      credential: null,
+      synchronizationStatus: 'account-linked',
+    })
+    useAccountStore().hydrate({
+      accountId: '44444444-4444-4444-8444-444444444444',
+      email: 'ada@example.test',
+      accessIdentityIds: [ACTOR_ID],
+      groupRevisions: {},
+      personRevisions: {},
+      conflictedGroupIds: [],
+    })
+    const persistCreation = vi.fn(async () => undefined)
+    const { createGroup } = useCreateGroup({ persistCreation })
+
+    await expect(createGroup(draft({ addParticipant: false }))).resolves.toMatchObject({ ok: true })
+    expect(persistCreation).toHaveBeenCalledOnce()
+  })
+
+  test('rejects creation when neither anonymous credential nor account session is available', async () => {
+    useAccessIdentityStore().hydrate({
+      id: ACTOR_ID,
+      credential: null,
+      synchronizationStatus: 'account-linked',
+    })
+    const persistCreation = vi.fn(async () => undefined)
+    const { createGroup } = useCreateGroup({ persistCreation })
+
+    await expect(createGroup(draft())).rejects.toThrow('Access identity is not ready')
+    expect(persistCreation).not.toHaveBeenCalled()
   })
 })

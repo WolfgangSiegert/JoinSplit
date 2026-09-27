@@ -1,11 +1,13 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Group, Participant, PreparedGroupCreation } from '../domain/create-group'
-import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingArchiveGroup, PendingReactivateGroup, PendingDeleteGroup } from '../domain/pending-mutation'
+import type { PendingCreateGroup, PendingMutation, PendingAddParticipant, PendingRenameParticipant, PendingDeactivateParticipant, PendingAssociateParticipant, PendingDeleteParticipant, PendingArchiveGroup, PendingReactivateGroup, PendingDeleteGroup } from '../domain/pending-mutation'
 import type { Expense, ExpenseShare } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
+import type { Person } from '../domain/person'
+import type { PendingPersonMutation } from '../domain/pending-person-mutation'
 
 export const DATABASE_NAME = 'joinsplit'
-export const DATABASE_VERSION = 7
+export const DATABASE_VERSION = 10
 const ACCESS_IDENTITY_KEY = 'current'
 const ACCOUNT_WORKSPACE_KEY = 'current'
 const ACCOUNT_ADOPTION_KEY = 'current'
@@ -21,11 +23,13 @@ export interface DurableAccountWorkspace {
   readonly email: string
   readonly accessIdentityIds: readonly string[]
   readonly groupRevisions: Readonly<Record<string, number>>
+  readonly personRevisions: Readonly<Record<string, number>>
   readonly conflictedGroupIds: readonly string[]
 }
 export interface DurableAdoptionAttempt {
   readonly adoptionId: string
   readonly imports: readonly { readonly groupId: string; readonly importId: string; readonly snapshot: unknown }[]
+  readonly peopleImport?: { readonly importId: string; readonly people: unknown; readonly associations: unknown }
 }
 export interface DurableSettings {
   readonly addSelfAsParticipantByDefault: boolean
@@ -43,6 +47,8 @@ interface JoinSplitDatabase extends DBSchema {
   accountAdoption: { key: string; value: AccountAdoptionRecord }
   groups: { key: string; value: Group }
   participants: { key: string; value: Participant }
+  people: { key: string; value: Person }
+  pendingPersonMutations: { key: string; value: PendingPersonMutation }
   pendingMutations: { key: string; value: PendingMutation }
   settings: { key: string; value: SettingsRecord }
   expenses: { key: string; value: Omit<Expense, 'shares'> }
@@ -73,6 +79,8 @@ export interface DurableState {
   readonly accountWorkspace?: DurableAccountWorkspace | null
   readonly groups: Group[]
   readonly participants: Participant[]
+  readonly people: Person[]
+  readonly pendingPersonMutations: PendingPersonMutation[]
   readonly pendingMutations: PendingMutation[]
   readonly expenses: Expense[]
   readonly settlements: DurableSettlementSnapshot[]
@@ -138,6 +146,17 @@ function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
       }
       if (oldVersion < 6) db.createObjectStore('accountWorkspace', { keyPath: 'key' })
       if (oldVersion < 7) db.createObjectStore('accountAdoption', { keyPath: 'key' })
+      if (oldVersion < 8) db.createObjectStore('people', { keyPath: 'id' })
+      if (oldVersion < 9) {
+        const workspaces = transaction.objectStore('accountWorkspace')
+        void workspaces.openCursor().then(function migrate(cursor): Promise<void> | void {
+          if (!cursor) return
+          const value = cursor.value as AccountWorkspaceRecord & { personRevisions?: Readonly<Record<string, number>> }
+          if (!value.personRevisions) cursor.update({ ...value, personRevisions: {} })
+          return cursor.continue().then(migrate)
+        })
+      }
+      if (oldVersion < 10) db.createObjectStore('pendingPersonMutations', { keyPath: 'id' })
     },
   })
   return databasePromise
@@ -145,10 +164,10 @@ function database(): Promise<IDBPDatabase<JoinSplitDatabase>> {
 
 export async function loadDurableState(): Promise<DurableState> {
   const db = await database()
-  const tx = db.transaction(['accessIdentity', 'accountWorkspace', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'], 'readonly')
-  const [identities, accountWorkspaces, groups, participants, pendingMutations, settingsRecords, expenseRecords, expenseShares, settlements] = await Promise.all([
+  const tx = db.transaction(['accessIdentity', 'accountWorkspace', 'groups', 'participants', 'people', 'pendingPersonMutations', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'], 'readonly')
+  const [identities, accountWorkspaces, groups, participants, people, pendingPersonMutations, pendingMutations, settingsRecords, expenseRecords, expenseShares, settlements] = await Promise.all([
     tx.objectStore('accessIdentity').getAll(), tx.objectStore('accountWorkspace').getAll(), tx.objectStore('groups').getAll(),
-    tx.objectStore('participants').getAll(), tx.objectStore('pendingMutations').getAll(),
+    tx.objectStore('participants').getAll(), tx.objectStore('people').getAll(), tx.objectStore('pendingPersonMutations').getAll(), tx.objectStore('pendingMutations').getAll(),
     tx.objectStore('settings').getAll(), tx.objectStore('expenses').getAll(), tx.objectStore('expenseShares').getAll(), tx.objectStore('settlements').getAll(),
   ])
   await tx.done
@@ -170,9 +189,10 @@ export async function loadDurableState(): Promise<DurableState> {
       email: accountWorkspaces[0].email,
       accessIdentityIds: [...accountWorkspaces[0].accessIdentityIds],
       groupRevisions: { ...accountWorkspaces[0].groupRevisions },
+      personRevisions: { ...accountWorkspaces[0].personRevisions },
       conflictedGroupIds: [...accountWorkspaces[0].conflictedGroupIds],
     } : null,
-    groups, participants, pendingMutations,
+    groups, participants, people, pendingPersonMutations, pendingMutations,
     expenses: expenseRecords.map(expense => ({
       ...expense,
       shares: expenseShares
@@ -233,13 +253,52 @@ export async function persistAccessIdentity(identity: DurableAccessIdentity): Pr
   const db = await database(); await db.put('accessIdentity', { key: ACCESS_IDENTITY_KEY, ...identity })
 }
 
+export async function persistPerson(person: Person): Promise<void> {
+  const db = await database(); await db.put('people', person)
+}
+
+export async function deletePerson(personId: string): Promise<void> {
+  const db = await database(); await db.delete('people', personId)
+}
+
+export async function persistPersonMutation(person: Person, mutation: PendingPersonMutation): Promise<void> {
+  const db = await database(); const tx = db.transaction(['people', 'pendingPersonMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('people').put(person), tx.objectStore('pendingPersonMutations').add(mutation)])
+  await tx.done
+}
+
+export async function persistPersonDeleteMutation(personId: string, mutation: PendingPersonMutation): Promise<void> {
+  const db = await database(); const tx = db.transaction(['people', 'pendingPersonMutations'], 'readwrite')
+  await Promise.all([tx.objectStore('people').delete(personId), tx.objectStore('pendingPersonMutations').add(mutation)])
+  await tx.done
+}
+
+export async function acknowledgePersonMutation(mutationId: string, personId: string, revision: number, deleted: boolean): Promise<void> {
+  const db = await database(); const tx = db.transaction(['people', 'pendingPersonMutations', 'accountWorkspace'], 'readwrite')
+  const person = await tx.objectStore('people').get(personId)
+  if (person) await tx.objectStore('people').put({ ...person, revision })
+  const workspace = await tx.objectStore('accountWorkspace').get(ACCOUNT_WORKSPACE_KEY)
+  if (workspace) {
+    const personRevisions = { ...workspace.personRevisions }
+    if (deleted) delete personRevisions[personId]
+    else personRevisions[personId] = revision
+    await tx.objectStore('accountWorkspace').put({ ...workspace, personRevisions })
+  }
+  await tx.objectStore('pendingPersonMutations').delete(mutationId)
+  await tx.done
+}
+
 export async function persistAccountWorkspace(workspace: DurableAccountWorkspace): Promise<void> {
   const db = await database(); await db.put('accountWorkspace', { key: ACCOUNT_WORKSPACE_KEY, ...workspace })
 }
 
 export async function loadAdoptionAttempt(): Promise<DurableAdoptionAttempt | null> {
   const db = await database(); const record = await db.get('accountAdoption', ACCOUNT_ADOPTION_KEY)
-  return record ? { adoptionId: record.adoptionId, imports: record.imports.map(item => ({ ...item })) } : null
+  return record ? {
+    adoptionId: record.adoptionId,
+    imports: record.imports.map(item => ({ ...item })),
+    ...(record.peopleImport ? { peopleImport: { ...record.peopleImport } } : {}),
+  } : null
 }
 
 export async function persistAdoptionAttempt(attempt: DurableAdoptionAttempt): Promise<void> {
@@ -255,19 +314,21 @@ export interface AccountHydration {
   readonly workspace: DurableAccountWorkspace
   readonly groups: readonly Group[]
   readonly participants: readonly Participant[]
+  readonly people: readonly Person[]
   readonly expenses: readonly Expense[]
   readonly settlements: readonly DurableSettlementSnapshot[]
 }
 
 export async function replaceWithAccountHydration(hydration: AccountHydration): Promise<void> {
   const db = await database()
-  const stores = ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const
+  const stores = ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'people', 'pendingPersonMutations', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const
   const tx = db.transaction(stores, 'readwrite')
   await Promise.all(stores.map(store => tx.objectStore(store).clear()))
   await tx.objectStore('accessIdentity').put({ key: ACCESS_IDENTITY_KEY, ...hydration.identity })
   await tx.objectStore('accountWorkspace').put({ key: ACCOUNT_WORKSPACE_KEY, ...hydration.workspace })
   for (const group of hydration.groups) await tx.objectStore('groups').put(group)
   for (const participant of hydration.participants) await tx.objectStore('participants').put(participant)
+  for (const person of hydration.people) await tx.objectStore('people').put(person)
   for (const expense of hydration.expenses) {
     await tx.objectStore('expenses').put(expenseRecord(expense))
     for (const share of expense.shares) await tx.objectStore('expenseShares').put({ expenseId: expense.id, ...share })
@@ -278,7 +339,7 @@ export async function replaceWithAccountHydration(hydration: AccountHydration): 
 
 export async function clearAccountLocalData(): Promise<void> {
   const db = await database()
-  const stores = ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const
+  const stores = ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'people', 'pendingPersonMutations', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const
   const tx = db.transaction(stores, 'readwrite')
   await Promise.all(stores.map(store => tx.objectStore(store).clear()))
   await tx.done
@@ -297,10 +358,14 @@ export async function persistParticipantAdd(group: Group, participant: Participa
   await tx.done
 }
 
-export async function persistParticipantUpdate(participant: Participant, mutation: PendingRenameParticipant | PendingDeactivateParticipant): Promise<void> {
+export async function persistParticipantUpdate(participant: Participant, mutation: PendingRenameParticipant | PendingDeactivateParticipant | PendingAssociateParticipant): Promise<void> {
   const db = await database(); const tx = db.transaction(['participants', 'pendingMutations'], 'readwrite')
   await Promise.all([tx.objectStore('participants').put(participant), tx.objectStore('pendingMutations').add(mutation)])
   await tx.done
+}
+
+export async function persistParticipantAssociation(participant: Participant): Promise<void> {
+  const db = await database(); await db.put('participants', participant)
 }
 
 export async function persistParticipantDelete(group: Group, participantId: string, mutation: PendingDeleteParticipant): Promise<void> {
@@ -403,7 +468,7 @@ export async function persistSettings(settings: DurableSettings): Promise<void> 
 export async function resetDurableState(): Promise<void> {
   const db = await database()
   const tx = db.transaction(
-    ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'],
+    ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'people', 'pendingPersonMutations', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements'],
     'readwrite',
   )
   await Promise.all([
@@ -412,6 +477,8 @@ export async function resetDurableState(): Promise<void> {
     tx.objectStore('accountAdoption').clear(),
     tx.objectStore('groups').clear(),
     tx.objectStore('participants').clear(),
+    tx.objectStore('people').clear(),
+    tx.objectStore('pendingPersonMutations').clear(),
     tx.objectStore('pendingMutations').clear(),
     tx.objectStore('settings').clear(),
     tx.objectStore('expenses').clear(),

@@ -375,6 +375,18 @@ M5 erweitert das Schema auf Version 7:
 Der verbindliche Daten- und Sicherheitsvertrag steht in
 [`Account and Data-Adoption Contract`](account-data-adoption.md).
 
+## Planned M6.5 People extension
+
+JS-060 wird IndexedDB über einen expliziten Upgrade-Pfad um dauerhafte People
+erweitern. Bestehende Participants werden dabei nicht anhand ihres Namens
+konvertiert oder zusammengeführt. Eine optionale Person-Verknüpfung eines
+Participants bleibt lokal erhalten und wird erst im authentifizierten
+Account-Vertrag serverseitig übernommen. Der aktuelle implementierte
+Schema-Stand ändert sich erst mit JS-060.
+
+Die verbindliche Planungsgrundlage steht im
+[`Navigation and Reusable People Contract`](navigation-people-contract.md).
+
 ## Non-goals of the completed M2/M4 persistence architecture
 
 Nicht Bestandteil dieser Architekturphase:

@@ -11,7 +11,7 @@ class Participant extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['id', 'name', 'is_active', 'position'];
+    protected $fillable = ['id', 'person_id', 'name', 'is_active', 'position'];
 
     protected function casts(): array
     {
@@ -24,6 +24,11 @@ class Participant extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(Group::class);
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
     }
 
     public function paidExpenses(): HasMany

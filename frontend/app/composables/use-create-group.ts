@@ -5,6 +5,7 @@ import {
   type CreateGroupErrors,
 } from '../domain/create-group'
 import { useAccessIdentityStore } from '../stores/access-identity'
+import { useAccountStore } from '../stores/account'
 import { useGroupsStore } from '../stores/groups'
 import { persistGroupCreation } from '../persistence/database'
 import { prepareCreateGroupMutation } from '../domain/pending-mutation'
@@ -18,6 +19,7 @@ export function useCreateGroup(dependencies: CreateGroupDependencies = {
   persistCreation: persistGroupCreation,
 }) {
   const identityStore = useAccessIdentityStore()
+  const accountStore = useAccountStore()
   const groupsStore = useGroupsStore()
 
   async function createGroup(draft: CreateGroupDraft): Promise<
@@ -30,7 +32,7 @@ export function useCreateGroup(dependencies: CreateGroupDependencies = {
     }
 
     const actorId = identityStore.accessIdentityId
-    if (!actorId || !identityStore.credential) {
+    if (!actorId || (!identityStore.credential && !accountStore.isAuthenticated)) {
       throw new Error('Access identity is not ready')
     }
     const prepared = prepareGroupCreation(draft, actorId)

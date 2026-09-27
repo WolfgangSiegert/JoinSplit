@@ -144,6 +144,13 @@ Der initiale MVP verlangt keine globale Personenidentität.
 Zwei Participants mit demselben Namen in unterschiedlichen Groups sind
 unabhängige Domain-Objekte.
 
+M6.5 ergänzt dieses initiale Modell um eine optionale, gruppenübergreifend
+wiederverwendbare `Person`. Ein Participant bleibt trotzdem die eigenständige
+finanzielle Identität genau einer Group und darf lediglich optional auf eine
+Person verweisen. Die verbindlichen Regeln für Verknüpfung, Namen, Historie und
+Account-Synchronisierung stehen im
+[`Navigation and Reusable People Contract`](navigation-people-contract.md).
+
 ### Stable Participant Order
 
 Eine Group besitzt eine stabile Reihenfolge ihrer Participants.

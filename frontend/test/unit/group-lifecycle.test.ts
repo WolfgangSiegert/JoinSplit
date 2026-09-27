@@ -58,7 +58,7 @@ describe('Group lifecycle', () => {
 
   test('rehydration accepts the retained DeleteGroup tombstone and hides it from normal lookup', () => {
     const deletion: PendingDeleteGroup = { id: MUTATION_ID, type: 'DeleteGroup', groupId: GROUP_ID, createdOrder: 0, payload: {} }
-    const state = { accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32), synchronizationStatus: 'registered' as const }, groups: [group], participants: [participant], pendingMutations: [deletion], expenses: [], settlements: [], settings: null }
+    const state = { accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32), synchronizationStatus: 'registered' as const }, groups: [group], participants: [participant], people: [], pendingPersonMutations: [], pendingMutations: [deletion], expenses: [], settlements: [], settings: null }
     expect(validateDurableState(state)).toBe(state)
     const store = useGroupsStore(); store.hydrate(state)
     expect(store.findGroup(GROUP_ID)).toBeUndefined()
@@ -71,7 +71,7 @@ describe('Group lifecycle', () => {
     const archive: PendingArchiveGroup = { id: MUTATION_ID, type: 'ArchiveGroup', groupId: GROUP_ID, createdOrder: 0, payload: { status: 'archived' } }
     const invalid = {
       accessIdentity: { id: ACTOR_ID, credential: '01'.repeat(32), synchronizationStatus: 'registered' as const },
-      groups: [{ ...group, status: 'archived' as const }], participants: [participant], pendingMutations: [archive],
+      groups: [{ ...group, status: 'archived' as const }], participants: [participant], people: [], pendingPersonMutations: [], pendingMutations: [archive],
       expenses: [], settlements: [], settings: null,
     }
     expect(() => validateDurableState(invalid)).toThrow('archive history mismatch')

@@ -25,7 +25,7 @@ async function seedBalanceState(
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
 
   await page.evaluate(async ({ groupId, aliceId, bobId, carolId, expenseId, participants, expenses, archived }) => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -149,7 +149,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'CRUD-Balance' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()

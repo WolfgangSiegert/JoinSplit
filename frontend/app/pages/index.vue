@@ -14,52 +14,89 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
 <template>
   <main class="page-shell">
     <div class="page-content">
-      <header :class="isFreshStart ? 'landing-header' : 'mb-8'">
+      <header class="landing-header">
         <div class="flex flex-wrap items-center justify-end gap-2">
           <nav class="flex flex-wrap justify-end" aria-label="Allgemeine Navigation">
+            <a href="#gruppen" class="secondary-link"><AppIcon name="users" />Gruppen</a>
             <NuxtLink to="/demo" class="secondary-link"><AppIcon name="database" />Demo & Daten</NuxtLink>
             <NuxtLink to="/settings" class="secondary-link -mr-4"><AppIcon name="settings" />Einstellungen</NuxtLink>
           </nav>
         </div>
-        <template v-if="isFreshStart">
-          <div class="landing-hero">
-            <p class="eyebrow">Gemeinsame Ausgaben. Klar geregelt.</p>
-            <h1 class="landing-hero__title">Deine Gruppen</h1>
-            <p class="landing-hero__lead">Mehr zusammen erleben. Weniger rechnen.</p>
-            <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
-            <div class="landing-hero__actions">
-              <NuxtLink to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten"><AppIcon name="plus" />Erste Gruppe starten</NuxtLink>
-              <a href="#so-funktionierts" class="secondary-button"><AppIcon name="info" />So funktioniert es</a>
-            </div>
+        <div class="landing-hero">
+          <p class="eyebrow">Gemeinsame Ausgaben. Klar geregelt.</p>
+          <h1 class="landing-hero__title">Deine Gruppen</h1>
+          <p class="landing-hero__lead">Mehr zusammen erleben. Weniger rechnen.</p>
+          <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
+          <div class="landing-hero__actions">
+            <NuxtLink v-if="isFreshStart" to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten"><AppIcon name="plus" />Erste Gruppe starten</NuxtLink>
+            <a v-else href="#gruppen" class="primary-button"><AppIcon name="users" />Zu meinen Gruppen</a>
+            <a href="#so-funktionierts" class="secondary-button"><AppIcon name="info" />So funktioniert es</a>
           </div>
-          <JoinSplitOverviewGraphic />
-        </template>
-        <template v-else>
-          <h1 class="mt-5 text-4xl font-bold text-brand-900">Deine Gruppen</h1>
-          <p class="mt-2 text-lg text-ink-700">Gemeinsame Ausgaben, klar und menschlich.</p>
-        </template>
+        </div>
+        <JoinSplitOverviewGraphic />
       </header>
 
       <p v-if="route.query.deleted === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Gruppe lokal zur endgültigen Löschung vorgemerkt.</p>
       <p v-if="route.query.reset === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Lokale Daten wurden zurückgesetzt. Eine neue Browser-Identität wurde erstellt.</p>
 
-      <section v-if="activeGroups.length" aria-labelledby="active-groups">
-        <h2 id="active-groups" class="eyebrow">Aktive Gruppen</h2>
-        <ul class="ledger-list mt-3">
-          <li v-for="(group, index) in activeGroups" :key="group.id">
-            <NuxtLink
-              :to="`/groups/${group.id}`"
-              class="ledger-row font-semibold"
-            >
-              <ParticipantAvatar :name="group.name" :index="index" size="lg" />
-              <span class="min-w-0 flex-1"><span class="block break-words font-bold">{{ group.name }}</span><span class="mt-1 block text-sm font-medium text-ink-700">Aktiv · {{ group.currency }}</span></span>
-              <span class="text-xl" aria-hidden="true">›</span>
-            </NuxtLink>
-          </li>
-        </ul>
+      <section id="gruppen" class="landing-groups" aria-labelledby="group-selector-title">
+        <p class="eyebrow">Dein Bereich</p>
+        <h2 id="group-selector-title" class="mt-2 text-3xl font-bold">Gruppenauswahl</h2>
+        <p class="mt-2 text-ink-700">Öffne eine bestehende Gruppe oder starte einen neuen gemeinsamen Stand.</p>
+
+        <section v-if="activeGroups.length" class="mt-6" aria-labelledby="active-groups">
+          <h3 id="active-groups" class="text-lg font-semibold">Aktive Gruppen</h3>
+          <ul class="ledger-list mt-3">
+            <li v-for="(group, index) in activeGroups" :key="group.id">
+              <NuxtLink
+                :to="`/groups/${group.id}`"
+                class="ledger-row font-semibold"
+              >
+                <ParticipantAvatar :name="group.name" :index="index" size="lg" />
+                <span class="min-w-0 flex-1"><span class="block break-words font-bold">{{ group.name }}</span><span class="mt-1 block text-sm font-medium text-ink-700">Aktiv · {{ group.currency }}</span></span>
+                <span class="text-xl" aria-hidden="true">›</span>
+              </NuxtLink>
+            </li>
+          </ul>
+        </section>
+
+        <p v-else class="card mt-6 p-5 text-center">
+          {{ isFreshStart
+            ? 'Noch keine Gruppe auf diesem Gerät. Du kannst sofort lokal starten.'
+            : 'Keine aktive Gruppe. Archivierte Gruppen und ausstehende Löschungen bleiben unten erreichbar.' }}
+        </p>
+
+        <section v-if="archivedGroups.length" class="mt-6" aria-labelledby="archived-groups-title">
+          <label class="flex min-h-11 items-center gap-3 font-medium">
+            <input v-model="showArchived" type="checkbox" class="size-5">
+            Archivierte Gruppen anzeigen
+          </label>
+          <div v-if="showArchived" class="mt-3">
+            <h3 id="archived-groups-title" class="text-lg font-semibold">Archivierte Gruppen</h3>
+            <ul class="mt-3 space-y-3">
+              <li v-for="group in archivedGroups" :key="group.id" class="card">
+                <NuxtLink :to="`/groups/${group.id}`" class="flex min-h-14 items-center justify-between rounded-2xl px-4 py-3 font-semibold">
+                  <span>{{ group.name }}</span><span aria-hidden="true">→</span>
+                </NuxtLink>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section v-if="pendingDeletions.length" class="mt-6" aria-labelledby="pending-deletions-title">
+          <h3 id="pending-deletions-title" class="text-lg font-semibold">Ausstehende Löschungen</h3>
+          <ul class="mt-3 space-y-3">
+            <li v-for="item in pendingDeletions" :key="item.mutation.id" class="card p-4">
+              <p class="font-semibold">{{ item.group!.name }}</p>
+              <GroupSyncStatus :group-id="item.mutation.groupId" pending-deletion class="mt-3" />
+            </li>
+          </ul>
+        </section>
+
+        <NuxtLink to="/groups/new" class="primary-button mt-7 w-full"><AppIcon name="plus" />{{ isFreshStart ? 'Erste Gruppe starten' : 'Neue Gruppe starten' }}</NuxtLink>
       </section>
 
-      <section v-if="isFreshStart" id="so-funktionierts" class="landing-guide" aria-labelledby="landing-guide-title">
+      <section id="so-funktionierts" class="landing-guide mt-8" aria-labelledby="landing-guide-title">
         <p class="eyebrow">In drei Schritten</p>
         <h2 id="landing-guide-title" class="mt-2 text-2xl font-bold">Von der ersten Ausgabe zum klaren Ausgleich</h2>
         <ol class="landing-guide__list">
@@ -69,35 +106,6 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
         </ol>
         <p class="landing-guide__note">Ohne Registrierung. Die Daten bleiben in diesem Browser verfügbar und werden bei Verbindung mit der Demo synchronisiert.</p>
       </section>
-
-      <section v-if="archivedGroups.length" class="mt-6" aria-labelledby="archived-groups-title">
-        <label class="flex min-h-11 items-center gap-3 font-medium">
-          <input v-model="showArchived" type="checkbox" class="size-5">
-          Archivierte Gruppen anzeigen
-        </label>
-        <div v-if="showArchived" class="mt-3">
-          <h2 id="archived-groups-title" class="text-lg font-semibold">Archivierte Gruppen</h2>
-          <ul class="mt-3 space-y-3">
-            <li v-for="group in archivedGroups" :key="group.id" class="card">
-              <NuxtLink :to="`/groups/${group.id}`" class="flex min-h-14 items-center justify-between rounded-2xl px-4 py-3 font-semibold">
-                <span>{{ group.name }}</span><span aria-hidden="true">→</span>
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section v-if="pendingDeletions.length" class="mt-6" aria-labelledby="pending-deletions-title">
-        <h2 id="pending-deletions-title" class="text-lg font-semibold">Ausstehende Löschungen</h2>
-        <ul class="mt-3 space-y-3">
-          <li v-for="item in pendingDeletions" :key="item.mutation.id" class="card p-4">
-            <p class="font-semibold">{{ item.group!.name }}</p>
-            <GroupSyncStatus :group-id="item.mutation.groupId" pending-deletion class="mt-3" />
-          </li>
-        </ul>
-      </section>
-
-      <NuxtLink v-if="!isFreshStart" to="/groups/new" class="primary-button mt-7 w-full"><AppIcon name="plus" />Neue Gruppe starten</NuxtLink>
     </div>
   </main>
 </template>

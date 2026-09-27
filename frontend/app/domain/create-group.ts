@@ -24,6 +24,7 @@ export interface Group {
 export interface Participant {
   id: string
   groupId: string
+  personId?: string
   name: string
   status: 'active' | 'inactive'
   order: number

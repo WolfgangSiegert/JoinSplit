@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Actions\ImportAccountGroup;
+use App\Actions\ImportAccountPeople;
 use App\Http\Requests\ImportAccountGroupRequest;
+use App\Http\Requests\ImportAccountPeopleRequest;
 use App\Models\Account;
 use App\Models\Group;
+use App\Models\Person;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,8 +20,8 @@ class AccountWorkspaceController extends Controller
         /** @var Account $account */
         $account = $request->user('web');
 
-        $groups = DB::transaction(function () use ($account) {
-            return Group::query()
+        [$groups, $people] = DB::transaction(function () use ($account) {
+            $groups = Group::query()
                 ->whereHas('owner', fn ($query) => $query->where('account_id', $account->id))
                 ->lockForUpdate()
                 ->with(['participants', 'expenses.shares', 'settlements'])
@@ -26,11 +29,21 @@ class AccountWorkspaceController extends Controller
                 ->get()
                 ->map(fn (Group $group): array => $this->snapshot($group))
                 ->values();
+            $people = Person::query()->where('account_id', $account->id)
+                ->lockForUpdate()->orderBy('id')->get()
+                ->map(fn (Person $person): array => [
+                    'id' => $person->id, 'name' => $person->name,
+                    'status' => $person->is_active ? 'active' : 'inactive',
+                    'revision' => $person->revision,
+                ])->values();
+
+            return [$groups, $people];
         });
 
         return response()->json([
             'data' => [
                 'account' => ['id' => $account->id, 'email' => $account->email],
+                'people' => $people,
                 'groups' => $groups,
             ],
         ]);
@@ -56,6 +69,24 @@ class AccountWorkspaceController extends Controller
         return response()->json(['data' => ['groupId' => $imported->id, 'revision' => $imported->revision]], 201);
     }
 
+    public function importPeople(
+        ImportAccountPeopleRequest $request,
+        string $adoption,
+        ImportAccountPeople $import,
+    ): JsonResponse {
+        /** @var Account $account */
+        $account = $request->user('web');
+        $import->handle(
+            $account,
+            strtolower($adoption),
+            $request->string('importId')->toString(),
+            $request->validated('people'),
+            $request->validated('associations'),
+        );
+
+        return response()->json(['data' => ['imported' => count($request->validated('people'))]], 201);
+    }
+
     /** @return array<string, mixed> */
     private function snapshot(Group $group): array
     {
@@ -70,6 +101,7 @@ class AccountWorkspaceController extends Controller
             'participants' => $group->participants->map(fn ($participant): array => [
                 'id' => $participant->id, 'groupId' => $participant->group_id, 'name' => $participant->name,
                 'status' => $participant->is_active ? 'active' : 'inactive', 'order' => $participant->position,
+                ...($participant->person_id ? ['personId' => $participant->person_id] : []),
             ])->values(),
             'expenses' => $group->expenses->sortBy('id')->map(fn ($expense): array => [
                 'id' => $expense->id, 'groupId' => $expense->group_id, 'description' => $expense->description,

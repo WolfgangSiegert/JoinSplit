@@ -77,6 +77,20 @@ describe('access identity registration protocol', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 
+  test('treats an account-linked identity without an anonymous credential as ready', async () => {
+    const current = {
+      ...identity('account-linked'),
+      credential: null,
+    }
+    const fetcher = vi.fn()
+
+    await expect(ensureAccessIdentityRegistered({
+      apiBase: 'https://joinsplit.tiny-bits.org', identity: current, online: true,
+      fetcher: fetcher as typeof fetch,
+    })).resolves.toEqual({ outcome: 'ready' })
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   test('persists terminal expiry and treats registration throttling as retryable', async () => {
     const current = identity('registered')
     const persist = vi.fn(async () => undefined)

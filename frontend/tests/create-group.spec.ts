@@ -19,12 +19,12 @@ async function expectNoAxeViolations(page: Page): Promise<void> {
 
 async function openCreateGroup(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
 }
 
 async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -62,7 +62,7 @@ async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
 
 async function durableInitialParticipantDefault(page: Page): Promise<boolean | null> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -117,7 +117,7 @@ test('the durable global setting controls the next form default after reload', a
     page.getByRole('checkbox', { name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen' }),
   ).not.toBeChecked()
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
 
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).not.toBeChecked()
   await expect(page.getByLabel('Mein Name in dieser Gruppe')).toHaveCount(0)
@@ -146,7 +146,7 @@ test('a failed durable settings write restores the visible and effective value',
   await expect(setting).toBeChecked()
 
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).toBeChecked()
 })
 
@@ -238,7 +238,7 @@ test('local creation navigates immediately, then the real API confirms the same 
     await route.continue()
   })
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Zweite Gruppe')
   const laterResponse = page.waitForResponse(
@@ -262,6 +262,11 @@ test('local creation navigates immediately, then the real API confirms the same 
 
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await expect(page.getByRole('link', { name: /Wochenendtrip/ })).toHaveCount(1)
+  await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
+  await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Gruppenauswahl' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Zu meinen Gruppen' })).toHaveAttribute('href', '#gruppen')
+  await expect(page.locator('#gruppen')).toBeVisible()
 })
 
 test('creation without a participant succeeds and offline is distinct from pending', async ({ page, context }) => {
@@ -269,7 +274,7 @@ test('creation without a participant succeeds and offline is distinct from pendi
   await page.goto('/groups/preload')
   await expect(page.getByRole('heading', { level: 1, name: 'Gruppe nicht gefunden' })).toBeVisible()
   await page.getByRole('link', { name: 'Zur Gruppenliste' }).click()
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await context.setOffline(true)
   await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
   await page.getByLabel('Gruppenname').fill('Ohne Teilnehmer')
@@ -396,16 +401,16 @@ test('the server-rendered hydration state is blocked and accessible', async ({ p
   await page.goto('/')
 
   await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten werden geladen' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Neue Gruppe', exact: true })).toBeVisible()
   await expect(page.getByText('Noch keine Gruppe')).toHaveCount(0)
   await expectNoAxeViolations(page)
 })
 
 test('malformed durable data blocks domain UI without deleting the record', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Neue Gruppe', exact: true })).toBeVisible()
   await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -428,9 +433,9 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
 
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Lokale Daten nicht verfügbar' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Neue Gruppe' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Neue Gruppe', exact: true })).toBeVisible()
   const malformedStillExists = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -448,7 +453,7 @@ test('malformed durable data blocks domain UI without deleting the record', asyn
   await expectNoAxeViolations(page)
 })
 
-test('v1 pending CreateGroup data upgrades atomically through v7', async ({ page }) => {
+test('v1 pending CreateGroup data upgrades atomically through v10', async ({ page }) => {
   await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -482,22 +487,22 @@ test('v1 pending CreateGroup data upgrades atomically through v7', async ({ page
   await page.reload()
   await expect(page.getByRole('link', { name: /Migration/ })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
     const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
     const version = db.version; db.close(); return { version, records }
   })
-  expect(upgraded.version).toBe(7)
+  expect(upgraded.version).toBe(10)
   expect(upgraded.records).toHaveLength(1)
   expect(upgraded.records[0]).toMatchObject({ type: 'CreateGroup', createdOrder: 0, groupId: '22222222-2222-4222-8222-222222222222' })
   expect(upgraded.records[0]?.id).toMatch(/^[0-9a-f-]{36}$/)
 })
 
-test('a fresh database is created directly at schema v7', async ({ page }) => {
+test('a fresh database is created directly at schema v10', async ({ page }) => {
   await page.goto('/')
   const schema = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
     })
@@ -505,11 +510,11 @@ test('a fresh database is created directly at schema v7', async ({ page }) => {
     db.close()
     return result
   })
-  expect(schema.version).toBe(7)
-  expect(schema.stores).toEqual(expect.arrayContaining(['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements']))
+  expect(schema.version).toBe(10)
+  expect(schema.stores).toEqual(expect.arrayContaining(['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'people', 'pendingPersonMutations', 'pendingMutations', 'settings', 'expenses', 'expenseShares', 'settlements']))
 })
 
-test('v3 settings upgrade to v7 preserves existing preferences and adds the Settlement default', async ({ page }) => {
+test('v3 settings upgrade to v10 preserves existing preferences and adds the Settlement default', async ({ page }) => {
   await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -541,19 +546,19 @@ test('v3 settings upgrade to v7 preserves existing preferences and adds the Sett
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const settingsRequest = db.transaction('settings').objectStore('settings').get('preferences')
     const settings = await new Promise<Record<string, unknown>>((resolve, reject) => { settingsRequest.onsuccess = () => resolve(settingsRequest.result); settingsRequest.onerror = () => reject(settingsRequest.error) })
     const result = { version: db.version, stores: [...db.objectStoreNames], settings }
     db.close(); return result
   })
-  expect(upgraded.version).toBe(7)
+  expect(upgraded.version).toBe(10)
   expect(upgraded.stores).toContain('settlements')
   expect(upgraded.settings).toEqual({ key: 'preferences', addSelfAsParticipantByDefault: false, settlementProposalStrategy: 'deterministic' })
 })
 
-test('v2 durable state upgrades to v7 without losing existing records', async ({ page }) => {
+test('v2 durable state upgrades to v10 without losing existing records', async ({ page }) => {
   await page.route('**/_nuxt/**', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }))
   await page.goto('/')
   await page.evaluate(async () => {
@@ -582,14 +587,14 @@ test('v2 durable state upgrades to v7 without losing existing records', async ({
   await page.reload()
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   const upgraded = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
     const result = { version: db.version, stores: [...db.objectStoreNames], identityId: identity.id }
     db.close(); return result
   })
-  expect(upgraded).toMatchObject({ version: 7, identityId: '11111111-1111-4111-8111-111111111111' })
+  expect(upgraded).toMatchObject({ version: 10, identityId: '11111111-1111-4111-8111-111111111111' })
   expect(upgraded.stores).toEqual(expect.arrayContaining(['expenses', 'expenseShares', 'settlements']))
 })
 
@@ -601,7 +606,7 @@ test('Expense shares reload in stable Participant order despite opposing UUID or
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: 'Deine Gruppen' })).toBeVisible()
   await page.evaluate(async ({ groupId, expenseId, stableFirst, stableSecond }) => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const identityRequest = db.transaction('accessIdentity').objectStore('accessIdentity').get('current')
     const identity = await new Promise<{ id: string }>((resolve, reject) => { identityRequest.onsuccess = () => resolve(identityRequest.result); identityRequest.onerror = () => reject(identityRequest.error) })
@@ -636,7 +641,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   const addBob = page.waitForResponse(response => response.url().endsWith('/participants') && response.request().method() === 'POST' && response.status() === 201)
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
@@ -671,7 +676,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.reload()
   await expect(page.getByText('10,01 €')).toBeVisible()
   await page.getByRole('link', { name: /Ausgaben/ }).click()
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   const deactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
   await page.getByRole('button', { name: 'Bob deaktivieren' }).click()
   await deactivate
@@ -752,7 +757,7 @@ test('Participant persistence failures are visibly and safely reported', async (
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   await page.evaluate(() => {
     const originalAdd = IDBObjectStore.prototype.add
     IDBObjectStore.prototype.add = function (...args) {
@@ -775,7 +780,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   await expect(page).toHaveURL(/\/participants$/)
   await expect(page.getByRole('heading', { name: 'Personen', exact: true })).toBeVisible()
   await expect(page.getByText('Alice', { exact: true })).toBeVisible()
@@ -814,7 +819,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await expect(page.getByRole('button', { name: 'Bobby umbenennen' })).toBeFocused()
   await expectNoAxeViolations(page)
   await expect.poll(async () => page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('pendingMutations').objectStore('pendingMutations').getAll()
     const records = await new Promise<unknown[]>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })
@@ -856,7 +861,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.reload()
   await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
   const orders = await page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
     const result = db.transaction('participants').objectStore('participants').getAll()
     const records = await new Promise<Array<{ name: string; order: number }>>((resolve, reject) => { result.onsuccess = () => resolve(result.result); result.onerror = () => reject(result.error) })

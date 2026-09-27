@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function localState(page: Page): Promise<{ groups: string[]; pendingMutations: number }> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -39,7 +39,7 @@ test('a real waiting worker never reloads silently and preserves pending Indexed
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
 
     await page.route('**/api/groups', route => route.abort('connectionrefused'))
-    await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+    await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
     await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
     await page.getByLabel('Gruppenname').fill('Update bleibt lokal')
     await page.getByRole('button', { name: 'Gruppe erstellen' }).click()

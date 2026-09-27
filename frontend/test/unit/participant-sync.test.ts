@@ -1,13 +1,14 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Participant } from '../../app/domain/create-group'
-import type { PendingDeactivateParticipant, PendingRenameParticipant } from '../../app/domain/pending-mutation'
+import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactivateParticipant, PendingRenameParticipant } from '../../app/domain/pending-mutation'
 import { synchronizeParticipantMutation } from '../../app/services/participant-sync'
 import { useGroupsStore } from '../../app/stores/groups'
 
 const GROUP_ID = '11111111-1111-4111-8111-111111111111'
 const PARTICIPANT_ID = '22222222-2222-4222-8222-222222222222'
 const MUTATION_ID = '33333333-3333-4333-8333-333333333333'
+const PERSON_ID = '55555555-5555-4555-8555-555555555555'
 const identity = { accessIdentityId: '44444444-4444-4444-8444-444444444444', credential: 'secret' }
 
 function renameMutation(): PendingRenameParticipant {
@@ -53,6 +54,44 @@ async function synchronize(
 beforeEach(() => setActivePinia(createPinia()))
 
 describe('Participant synchronization reconciliation', () => {
+  test.each([
+    ['Account', { accessIdentityId: identity.accessIdentityId, credential: null }, true],
+    ['anonymous', identity, false],
+  ])('sends a Person association only in %s mode', async (_mode, currentIdentity, accountMode) => {
+    const mutation: PendingAddParticipant = {
+      id: MUTATION_ID, type: 'AddParticipant', groupId: GROUP_ID, createdOrder: 0,
+      payload: { participantId: PARTICIPANT_ID, personId: PERSON_ID, name: 'Ada', order: 0 },
+    }
+    const groupsStore = useGroupsStore()
+    groupsStore.hydrate({
+      groups: [{ id: GROUP_ID, name: 'Group', currency: 'EUR', ownerAccessIdentityId: identity.accessIdentityId,
+        status: 'active', hasFinancialHistory: false, participantIds: [PARTICIPANT_ID] }],
+      participants: [{ id: PARTICIPANT_ID, groupId: GROUP_ID, personId: PERSON_ID, name: 'Ada', status: 'active', order: 0 }],
+      pendingMutations: [mutation], groupRevisions: { [GROUP_ID]: 0 },
+    })
+    const mutationBodies: Record<string, unknown>[] = []
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/api/account/csrf')) {
+        return new Response(JSON.stringify({ data: { csrfToken: 'csrf-token' } }), { status: 200 })
+      }
+      mutationBodies.push(JSON.parse(String(init?.body)))
+      return new Response(JSON.stringify({ data: {
+        id: PARTICIPANT_ID, groupId: GROUP_ID, ...(accountMode ? { personId: PERSON_ID } : {}),
+        name: 'Ada', active: true, order: 0,
+      } }), { status: 201, headers: accountMode ? { 'X-Group-Revision': '1' } : {} })
+    })
+
+    const result = await synchronizeParticipantMutation({
+      mutationId: MUTATION_ID, apiBase: 'https://example.test', identity: currentIdentity,
+      groupsStore, online: true, fetcher, acknowledge: vi.fn(async () => {}),
+    })
+
+    expect(result).toEqual({ outcome: 'synced', status: 201 })
+    expect(mutationBodies).toEqual([accountMode
+      ? { participantId: PARTICIPANT_ID, personId: PERSON_ID, name: 'Ada', order: 0 }
+      : { participantId: PARTICIPANT_ID, name: 'Ada', order: 0 }])
+  })
+
   test('reconciles a complete Rename response while sending only the name', async () => {
     const { result, groupsStore, requestInit, acknowledge } = await synchronize(renameMutation(), responseParticipant())
     expect(result).toEqual({ outcome: 'synced', status: 200 })
@@ -78,6 +117,42 @@ describe('Participant synchronization reconciliation', () => {
     expect(result).toEqual({ outcome: 'synced', status: 200 })
     expect(JSON.parse(String(requestInit?.body))).toEqual({ active: false })
     expect(groupsStore.pendingMutations).toEqual([])
+  })
+
+  test.each([
+    ['link', PERSON_ID, { personId: PERSON_ID }],
+    ['unlink', null, {}],
+  ])('reconciles an explicit Account %s association', async (_operation, personId, responseAssociation) => {
+    const mutation: PendingAssociateParticipant = {
+      id: MUTATION_ID, type: 'AssociateParticipant', groupId: GROUP_ID, createdOrder: 0,
+      payload: { participantId: PARTICIPANT_ID, personId, name: 'Alice', active: true, order: 3 },
+    }
+    const groupsStore = useGroupsStore()
+    groupsStore.hydrate({
+      groups: [{ id: GROUP_ID, name: 'Group', currency: 'EUR', ownerAccessIdentityId: identity.accessIdentityId,
+        status: 'active', hasFinancialHistory: false, participantIds: [PARTICIPANT_ID] }],
+      participants: [{ id: PARTICIPANT_ID, groupId: GROUP_ID, ...(personId ? { personId } : {}), name: 'Alice', status: 'active', order: 3 }],
+      pendingMutations: [mutation], groupRevisions: { [GROUP_ID]: 4 },
+    })
+    const bodies: Record<string, unknown>[] = []
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith('/api/account/csrf')) {
+        return new Response(JSON.stringify({ data: { csrfToken: 'csrf' } }), { status: 200 })
+      }
+      bodies.push(JSON.parse(String(init?.body)))
+      return new Response(JSON.stringify({ data: {
+        id: PARTICIPANT_ID, groupId: GROUP_ID, name: 'Alice', active: true, order: 3, ...responseAssociation,
+      } }), { status: 200, headers: { 'X-Group-Revision': '5' } })
+    })
+
+    const result = await synchronizeParticipantMutation({
+      mutationId: MUTATION_ID, apiBase: 'https://example.test',
+      identity: { accessIdentityId: identity.accessIdentityId, credential: null }, groupsStore,
+      online: true, fetcher, acknowledge: vi.fn(async () => {}),
+    })
+
+    expect(result).toEqual({ outcome: 'synced', status: 200 })
+    expect(bodies).toEqual([{ personId }])
   })
 
   test.each([

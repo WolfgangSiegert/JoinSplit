@@ -3,6 +3,7 @@ import {
   freezePendingMutation,
   nextCreatedOrder,
   type PendingAddParticipant,
+  type PendingAssociateParticipant,
   type PendingDeactivateParticipant,
   type PendingDeleteParticipant,
   type PendingMutation,
@@ -65,6 +66,7 @@ export function prepareParticipantAdd(
   name: string,
   generateId: () => string = () => crypto.randomUUID(),
   createdOrder: number = nextCreatedOrder(pendingMutations),
+  personId?: string,
 ): { ok: true; value: PreparedParticipantAdd } | { ok: false; errors: ParticipantNameErrors } {
   const validation = validateParticipantName(name)
   if (validation.errors.name) return { ok: false, errors: validation.errors }
@@ -75,6 +77,7 @@ export function prepareParticipantAdd(
   const participant: Participant = {
     id: participantId,
     groupId: group.id,
+    ...(personId ? { personId } : {}),
     name: validation.normalizedName,
     status: 'active',
     order,
@@ -84,7 +87,7 @@ export function prepareParticipantAdd(
     type: 'AddParticipant',
     groupId: group.id,
     createdOrder,
-    payload: { participantId, name: validation.normalizedName, order },
+    payload: { participantId, ...(personId ? { personId } : {}), name: validation.normalizedName, order },
   })
 
   return {
@@ -137,6 +140,28 @@ export function prepareParticipantDeactivate(
       id: generateId(), type: 'DeactivateParticipant', groupId: participant.groupId,
         createdOrder,
       payload: { participantId: participant.id, name: participant.name, active: false, order: participant.order },
+    }),
+  }
+}
+
+export function prepareParticipantAssociation(
+  participant: Participant,
+  pendingMutations: readonly PendingMutation[],
+  personId: string | null,
+  generateId: () => string = () => crypto.randomUUID(),
+  createdOrder: number = nextCreatedOrder(pendingMutations),
+): PreparedParticipantUpdate<PendingAssociateParticipant> {
+  const { personId: _currentPersonId, ...unlinkedParticipant } = participant
+  const updated: Participant = personId ? { ...participant, personId } : unlinkedParticipant
+  return {
+    participant: updated,
+    mutation: freezePendingMutation({
+      id: generateId(), type: 'AssociateParticipant', groupId: participant.groupId,
+      createdOrder,
+      payload: {
+        participantId: participant.id, personId, name: participant.name,
+        active: participant.status === 'active', order: participant.order,
+      },
     }),
   }
 }

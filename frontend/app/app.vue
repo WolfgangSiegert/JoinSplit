@@ -2,6 +2,7 @@
 const lifecycleStore = useApplicationLifecycleStore()
 const settingsStore = useSettingsStore()
 const { synchronizePending } = usePendingCreateGroupSync()
+usePendingPersonSync()
 
 const systemPrefersDark = ref(import.meta.client && window.matchMedia('(prefers-color-scheme: dark)').matches)
 const resolvedColorMode = computed(() => settingsStore.colorMode === 'system'

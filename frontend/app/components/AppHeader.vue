@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const settingsStore = useSettingsStore()
+const accountStore = useAccountStore()
 const systemPrefersDark = ref(false)
 const saving = ref(false)
 const persistenceError = ref('')
@@ -45,6 +46,11 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
         </NuxtLink>
         <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
       </div>
+      <nav class="app-header__nav" aria-label="Hauptnavigation">
+        <NuxtLink to="/groups/new" class="app-header__action"><AppIcon name="plus" /><span>Neue Gruppe</span></NuxtLink>
+        <NuxtLink to="/people" class="app-header__action"><AppIcon name="users" /><span>Personen</span></NuxtLink>
+        <NuxtLink to="/account" class="app-header__action"><AppIcon name="user" /><span>{{ accountStore.isAuthenticated ? 'Account' : 'Anmelden' }}</span></NuxtLink>
+      </nav>
       <button
         type="button"
         class="theme-toggle"

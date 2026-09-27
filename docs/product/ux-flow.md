@@ -142,6 +142,25 @@ Owner-Zugriff und finanzielle Beteiligung sind getrennt:
 
 ## Minimal Mobile Views and Navigation
 
+### M6.5 global navigation extension
+
+Ab M6.5 bleibt `/` dauerhaft die Landingpage. Produktüberblick und
+Kurzanleitung verschwinden nicht mehr, sobald lokale Groups existieren. Eine
+beschriftete, über `#gruppen` ansteuerbare Group-Auswahl befindet sich auf
+derselben Seite.
+
+Der globale Header führt auf allen primären Ansichten zu:
+
+- neuer Group,
+- gruppenunabhängigen People,
+- Anmeldung oder Accountverwaltung,
+- der Landingpage über die Wortmarke.
+
+Eine globale Person ist keine finanzielle Group-Identität. Erst eine
+ausdrückliche Zuordnung erzeugt pro Group einen eigenen Participant. Die
+vollständige Produkt- und Architekturgrenze steht im
+[`Navigation and Reusable People Contract`](../architecture/navigation-people-contract.md).
+
 ### Group Overview
 
 Die Group Overview zeigt aktive Groups und ermöglicht den Zugriff auf
@@ -282,6 +301,13 @@ IndexedDB wird durch eine App-Aktualisierung nicht gelöscht.
 
 ## Confirmed UX Decisions
 
+- Die Landingpage bleibt mit und ohne lokale Groups dauerhaft erreichbar.
+- Die Group-Auswahl besitzt auf der Landingpage den stabilen Anker `#gruppen`.
+- Neue Group, People und Accountzugang sind aus dem globalen Header erreichbar.
+- Eine Person darf ohne Group existieren und mehreren Groups ausdrücklich
+  zugeordnet werden; jede Zuordnung bleibt ein eigener Participant.
+- Person- und Participant-Namen werden nicht automatisch miteinander
+  überschrieben.
 - Die MVP-Währung ist EUR und wird sichtbar ausgewiesen.
 - Create Group zeigt die Checkbox „Mich als Teilnehmer hinzufügen“.
 - Die Checkbox ist über eine gruppenübergreifende App-Einstellung vorbelegt,

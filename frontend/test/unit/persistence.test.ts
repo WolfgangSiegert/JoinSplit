@@ -47,6 +47,8 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
       status: 'active',
       order: 0,
     }],
+    people: [],
+    pendingPersonMutations: [],
     pendingMutations: [pendingMutation],
     expenses: [],
     settlements: [],
@@ -71,6 +73,7 @@ describe('durable state validation and bootstrap', () => {
         email: 'owner@example.test',
         accessIdentityIds: [ACTOR_ID],
         groupRevisions: { [GROUP_ID]: 1 },
+        personRevisions: {},
         conflictedGroupIds: [],
       },
     })

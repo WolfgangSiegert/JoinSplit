@@ -36,7 +36,8 @@ async function submit(): Promise<void> {
       addParticipant: addParticipant.value,
       participantName: participantName.value,
     })
-  } catch {
+  } catch (error) {
+    console.error('Local group creation failed', error)
     localError.value = 'Die Gruppe konnte lokal nicht gespeichert werden. Deine Eingaben sind erhalten.'
     submitting.value = false
     return

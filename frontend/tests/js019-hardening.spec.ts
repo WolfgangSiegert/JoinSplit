@@ -39,7 +39,7 @@ async function focusWithKeyboard(page: Page, locator: Locator, maximumTabs = 10)
 
 async function durableSnapshot(page: Page): Promise<DurableSnapshot> {
   return page.evaluate(async () => {
-    const request = indexedDB.open('joinsplit', 7)
+    const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -87,14 +87,14 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
     if (request.url().startsWith('http://127.0.0.1:8001/api/')) apiRequests.push(request)
   })
 
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByLabel('Gruppenname').fill('Offline-Kernflow')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')).toBeVisible()
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
@@ -221,7 +221,7 @@ test('the mobile core flow stays accessible and free of horizontal overflow', as
   await expectNoAxeViolations(page)
   await expectNoHorizontalOverflow(page)
 
-  const createGroupLink = page.getByRole('link', { name: 'Neue Gruppe' })
+  const createGroupLink = page.getByRole('link', { name: 'Neue Gruppe', exact: true })
   await expectMinimumTargetSize(createGroupLink)
   await focusWithKeyboard(page, createGroupLink)
   await expect(createGroupLink).toBeFocused()
@@ -270,7 +270,7 @@ test('the mobile core flow stays accessible and free of horizontal overflow', as
 
 test('Participant hardening prevents duplicate clicks, confirms duplicate names, and explains referenced deletion', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Neue Gruppe' }).click()
+  await page.getByRole('link', { name: 'Neue Gruppe', exact: true }).click()
   await page.getByLabel('Gruppenname').fill('Participant-Härtung')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   const createGroup = page.waitForResponse(response =>
@@ -281,7 +281,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await page.waitForURL(url => /^\/groups\/[0-9a-f-]{36}$/.test(url.pathname))
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
   const participantPosts: Request[] = []
   page.on('request', (request) => {
     if (request.url().endsWith('/participants') && request.method() === 'POST') {

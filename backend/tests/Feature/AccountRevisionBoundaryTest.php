@@ -3,6 +3,7 @@
 use App\Models\AccessIdentity;
 use App\Models\Account;
 use App\Models\Group;
+use App\Models\Person;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -12,6 +13,9 @@ const JS41_GROUP = '41000000-0000-4000-8000-000000000002';
 const JS41_PARTICIPANT = '41000000-0000-4000-8000-000000000003';
 const JS41_CREATE_MUTATION = '41000000-0000-4000-8000-000000000004';
 const JS41_ADD_MUTATION = '41000000-0000-4000-8000-000000000005';
+const JS41_PERSON = '41000000-0000-4000-8000-000000000006';
+const JS41_ASSOCIATE_MUTATION = '41000000-0000-4000-8000-000000000007';
+const JS41_UNLINK_MUTATION = '41000000-0000-4000-8000-000000000008';
 
 function js41Account(): Account
 {
@@ -89,6 +93,66 @@ it('authorizes mutations through Account ownership across linked identities', fu
         ])->assertCreated()->assertHeader('X-Group-Revision', '1');
 
     $this->assertDatabaseHas('participants', ['id' => JS41_PARTICIPANT, 'group_id' => JS41_GROUP]);
+});
+
+it('persists an authorized Person association inside the Group revision boundary', function () {
+    $account = js41Account();
+    AccessIdentity::findOrFail(JS41_ACCOUNT_IDENTITY)->groups()->create([
+        'id' => JS41_GROUP, 'name' => 'People group', 'currency' => 'EUR',
+        'is_active' => true, 'revision' => 0,
+    ]);
+    Person::query()->create([
+        'id' => JS41_PERSON, 'account_id' => $account->id, 'name' => 'Ava',
+        'is_active' => true, 'revision' => 1,
+    ]);
+    $this->actingAs($account, 'web');
+
+    $payload = [
+        'participantId' => JS41_PARTICIPANT, 'personId' => JS41_PERSON,
+        'name' => 'Ava', 'order' => 0,
+    ];
+    $this->withHeaders(js41Headers(JS41_ADD_MUTATION, 0))
+        ->postJson('/api/account/workspace/groups/'.JS41_GROUP.'/participants', $payload)
+        ->assertCreated()->assertHeader('X-Group-Revision', '1')
+        ->assertJsonPath('data.personId', JS41_PERSON);
+
+    $this->assertDatabaseHas('participants', [
+        'id' => JS41_PARTICIPANT, 'group_id' => JS41_GROUP, 'person_id' => JS41_PERSON,
+    ]);
+});
+
+it('explicitly links and unlinks an existing Participant inside the Group revision boundary', function () {
+    $account = js41Account();
+    $group = AccessIdentity::findOrFail(JS41_ACCOUNT_IDENTITY)->groups()->create([
+        'id' => JS41_GROUP, 'name' => 'People group', 'currency' => 'EUR',
+        'is_active' => true, 'revision' => 0,
+    ]);
+    $group->participants()->create([
+        'id' => JS41_PARTICIPANT, 'name' => 'Ava in group', 'is_active' => true, 'position' => 0,
+    ]);
+    Person::query()->create([
+        'id' => JS41_PERSON, 'account_id' => $account->id, 'name' => 'Ava directory',
+        'is_active' => true, 'revision' => 1,
+    ]);
+    $this->actingAs($account, 'web');
+
+    $this->withHeaders(js41Headers(JS41_ASSOCIATE_MUTATION, 0))
+        ->patchJson('/api/account/workspace/groups/'.JS41_GROUP.'/participants/'.JS41_PARTICIPANT, [
+            'personId' => JS41_PERSON,
+        ])->assertOk()->assertHeader('X-Group-Revision', '1')
+        ->assertJsonPath('data.personId', JS41_PERSON)
+        ->assertJsonPath('data.name', 'Ava in group');
+
+    $this->withHeaders(js41Headers(JS41_UNLINK_MUTATION, 1))
+        ->patchJson('/api/account/workspace/groups/'.JS41_GROUP.'/participants/'.JS41_PARTICIPANT, [
+            'personId' => null,
+        ])->assertOk()->assertHeader('X-Group-Revision', '2')
+        ->assertJsonMissingPath('data.personId')
+        ->assertJsonPath('data.name', 'Ava in group');
+
+    $this->assertDatabaseHas('participants', [
+        'id' => JS41_PARTICIPANT, 'group_id' => JS41_GROUP, 'person_id' => null,
+    ]);
 });
 
 it('requires authenticated revision and idempotency headers', function () {

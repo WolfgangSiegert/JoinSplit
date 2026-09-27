@@ -6,11 +6,14 @@ import { hasDuplicateParticipantName } from '../../../domain/participant'
 
 const route = useRoute()
 const groupsStore = useGroupsStore()
-const { add, rename, deactivate, remove } = useParticipants()
+const peopleStore = usePeopleStore()
+const { add, rename, deactivate, associate, remove } = useParticipants()
 const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
 const participants = computed(() => groupsStore.participantsForGroup(groupId.value))
 const addName = ref('')
+const selectedPersonId = ref('')
+const associationSelection = reactive<Record<string, string>>({})
 const addError = ref('')
 const status = ref('')
 const statusIsError = ref(false)
@@ -28,6 +31,10 @@ const deleteTarget = computed(() => participants.value.find(item => item.id === 
 const busyAction = ref<string | null>(null)
 const duplicateWarning = ref<{ kind: 'add' | 'rename'; participantId?: string; name: string } | null>(null)
 const duplicateConfirmButton = ref<HTMLButtonElement | null>(null)
+const availablePeople = computed(() => {
+  const linked = new Set(participants.value.flatMap(participant => participant.personId ? [participant.personId] : []))
+  return peopleStore.activePeople.filter(person => !linked.has(person.id))
+})
 
 function hasFinancialReferences(participantId: string): boolean {
   return participantHasFinancialReferences(participantId, groupsStore.expenses)
@@ -61,6 +68,47 @@ async function submitAdd(duplicateConfirmed = false) {
   finally {
     busyAction.value = null
     if (restoreAddFocus) { await nextTick(); addInput.value?.focus() }
+  }
+}
+
+async function addSelectedPerson(): Promise<void> {
+  if (busyAction.value || !selectedPersonId.value) return
+  const person = peopleStore.people.find(item => item.id === selectedPersonId.value && item.status === 'active')
+  if (!person) { status.value = 'Die ausgewählte Person ist nicht mehr verfügbar.'; statusIsError.value = true; return }
+  busyAction.value = 'add-person'
+  status.value = ''
+  statusIsError.value = false
+  try {
+    const result = await add(groupId.value, person.name, person.id)
+    if (!result.ok) { status.value = result.errors.name ?? 'Die Person konnte nicht hinzugefügt werden.'; statusIsError.value = true; return }
+    selectedPersonId.value = ''
+    status.value = `Person „${person.name}“ wurde dieser Gruppe hinzugefügt.`
+  } catch {
+    status.value = 'Die Person konnte nicht lokal mit dieser Gruppe verknüpft werden.'
+    statusIsError.value = true
+  } finally {
+    busyAction.value = null
+  }
+}
+
+async function updateAssociation(participantId: string, personId: string | null): Promise<void> {
+  if (busyAction.value) return
+  busyAction.value = `associate:${participantId}`
+  status.value = ''
+  statusIsError.value = false
+  try {
+    const person = personId ? peopleStore.people.find(item => item.id === personId && item.status === 'active') : null
+    if (personId && !person) throw new Error('Active Person required')
+    await associate(participantId, personId)
+    associationSelection[participantId] = ''
+    status.value = person
+      ? `Teilnehmer wurde ausdrücklich mit „${person.name}“ verknüpft.`
+      : 'Die Verknüpfung wurde gelöst. Teilnehmer und Person bleiben erhalten.'
+  } catch {
+    status.value = 'Die Personenverknüpfung konnte nicht sicher gespeichert werden.'
+    statusIsError.value = true
+  } finally {
+    busyAction.value = null
   }
 }
 
@@ -152,6 +200,21 @@ async function cancelRename(id: string): Promise<void> {
         <button type="submit" class="primary-button mt-3 w-full" :disabled="Boolean(busyAction)"><AppIcon name="plus" />{{ busyAction === 'add' ? 'Wird hinzugefügt …' : 'Hinzufügen' }}</button>
       </form>
 
+      <section v-if="group.status === 'active'" class="card mt-4 p-5" aria-labelledby="add-known-person-title">
+        <h2 id="add-known-person-title" class="font-semibold">Person aus dem Verzeichnis hinzufügen</h2>
+        <template v-if="peopleStore.activePeople.length">
+          <label for="known-person" class="mt-3 block font-medium">Person</label>
+          <select id="known-person" v-model="selectedPersonId" class="field-input mt-2" :disabled="Boolean(busyAction) || !availablePeople.length">
+            <option value="">Person auswählen</option>
+            <option v-for="person in availablePeople" :key="person.id" :value="person.id">{{ person.name }}</option>
+          </select>
+          <p v-if="!availablePeople.length" class="mt-2 text-sm text-gray-600">Alle aktiven Personen sind dieser Gruppe bereits zugeordnet.</p>
+          <button type="button" class="secondary-button mt-3 w-full" :disabled="Boolean(busyAction) || !selectedPersonId" @click="addSelectedPerson"><AppIcon name="users" />{{ busyAction === 'add-person' ? 'Wird hinzugefügt …' : 'Ausgewählte Person hinzufügen' }}</button>
+        </template>
+        <p v-else class="mt-2 text-sm text-gray-600">Lege zuerst im globalen Personenverzeichnis eine Person an.</p>
+        <NuxtLink to="/people" class="secondary-link mt-3 -ml-4"><AppIcon name="arrow-right" />Personenverzeichnis öffnen</NuxtLink>
+      </section>
+
       <p v-if="statusIsError" class="error-text mt-4" role="alert">{{ status }}</p>
       <p v-else class="sr-only" role="status" aria-live="polite">{{ status }}</p>
       <p v-if="!participants.length" class="card mt-6 p-5 text-center">Noch keine Teilnehmer.</p>
@@ -159,7 +222,7 @@ async function cancelRename(id: string): Promise<void> {
         <li v-for="(participant, index) in participants" :key="participant.id" class="py-4">
           <div class="flex items-center gap-3">
             <ParticipantAvatar :name="participant.name" :index="index" size="lg" />
-            <div><p class="font-bold">{{ participant.name }}</p><p class="text-sm text-ink-700">{{ participant.status === 'active' ? 'Aktiv' : 'Inaktiv' }}</p></div>
+            <div><p class="font-bold">{{ participant.name }}</p><p class="text-sm text-ink-700">{{ participant.status === 'active' ? 'Aktiv' : 'Inaktiv' }}{{ participant.personId ? ' · Aus Personenverzeichnis' : '' }}</p></div>
           </div>
           <form v-if="group.status === 'active' && editingId === participant.id" class="mt-3" :aria-busy="busyAction === `rename:${participant.id}`" @submit.prevent="submitRename(participant.id)">
             <label :for="`rename-${participant.id}`" class="font-semibold">Neuer Name</label>
@@ -176,6 +239,21 @@ async function cancelRename(id: string): Promise<void> {
             <button :ref="(element) => { if (element) renameTriggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} umbenennen`" @click="startRename(participant.id, participant.name)"><AppIcon name="pencil" />Umbenennen</button>
             <button v-if="participant.status === 'active'" type="button" class="secondary-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} deaktivieren`" @click="submitDeactivate(participant.id, participant.name)"><AppIcon name="user-minus" />{{ busyAction === `deactivate:${participant.id}` ? 'Wird deaktiviert …' : 'Deaktivieren' }}</button>
             <button v-if="!hasFinancialReferences(participant.id)" :ref="(element) => { if (element) triggerByParticipant.set(participant.id, element as HTMLButtonElement) }" type="button" class="danger-button" :disabled="Boolean(busyAction)" :aria-label="`${participant.name} löschen`" @click="askDelete(participant.id, $event.currentTarget as HTMLButtonElement)"><AppIcon name="trash" />Löschen</button>
+          </div>
+          <div v-if="group.status === 'active'" class="mt-3 rounded-xl border border-gray-200 p-3">
+            <template v-if="participant.personId">
+              <p class="text-sm text-ink-700">Mit „{{ peopleStore.people.find(person => person.id === participant.personId)?.name ?? participant.name }}“ im Personenverzeichnis verknüpft.</p>
+              <button type="button" class="secondary-button mt-3 w-full" :disabled="Boolean(busyAction)" :aria-label="`Verknüpfung von ${participant.name} lösen`" @click="updateAssociation(participant.id, null)"><AppIcon name="unlink" />{{ busyAction === `associate:${participant.id}` ? 'Wird gelöst …' : 'Verknüpfung lösen' }}</button>
+            </template>
+            <template v-else-if="availablePeople.length">
+              <label :for="`associate-${participant.id}`" class="block text-sm font-semibold">Bestehende Person verknüpfen</label>
+              <select :id="`associate-${participant.id}`" v-model="associationSelection[participant.id]" class="field-input mt-2" :disabled="Boolean(busyAction)">
+                <option value="">Person auswählen</option>
+                <option v-for="person in availablePeople" :key="person.id" :value="person.id">{{ person.name }}</option>
+              </select>
+              <button type="button" class="secondary-button mt-3 w-full" :disabled="Boolean(busyAction) || !associationSelection[participant.id]" @click="updateAssociation(participant.id, associationSelection[participant.id]!)"><AppIcon name="link" />{{ busyAction === `associate:${participant.id}` ? 'Wird verknüpft …' : 'Ausdrücklich verknüpfen' }}</button>
+            </template>
+            <p v-else class="text-sm text-gray-600">Keine weitere aktive Person zum Verknüpfen verfügbar.</p>
           </div>
           <p v-if="group.status === 'active' && hasFinancialReferences(participant.id) && participant.status === 'active'" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Finanzdaten nicht gelöscht werden. Deaktiviere die Person, damit sie für neue Ausgaben nicht mehr auswählbar ist.</p>
           <p v-else-if="group.status === 'active' && hasFinancialReferences(participant.id)" class="mt-3 text-sm text-gray-600">Kann wegen vorhandener Finanzdaten nicht gelöscht werden und bleibt für den finanziellen Verlauf erhalten.</p>
