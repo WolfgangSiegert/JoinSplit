@@ -93,6 +93,7 @@ test('the ready Group List is accessible', async ({ page }) => {
   await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Von der ersten Ausgabe zum klaren Ausgleich' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Neue Gruppe starten' })).toContainText('Erste Gruppe starten')
+  await expect(page.getByRole('link', { name: 'So funktioniert’s' })).toHaveAttribute('href', '#so-funktionierts')
   await expectNoAxeViolations(page)
 })
 

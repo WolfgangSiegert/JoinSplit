@@ -19,6 +19,18 @@ const settlements = computed(() => groupsStore.settlementsForGroup(groupId.value
 const balances = computed(() => calculateParticipantBalances(groupId.value, participants.value, expenses.value, settlements.value))
 const participantById = computed(() => new Map(participants.value.map(participant => [participant.id, participant])))
 const allBalanced = computed(() => balances.value.length > 0 && balances.value.every(balance => balance.balanceAmountMinor === 0n))
+const balanceSummaryParts = computed(() => {
+  const receiving = balances.value.filter(balance => balance.balanceAmountMinor > 0n).length
+  const paying = balances.value.filter(balance => balance.balanceAmountMinor < 0n).length
+  const balanced = balances.value.length - receiving - paying
+  const parts: Array<{ tone: 'positive' | 'negative' | 'neutral', text: string }> = []
+
+  if (receiving) parts.push({ tone: 'positive', text: `${receiving} ${receiving === 1 ? 'erhält' : 'erhalten'} Geld` })
+  if (paying) parts.push({ tone: 'negative', text: `${paying} ${paying === 1 ? 'zahlt' : 'zahlen'}` })
+  if (balanced) parts.push({ tone: 'neutral', text: `${balanced} ausgeglichen` })
+
+  return parts.length ? parts : [{ tone: 'neutral' as const, text: 'Noch keine Salden' }]
+})
 const savingStrategy = ref(false)
 const strategyPersistenceError = ref('')
 const visibleStrategyOverride = ref<'deterministic' | 'minimum-transfer' | null>(null)
@@ -204,7 +216,7 @@ function downloadBlob(blob: Blob, filename: string): void {
           <GroupSyncStatus :group-id="group.id" mobile-collapsible class="group-view-heading__sync" />
         </div>
         <p class="mt-2 text-ink-700">Wer bekommt noch Geld, wer zahlt noch?</p>
-        <p class="mt-2 text-sm text-ink-700">Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.</p>
+        <p class="group-view-heading__description mt-2 text-sm text-ink-700">Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.</p>
       </header>
 
       <GroupAreaNavigation :group-id="group.id" @area-activated="handleAreaActivation" />
@@ -282,6 +294,13 @@ function downloadBlob(blob: Blob, filename: string): void {
               <span class="participant-balances__toggle-label">Anzeigen</span>
               <AppIcon name="chevron-down" />
             </span>
+            <span class="participant-balances__divider" aria-hidden="true" />
+            <span class="participant-balances__preview">
+              <template v-for="(part, index) in balanceSummaryParts" :key="part.tone">
+                <span v-if="index" class="participant-balances__preview-separator" aria-hidden="true"> · </span>
+                <strong :class="`participant-balances__preview-part--${part.tone}`">{{ part.text }}</strong>
+              </template>
+            </span>
           </summary>
           <ul class="ledger-list mt-3">
             <li v-for="(balance, index) in balances" :key="balance.participantId">
@@ -351,15 +370,15 @@ function downloadBlob(blob: Blob, filename: string): void {
                   </div>
                   <div class="settlement-transfer__direction">
                     <span class="settlement-transfer__caret-group settlement-transfer__caret-group--payer">
-                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--owes" />
-                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--warm" />
-                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-left" />
+                      <i class="settlement-transfer__caret settlement-transfer__caret--owes" />
+                      <i class="settlement-transfer__caret settlement-transfer__caret--warm" />
+                      <i class="settlement-transfer__caret settlement-transfer__caret--mid-left" />
                     </span>
                     <strong class="settlement-transfer__amount">{{ formatSettlementAmountMinor(BigInt(transfer.amountMinor)) }}</strong>
                     <span class="settlement-transfer__caret-group settlement-transfer__caret-group--receiver">
-                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--mid-right" />
-                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--cool" />
-                      <AppIcon name="chevron-right" class="settlement-transfer__caret settlement-transfer__caret--receives" />
+                      <i class="settlement-transfer__caret settlement-transfer__caret--mid-right" />
+                      <i class="settlement-transfer__caret settlement-transfer__caret--cool" />
+                      <i class="settlement-transfer__caret settlement-transfer__caret--receives" />
                     </span>
                   </div>
                   <div class="settlement-transfer__person settlement-transfer__person--receiver">

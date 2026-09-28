@@ -119,6 +119,7 @@ test('balance overview and participant composition use local data, stable order,
   await expect(page.getByRole('heading', { level: 1, name: 'Salden' })).toBeVisible()
   await expect(page.getByText('Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.')).toBeVisible()
   await expect(participantBalances(page)).not.toHaveAttribute('open', '')
+  await expect(participantBalances(page).locator('.participant-balances__preview')).toHaveText('1 erhält Geld · 1 zahlt · 1 ausgeglichen')
   await openParticipantBalances(page)
   const items = participantBalances(page).locator('li')
   await expect(items).toHaveCount(3)

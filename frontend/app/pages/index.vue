@@ -21,6 +21,7 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
           <h1 class="landing-hero__title">Gemeinsam den Überblick behalten</h1>
           <p class="landing-hero__lead">Mehr zusammen erleben. Weniger rechnen.</p>
           <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
+          <a href="#so-funktionierts" class="landing-hero__guide-link">So funktioniert’s<AppIcon name="chevron-down" /></a>
           <div class="landing-hero__actions">
             <NuxtLink v-if="isFreshStart" to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten"><AppIcon name="plus" />Erste Gruppe starten</NuxtLink>
             <NuxtLink v-else to="/groups" class="primary-button"><AppIcon name="users" />Zu meinen Gruppen</NuxtLink>

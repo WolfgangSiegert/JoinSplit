@@ -195,7 +195,8 @@ async function cancelRename(id: string): Promise<void> {
           <h1 class="text-4xl font-bold text-brand-900">Personen</h1>
           <GroupSyncStatus :group-id="group.id" mobile-collapsible class="group-view-heading__sync" />
         </div>
-        <p class="mt-2 text-ink-700">Identitäten bleiben über Ausgaben und Salden hinweg klar erkennbar.</p>
+        <p class="mt-2 text-ink-700">Wer ist dabei, wer kommt noch dazu?</p>
+        <p class="group-view-heading__description mt-2 text-sm text-ink-700">Verwalte alle, die in dieser Gruppe gemeinsam abrechnen.</p>
       </header>
 
       <GroupAreaNavigation :group-id="group.id" />

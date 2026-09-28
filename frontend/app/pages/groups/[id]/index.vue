@@ -124,7 +124,8 @@ onMounted(async () => {
           <h1 ref="heading" tabindex="-1" class="break-words text-4xl font-bold text-ink-900">Ausgaben</h1>
           <GroupSyncStatus :group-id="group.id" show-synced compact mobile-collapsible class="group-view-heading__sync" />
         </div>
-        <p class="mt-2 text-ink-700">Gemeinsame Ausgaben erfassen und im Blick behalten.</p>
+        <p class="mt-2 text-ink-700">Was wurde bezahlt, und von wem?</p>
+        <p class="group-view-heading__description mt-2 text-sm text-ink-700">Erfasse gemeinsame Ausgaben und behalte eure bisherigen Einträge im Blick.</p>
         <p class="mt-2 text-sm font-medium text-ink-700">{{ participants.length }} {{ participants.length === 1 ? 'Person' : 'Personen' }} · {{ group.currency }}</p>
         <p v-if="group.status === 'archived'" class="mt-3 rounded-lg bg-gray-100 p-3 text-gray-800">
           Archiviert und schreibgeschützt. Ausgaben, Salden, Zahlungen und persönliche Stände bleiben lesbar.
