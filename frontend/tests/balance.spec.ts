@@ -134,6 +134,8 @@ test('balance overview and participant composition use local data, stable order,
   await expect(items.nth(2)).toContainText('Ausgeglichen: 0,00 €')
   await expect(items.nth(2).locator('.amount-value')).toHaveClass(/balance-amount--neutral/)
   await expect(page.getByRole('link', { name: 'Salden' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.locator('.balance-actions--sticky')).toBeVisible()
+  await expect(page.locator('.balance-actions--desktop')).toHaveCount(0)
   await expectNoAxeViolations(page)
 
   await page.setViewportSize({ width: 320, height: 700 })

@@ -221,7 +221,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 
       <GroupAreaNavigation :group-id="group.id" @area-activated="handleAreaActivation" />
 
-      <details class="balance-actions--mobile balance-actions--sticky">
+      <details class="balance-actions balance-actions--sticky">
         <summary class="icon-button" aria-label="Teilen und exportieren" title="Teilen und exportieren"><AppIcon name="share" /></summary>
         <div class="balance-actions__panel">
           <NuxtLink v-if="settingsStore.isSettlementRecordingEnabled(group.id) || settlements.length" :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
@@ -232,15 +232,6 @@ function downloadBlob(blob: Blob, filename: string): void {
           </button>
         </div>
       </details>
-
-      <div class="balance-actions--desktop mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <NuxtLink v-if="settingsStore.isSettlementRecordingEnabled(group.id) || settlements.length" :to="`/groups/${group.id}/settlements`" class="secondary-button w-full"><AppIcon name="wallet" />Zahlungen</NuxtLink>
-        <NuxtLink :to="`/groups/${group.id}/balances/statement`" class="secondary-button w-full text-center"><AppIcon name="share" />Persönlichen Stand teilen</NuxtLink>
-        <button type="button" class="secondary-button w-full text-center" :disabled="sharingOverview" @click="createOverviewImage">
-          <AppIcon name="image" />
-          <span>{{ sharingOverview ? 'Bild wird erstellt …' : overviewImageUrl ? 'Bild aktualisieren' : 'Übersicht als Bild' }}</span>
-        </button>
-      </div>
       <p
         v-if="overviewShareMessage"
         class="mt-3 text-sm"

@@ -45,7 +45,7 @@ const statusClass = computed(() => {
 const stateLabel = computed(() => {
   if (visibleState.value === 'failed') return 'Fehler'
   if (visibleState.value === 'offline') return 'Offline'
-  if (visibleState.value === 'synced') return 'Aktuell'
+  if (visibleState.value === 'synced') return 'Synchronisiert'
   if (visibleState.value === 'syncing') return 'Wird synchronisiert'
   return 'Ausstehend'
 })
@@ -74,6 +74,7 @@ const stateLabel = computed(() => {
       </div>
     </details>
     <div
+      v-if="!props.mobileCollapsible"
       :class="[
         'group-sync-status__full',
         props.compact && visibleState === 'synced' ? 'inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-sm font-bold' : 'status-panel',

@@ -23,6 +23,13 @@ async function openCreateGroup(page: Page): Promise<void> {
   await page.getByRole('menuitem', { name: 'Neue Gruppe', exact: true }).click()
 }
 
+async function expectCompactSyncMessage(page: Page, state: string, message: string): Promise<void> {
+  const details = page.locator('.group-sync-status__mobile-details')
+  await details.locator('summary').click()
+  await expect(details.locator('.group-sync-status__message')).toHaveText(message)
+  await expect(details.locator('summary')).toHaveAccessibleName(`${state}: Details anzeigen`)
+}
+
 async function durableSnapshot(page: Page): Promise<BrowserDurableSnapshot> {
   return page.evaluate(async () => {
     const request = indexedDB.open('joinsplit', 10)
@@ -207,7 +214,7 @@ test('local creation navigates immediately, then the real API confirms the same 
   await expect(page.locator('.group-view-heading').getByText('Wochenendtrip', { exact: true })).toBeVisible()
   await expect(page).toHaveURL(/\/groups\/[0-9a-f-]+\?created=1$/)
   await expect(page.getByText('Gruppe lokal erstellt.')).toBeVisible()
-  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.')).toBeVisible()
+  await expectCompactSyncMessage(page, 'Wird synchronisiert', 'Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.')
   await expect(page.getByRole('heading', { level: 2, name: 'Noch keine Ausgaben' })).toBeVisible()
 
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
@@ -287,7 +294,7 @@ test('creation without a participant succeeds and offline is distinct from pendi
 
   await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeFocused()
   await expect(page.locator('.group-view-heading').getByText('Ohne Teilnehmer', { exact: true })).toBeVisible()
-  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')).toBeVisible()
+  await expectCompactSyncMessage(page, 'Offline', 'Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')
   await expectNoAxeViolations(page)
 
   const reconnectResponse = page.waitForResponse(
@@ -319,7 +326,7 @@ test('a failed request keeps the local group and retries the identical operation
   const heading = page.getByRole('heading', { level: 1, name: 'Ausgaben' })
   await expect(heading).toBeVisible()
   await expect(page.locator('.group-view-heading').getByText('Retry-Reise', { exact: true })).toBeVisible()
-  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.')).toBeVisible()
+  await expectCompactSyncMessage(page, 'Fehler', 'Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.')
   const retry = page.getByRole('button', { name: 'Synchronisierung erneut versuchen' })
   await expect(retry).toBeVisible()
   await expectNoAxeViolations(page)
@@ -347,9 +354,7 @@ test('network-blocked creation survives reload and resumes the same mutation wit
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
   await expect(page.locator('.group-view-heading').getByText('Offline-Reise', { exact: true })).toBeVisible()
-  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText(
-    'Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.',
-  )).toBeVisible()
+  await expectCompactSyncMessage(page, 'Fehler', 'Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.')
 
   const beforeReload = await durableSnapshot(page)
   const groupId = beforeReload.groups[0]!.id
@@ -363,6 +368,7 @@ test('network-blocked creation survives reload and resumes the same mutation wit
   expect(afterReload.groups[0]?.id).toBe(groupId)
   expect(afterReload.participants[0]?.id).toBe(participantId)
   expect(afterReload.pendingGroupIds).toEqual([groupId])
+  await expectCompactSyncMessage(page, 'Fehler', 'Der Server ist derzeit nicht erreichbar. Die Gruppe bleibt lokal nutzbar.')
   await expect(page.getByRole('button', { name: 'Synchronisierung erneut versuchen' })).toBeVisible()
 
   const synchronized = page.waitForResponse(

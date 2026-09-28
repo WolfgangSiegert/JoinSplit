@@ -92,7 +92,9 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   await page.getByLabel('Gruppenname').fill('Offline-Kernflow')
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
-  await expect(page.locator('.group-sync-status__full .group-sync-status__message').getByText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.', { exact: true })).toBeVisible()
+  const syncDetails = page.locator('.group-sync-status__mobile-details')
+  await syncDetails.locator('summary').click()
+  await expect(syncDetails.locator('.group-sync-status__message')).toHaveText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
   await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
