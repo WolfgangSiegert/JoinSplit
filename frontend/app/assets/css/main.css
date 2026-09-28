@@ -249,6 +249,7 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   display: inline-flex;
   min-height: 1.35rem;
   align-items: center;
+  gap: 0.22rem;
   border: 1px solid color-mix(in srgb, var(--coral) 48%, var(--line));
   border-radius: 999px;
   background: color-mix(in srgb, var(--coral) 10%, var(--surface-strong));
@@ -259,6 +260,15 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   letter-spacing: 0.08em;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.app-beta-badge .app-icon { width: 0.78rem; height: 0.78rem; stroke-width: 2.3; }
+.app-beta-badge--link { transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.app-beta-badge--link:hover,
+.app-beta-badge--link:focus-visible {
+  border-color: var(--coral);
+  background: color-mix(in srgb, var(--coral) 16%, var(--surface-strong));
+  color: var(--coral);
 }
 
 .app-wordmark__icon {
@@ -1396,8 +1406,47 @@ html[data-theme="dark"] .status-panel[data-state="syncing"] { border-color: #846
   .mobile-create-dialog { display: none; }
   .app-header__content.app-header__content--desktop { display: grid; }
   .app-header__content { grid-template-columns: auto minmax(20rem, 1fr) auto; }
-  .app-header__nav { grid-column: 2; grid-row: 1; }
+  .app-header__nav {
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: center;
+    gap: 0.15rem;
+  }
   .app-header__utilities { grid-column: 3; grid-row: 1; }
+  .app-header__action {
+    position: relative;
+    min-height: 2.55rem;
+    border-color: transparent;
+    border-radius: 0.7rem;
+    background: transparent;
+    color: var(--ink-muted);
+    padding: 0.45rem 0.8rem;
+    font-size: 0.78rem;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+  .app-header__action:hover,
+  .app-header__action:focus-visible {
+    border-color: transparent;
+    background: var(--surface-strong);
+    color: var(--ink);
+  }
+  .app-header__action.router-link-active {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--coral) 9%, transparent);
+    color: var(--coral-dark);
+  }
+  .app-header__action.router-link-active::after {
+    position: absolute;
+    right: 0.8rem;
+    bottom: 0.2rem;
+    left: 0.8rem;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--coral);
+    content: '';
+  }
+  .app-create-menu__trigger { color: var(--ink); }
   .landing-groups,
   .landing-guide { scroll-margin-top: 5rem; }
   .landing-workspaces { grid-template-columns: repeat(2, minmax(0, 1fr)); }

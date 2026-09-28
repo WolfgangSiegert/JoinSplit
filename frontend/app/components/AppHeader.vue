@@ -66,7 +66,12 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
       </NuxtLink>
       <span class="mobile-app-header__title">{{ mobileTitle }}</span>
       <div class="mobile-app-header__actions">
-        <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
+        <NuxtLink
+          to="/demo"
+          class="app-beta-badge app-beta-badge--link"
+          aria-label="Beta-Hinweis und Demodaten"
+          title="Beta-Hinweis und Demodaten"
+        ><AppIcon name="alert-circle" /><span>Beta</span></NuxtLink>
         <button
           type="button"
           class="mobile-app-header__action"
@@ -83,10 +88,14 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
           <img class="app-wordmark__icon" src="/favicon.svg" alt="" width="32" height="32">
           <span>JoinSplit</span>
         </NuxtLink>
-        <span class="app-beta-badge" aria-label="Beta-Version">Beta</span>
+        <NuxtLink
+          to="/demo"
+          class="app-beta-badge app-beta-badge--link"
+          aria-label="Beta-Hinweis und Demodaten"
+          title="Beta-Hinweis und Demodaten"
+        ><AppIcon name="alert-circle" /><span>Beta</span></NuxtLink>
       </div>
       <nav class="app-header__utilities" aria-label="Schnellzugriff">
-        <NuxtLink to="/demo" class="icon-button" aria-label="Demo und Daten" title="Demo und Daten"><AppIcon name="database" /></NuxtLink>
         <button
           type="button"
           class="icon-button"
