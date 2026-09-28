@@ -101,6 +101,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
+  await page.getByLabel('Details zu Bob').click()
   await page.getByRole('button', { name: 'Bob umbenennen' }).click()
   await page.getByLabel('Neuer Name').fill('Bobby')
   await page.getByRole('button', { name: 'Speichern' }).click()
@@ -349,6 +350,9 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await createExpense
 
   await page.goto(`/groups/${groupId}/participants`)
+  await page.getByLabel('Details zu Alice').click()
+  await page.getByLabel('Details zu Bob').click()
+  await page.getByLabel('Details zu Cara').click()
   await expect(page.getByRole('button', { name: 'Alice löschen' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Bob löschen' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Cara löschen' })).toHaveCount(0)
@@ -391,6 +395,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await expect(page.getByText('alice', { exact: true })).toBeVisible()
   expect(participantPosts).toHaveLength(3)
 
+  await page.getByLabel('Details zu alice', { exact: true }).click()
   await page.getByRole('button', { name: 'alice umbenennen', exact: true }).click()
   await page.getByLabel('Neuer Name').fill('  bob  ')
   await page.getByRole('button', { name: 'Speichern' }).click()
@@ -425,6 +430,6 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   })
   await deleteDuplicate
   expect(participantDeletes).toHaveLength(1)
-  await expect(page.getByLabel('Teilnehmer hinzufügen')).toBeFocused()
+  await expect(page.getByLabel('Details zu Alice')).toBeFocused()
   await expectNoAxeViolations(page)
 })

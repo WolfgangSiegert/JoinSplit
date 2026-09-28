@@ -89,6 +89,23 @@ async function durableInitialParticipantDefault(page: Page): Promise<boolean | n
   })
 }
 
+async function durableDefaultParticipantName(page: Page): Promise<string | null> {
+  return page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 10)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const result = db.transaction('settings').objectStore('settings').get('preferences')
+    const record = await new Promise<{ defaultParticipantName?: unknown } | undefined>((resolve, reject) => {
+      result.onsuccess = () => resolve(result.result)
+      result.onerror = () => reject(result.error)
+    })
+    db.close()
+    return typeof record?.defaultParticipantName === 'string' ? record.defaultParticipantName : null
+  })
+}
+
 test('the ready Group List is accessible', async ({ page }) => {
   const response = await page.goto('/')
   expect(response?.headers()['content-security-policy']).toContain("default-src 'self'")
@@ -117,14 +134,14 @@ test('the durable global setting controls the next form default after reload', a
   await openCreateGroup(page)
   await page.goto('/settings')
   const setting = page.getByRole('checkbox', {
-    name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
+    name: 'Bei neuen Gruppen automatisch als Teilnehmer hinzufügen',
   })
   await setting.uncheck()
   await expect(setting).not.toBeChecked()
   await expect.poll(() => durableInitialParticipantDefault(page)).toBe(false)
   await page.reload()
   await expect(
-    page.getByRole('checkbox', { name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen' }),
+    page.getByRole('checkbox', { name: 'Bei neuen Gruppen automatisch als Teilnehmer hinzufügen' }),
   ).not.toBeChecked()
   await page.goto('/groups/new')
 
@@ -132,10 +149,26 @@ test('the durable global setting controls the next form default after reload', a
   await expect(page.getByLabel('Mein Name in dieser Gruppe')).toHaveCount(0)
 })
 
+test('the saved participant name prefills new groups and clarifies the automatic participant label', async ({ page }) => {
+  await page.goto('/settings')
+  const name = page.getByLabel('Mein Name in neuen Gruppen')
+  await name.fill('  Ada   Example  ')
+  await name.press('Tab')
+
+  await expect.poll(() => durableDefaultParticipantName(page)).toBe('Ada Example')
+  await expect(page.getByRole('checkbox', {
+    name: '„Ada Example“ bei neuen Gruppen automatisch als Teilnehmer hinzufügen',
+  })).toBeChecked()
+
+  await page.goto('/groups/new')
+  await expect(page.getByRole('checkbox', { name: '„Ada Example“ als Teilnehmer hinzufügen' })).toBeChecked()
+  await expect(page.getByLabel('Mein Name in dieser Gruppe')).toHaveValue('Ada Example')
+})
+
 test('a failed durable settings write restores the visible and effective value', async ({ page }) => {
   await page.goto('/settings')
   const setting = page.getByRole('checkbox', {
-    name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
+    name: 'Bei neuen Gruppen automatisch als Teilnehmer hinzufügen',
   })
   await expect(setting).toBeChecked()
   await page.evaluate(() => {
@@ -694,6 +727,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await expect(page.getByText('10,01 €')).toBeVisible()
   await page.getByRole('link', { name: /Ausgaben/ }).click()
   await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByLabel('Details zu Bob').click()
   const deactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
   await page.getByRole('button', { name: 'Bob deaktivieren' }).click()
   await deactivate
@@ -883,6 +917,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await postObserved
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
   await expectNoAxeViolations(page)
+  await page.getByLabel('Details zu Bob').click()
   await page.getByRole('button', { name: 'Bob umbenennen' }).click()
   const renameInput = page.getByLabel('Neuer Name')
   await renameInput.fill('   ')
@@ -920,6 +955,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   const carolResponse = await addCarol
   expect(carolResponse.request().postDataJSON().order).toBe(2)
 
+  await page.getByLabel('Details zu Carol').click()
   const deactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
   await page.getByRole('button', { name: 'Carol deaktivieren' }).click()
   await deactivate
@@ -927,6 +963,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await expectNoAxeViolations(page)
   await page.reload()
   await expect(page.getByText('Inaktiv')).toBeVisible()
+  await page.getByLabel('Details zu Carol').click()
 
   const reactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
   await page.getByRole('button', { name: 'Carol reaktivieren' }).click()
@@ -935,6 +972,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await expect(page.getByRole('button', { name: 'Carol deaktivieren' })).toBeVisible()
   await expectNoAxeViolations(page)
 
+  await page.getByLabel('Details zu Bobby').click()
   await page.getByRole('button', { name: 'Bobby löschen' }).click()
   await expect(page.getByRole('dialog')).toContainText('Teilnehmer „Bobby“ wirklich löschen?')
   await expectNoAxeViolations(page)
@@ -942,7 +980,7 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.getByRole('button', { name: 'Endgültig löschen' }).click()
   await deletion
   await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Alice löschen' })).toBeFocused()
+  await expect(page.getByLabel('Details zu Alice')).toBeFocused()
   await page.reload()
   await expect(page.getByText('Bobby', { exact: true })).toHaveCount(0)
   const orders = await page.evaluate(async () => {

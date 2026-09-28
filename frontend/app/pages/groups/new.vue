@@ -2,10 +2,11 @@
 import type { CreateGroupErrors } from '~/domain/create-group'
 
 const settingsStore = useSettingsStore()
+const accountStore = useAccountStore()
 const { createGroup } = useCreateGroup()
 const groupName = ref('')
 const addParticipant = ref(settingsStore.addSelfAsParticipantByDefault)
-const participantName = ref('')
+const participantName = ref(settingsStore.defaultParticipantName || accountStore.workspace?.name || '')
 const errors = ref<CreateGroupErrors>({})
 const localError = ref('')
 const submitting = ref(false)
@@ -102,7 +103,7 @@ async function submit(): Promise<void> {
               :aria-controls="addParticipant ? 'participant-field' : undefined"
               :aria-expanded="addParticipant"
             >
-            <span class="font-medium">Mich als Teilnehmer hinzufügen</span>
+            <span class="font-medium">{{ participantName.trim() ? `„${participantName.trim()}“ als Teilnehmer hinzufügen` : 'Mich als Teilnehmer hinzufügen' }}</span>
           </label>
 
           <div v-if="addParticipant" id="participant-field" class="mt-4">

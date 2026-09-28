@@ -4,6 +4,7 @@ import { persistSettings, type DurableSettings } from '../persistence/database'
 
 export const useSettingsStore = defineStore('settings', () => {
   const addSelfAsParticipantByDefault = ref(true)
+  const defaultParticipantName = ref('')
   const settlementProposalStrategy = ref<DurableSettings['settlementProposalStrategy']>('deterministic')
   const settlementRecordingEnabled = ref(false)
   const settlementRecordingGroupIds = ref<string[]>([])
@@ -13,6 +14,7 @@ export const useSettingsStore = defineStore('settings', () => {
   function currentSettings(overrides: Partial<DurableSettings> = {}): DurableSettings {
     return {
       addSelfAsParticipantByDefault: addSelfAsParticipantByDefault.value,
+      defaultParticipantName: defaultParticipantName.value,
       settlementProposalStrategy: settlementProposalStrategy.value,
       settlementRecordingEnabled: settlementRecordingEnabled.value,
       settlementRecordingGroupIds: [...settlementRecordingGroupIds.value],
@@ -24,6 +26,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function hydrate(settings: DurableSettings | null): void {
     addSelfAsParticipantByDefault.value = settings?.addSelfAsParticipantByDefault ?? true
+    defaultParticipantName.value = settings?.defaultParticipantName ?? ''
     settlementProposalStrategy.value = settings?.settlementProposalStrategy ?? 'deterministic'
     settlementRecordingEnabled.value = settings?.settlementRecordingEnabled ?? false
     settlementRecordingGroupIds.value = [...(settings?.settlementRecordingGroupIds ?? [])]
@@ -34,6 +37,13 @@ export const useSettingsStore = defineStore('settings', () => {
   async function setAddSelfAsParticipantByDefault(value: boolean): Promise<void> {
     await persistSettings(currentSettings({ addSelfAsParticipantByDefault: value }))
     addSelfAsParticipantByDefault.value = value
+  }
+
+  async function setDefaultParticipantName(value: string): Promise<void> {
+    const normalized = value.trim().replace(/\s+/gu, ' ')
+    if ([...normalized].length > 100) throw new Error('Default participant name is too long')
+    await persistSettings(currentSettings({ defaultParticipantName: normalized }))
+    defaultParticipantName.value = normalized
   }
 
   async function setSettlementProposalStrategy(value: DurableSettings['settlementProposalStrategy']): Promise<void> {
@@ -76,6 +86,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   return {
     addSelfAsParticipantByDefault,
+    defaultParticipantName,
     settlementProposalStrategy,
     settlementRecordingEnabled,
     settlementRecordingGroupIds,
@@ -83,6 +94,7 @@ export const useSettingsStore = defineStore('settings', () => {
     visualDesign,
     hydrate,
     setAddSelfAsParticipantByDefault,
+    setDefaultParticipantName,
     setSettlementProposalStrategy,
     isSettlementRecordingEnabled,
     setSettlementRecordingEnabled,

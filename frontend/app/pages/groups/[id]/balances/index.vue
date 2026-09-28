@@ -67,6 +67,9 @@ const overviewImageUrl = ref('')
 const overviewImageFilename = ref('')
 const overviewCanShare = ref(false)
 const participantBalancesDetails = ref<HTMLDetailsElement | null>(null)
+const settlementRecordingEnabled = computed(() => settingsStore.isSettlementRecordingEnabled(groupId.value))
+const enablingSettlementRecording = ref(false)
+const settlementRecordingError = ref('')
 
 function closeParticipantBalances(): void {
   if (participantBalancesDetails.value) participantBalancesDetails.value.open = false
@@ -114,6 +117,19 @@ async function changeSettlementStrategy(event: Event): Promise<void> {
   } finally {
     visibleStrategyOverride.value = null
     savingStrategy.value = false
+  }
+}
+
+async function enableSettlementRecordingForGroup(): Promise<void> {
+  if (enablingSettlementRecording.value) return
+  enablingSettlementRecording.value = true
+  settlementRecordingError.value = ''
+  try {
+    await settingsStore.enableSettlementRecordingForGroup(groupId.value)
+  } catch {
+    settlementRecordingError.value = 'Die Einstellung konnte nicht lokal gespeichert werden.'
+  } finally {
+    enablingSettlementRecording.value = false
   }
 }
 
@@ -325,7 +341,7 @@ function downloadBlob(blob: Blob, filename: string): void {
             </div>
           </div>
 
-          <p v-if="settingsStore.isSettlementRecordingEnabled(group.id)" class="settlement-proposal__notice mt-4">
+          <p v-if="settlementRecordingEnabled" class="settlement-proposal__notice mt-4">
             <AppIcon name="info" class="size-5" />
             <span><strong>Noch nicht verbucht.</strong> Der Vorschlag ist nur eine Rechenhilfe und keine erfasste Zahlung. Erfasste Zahlungen erscheinen unter „Zahlungen“.</span>
           </p>
@@ -379,10 +395,6 @@ function downloadBlob(blob: Blob, filename: string): void {
                 </div>
               </li>
             </ol>
-            <NuxtLink v-if="visibleProposal.transfers.length && group.status === 'active' && settingsStore.isSettlementRecordingEnabled(group.id)" :to="`/groups/${group.id}/settlements/new`" class="primary-button mt-4 w-full">
-              <AppIcon name="plus" />
-              Zahlung erfassen
-            </NuxtLink>
           </template>
 
           <div v-else class="mt-4 rounded-lg bg-red-50 p-4 text-red-900" role="alert">
@@ -417,6 +429,47 @@ function downloadBlob(blob: Blob, filename: string): void {
               <p v-if="strategyPersistenceError" class="error-text mt-3 text-sm" role="alert">{{ strategyPersistenceError }}</p>
             </div>
           </details>
+
+          <section
+            v-if="group.status === 'active'"
+            class="settlement-recording-entry"
+            aria-labelledby="settlement-recording-entry-title"
+          >
+            <div>
+              <h3 id="settlement-recording-entry-title" class="font-semibold">
+                {{ settlementRecordingEnabled ? 'Ausgleichszahlungen' : 'Ausgleichszahlungen dokumentieren' }}
+              </h3>
+              <p class="mt-1 text-sm text-ink-700">
+                {{ settlementRecordingEnabled
+                  ? 'Tatsächlich erfolgte Zahlungen für diese Gruppe erfassen und verwalten.'
+                  : 'Aktiviere das Erfassen nur für diese Gruppe, wenn Zahlungen tatsächlich erfolgt sind.' }}
+              </p>
+            </div>
+            <div class="settlement-recording-entry__actions">
+              <template v-if="settlementRecordingEnabled">
+                <NuxtLink :to="`/groups/${group.id}/settlements/new`" class="primary-button">
+                  <AppIcon name="plus" />Zahlung erfassen
+                </NuxtLink>
+                <NuxtLink :to="`/groups/${group.id}/settlements`" class="secondary-button">
+                  <AppIcon name="wallet" />Zahlungen verwalten
+                </NuxtLink>
+              </template>
+              <button
+                v-else
+                type="button"
+                class="primary-button"
+                :disabled="enablingSettlementRecording"
+                @click="enableSettlementRecordingForGroup"
+              >
+                <AppIcon name="check" />
+                {{ enablingSettlementRecording ? 'Wird aktiviert …' : 'Für diese Gruppe aktivieren' }}
+              </button>
+              <NuxtLink to="/settings#settlement-recording" class="secondary-link settlement-recording-entry__global">
+                <AppIcon name="settings" />Global einstellen
+              </NuxtLink>
+            </div>
+            <p v-if="settlementRecordingError" class="error-text text-sm" role="alert">{{ settlementRecordingError }}</p>
+          </section>
         </section>
       </template>
     </div>

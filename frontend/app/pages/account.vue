@@ -26,6 +26,7 @@ const identityStore = useAccessIdentityStore()
 const groupsStore = useGroupsStore()
 const peopleStore = usePeopleStore()
 const mode = ref<'login' | 'register' | 'recover'>('login')
+const name = ref('')
 const email = ref('')
 const password = ref('')
 const confirmation = ref(false)
@@ -128,7 +129,7 @@ async function submit(): Promise<void> {
   }
   accountStore.begin()
   try {
-    if (mode.value === 'register') await registerAccount(config.public.apiBase, email.value, password.value)
+    if (mode.value === 'register') await registerAccount(config.public.apiBase, name.value, email.value, password.value)
     else await loginAccount(config.public.apiBase, email.value, password.value)
     await adoptAndHydrate()
   } catch (error) {
@@ -231,6 +232,7 @@ async function discardConflictsAndRehydrate(): Promise<void> {
         </div>
         <h2 id="account-form-title" class="mt-5 text-xl font-semibold">{{ mode === 'login' ? 'Account anmelden' : mode === 'register' ? 'Account erstellen' : 'Passwort zurücksetzen' }}</h2>
         <form v-if="mode !== 'recover'" class="mt-4 space-y-4" @submit.prevent="submit">
+          <label v-if="mode === 'register'" class="block font-medium">Dein Name<input v-model="name" class="field-input mt-2" type="text" autocomplete="name" maxlength="100" required></label>
           <label class="block font-medium">E-Mail<input v-model="email" class="field-input mt-2" type="email" autocomplete="email" required></label>
           <label class="block font-medium">Passwort<input v-model="password" class="field-input mt-2" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" minlength="12" maxlength="128" required></label>
           <label v-if="mode === 'register'" class="flex items-start gap-3">
@@ -256,6 +258,7 @@ async function discardConflictsAndRehydrate(): Promise<void> {
       <template v-else>
         <section class="card mt-6 p-5">
           <h2 class="text-xl font-semibold">Angemeldet</h2>
+          <p v-if="accountStore.workspace?.name" class="mt-2 font-medium">{{ accountStore.workspace.name }}</p>
           <p class="mt-2 break-all">{{ accountStore.workspace?.email }}</p>
           <p class="mt-2 text-sm text-gray-600">{{ groupCount }} Gruppe(n) lokal verfügbar · {{ pendingCount }} Änderung(en) ausstehend</p>
           <p v-if="accountStore.error" class="error-text mt-3" role="alert">{{ accountStore.error }}</p>

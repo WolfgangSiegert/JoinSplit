@@ -73,6 +73,7 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await expect(page.getByRole('heading', { level: 1, name: 'Ferienwohnung' })).toBeVisible()
 
   await page.goto(`/groups/${groupId}/participants`)
+  await page.getByLabel('Details zu Bob').click()
   await page.getByRole('button', { name: 'Bob deaktivieren' }).click()
   await expect(page.getByText('Inaktiv', { exact: true })).toBeVisible()
 

@@ -3,13 +3,14 @@ import { expect, test } from '@playwright/test'
 const SUMMER_GROUP_ID = '71000000-0000-4000-8000-000000000001'
 const WINTER_GROUP_ID = '71000000-0000-4000-8000-000000000002'
 const PARTICIPANT_ID = '72000000-0000-4000-8000-000000000001'
+const SECOND_PARTICIPANT_ID = '72000000-0000-4000-8000-000000000002'
 
 test('group and expense lists can be filtered from compact search controls', async ({ page }) => {
   await page.route('**/api/**', route => route.abort('connectionrefused'))
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1, name: 'Gemeinsam den Überblick behalten' })).toBeVisible()
 
-  await page.evaluate(async ({ summerGroupId, winterGroupId, participantId }) => {
+  await page.evaluate(async ({ summerGroupId, winterGroupId, participantId, secondParticipantId }) => {
     const request = indexedDB.open('joinsplit', 10)
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result)
@@ -31,7 +32,7 @@ test('group and expense lists can be filtered from compact search controls', asy
       ownerAccessIdentityId: identity.id,
       status: 'active',
       hasFinancialHistory: true,
-      participantIds: [participantId],
+      participantIds: [participantId, secondParticipantId],
     })
     transaction.objectStore('groups').put({
       id: winterGroupId,
@@ -48,6 +49,13 @@ test('group and expense lists can be filtered from compact search controls', asy
       name: 'Alice',
       status: 'active',
       order: 0,
+    })
+    transaction.objectStore('participants').put({
+      id: secondParticipantId,
+      groupId: summerGroupId,
+      name: 'Beatrice',
+      status: 'inactive',
+      order: 1,
     })
     transaction.objectStore('expenses').put({
       id: '73000000-0000-4000-8000-000000000001',
@@ -88,6 +96,7 @@ test('group and expense lists can be filtered from compact search controls', asy
     summerGroupId: SUMMER_GROUP_ID,
     winterGroupId: WINTER_GROUP_ID,
     participantId: PARTICIPANT_ID,
+    secondParticipantId: SECOND_PARTICIPANT_ID,
   })
 
   await page.setViewportSize({ width: 320, height: 700 })
@@ -114,4 +123,26 @@ test('group and expense lists can be filtered from compact search controls', asy
   await page.getByRole('button', { name: 'Ausgaben durchsuchen schließen' }).click()
   await expect(page.getByRole('link', { name: /Hotel/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Taxi/ })).toBeVisible()
+
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await expect(page.getByRole('button', { name: 'Alice umbenennen' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Alice deaktivieren' })).toBeVisible()
+  await page.getByRole('button', { name: 'Alice umbenennen' }).click()
+  await expect(page.getByLabel('Neuer Name')).toBeVisible()
+  await expect(page.getByLabel('Neuer Name')).toBeFocused()
+  await page.getByRole('button', { name: 'Abbrechen' }).click()
+  await page.getByRole('button', { name: 'Alice deaktivieren' }).click()
+  await expect(page.getByRole('button', { name: 'Alice reaktivieren' })).toBeVisible()
+  await page.getByRole('button', { name: 'Alice reaktivieren' }).click()
+  await expect(page.getByRole('button', { name: 'Alice deaktivieren' })).toBeVisible()
+  await page.getByRole('button', { name: 'Teilnehmer durchsuchen' }).click()
+  const participantSearch = page.getByRole('searchbox', { name: 'Teilnehmer durchsuchen', exact: true })
+  await expect(participantSearch).toBeFocused()
+  await participantSearch.fill('Bea')
+  await expect(page.getByLabel('Details zu Beatrice')).toBeVisible()
+  await expect(page.getByLabel('Details zu Alice')).toHaveCount(0)
+  await participantSearch.fill('Keine solche Person')
+  await expect(page.getByText('Keine Person passt zu „Keine solche Person“.')).toBeVisible()
+  await page.getByRole('button', { name: 'Teilnehmer durchsuchen schließen' }).click()
+  await expect(page.getByRole('button', { name: 'Alice deaktivieren' })).toBeVisible()
 })

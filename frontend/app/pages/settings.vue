@@ -2,6 +2,7 @@
 import { resetDurableState } from '~/persistence/database'
 
 const settingsStore = useSettingsStore()
+const accountStore = useAccountStore()
 const route = useRoute()
 const { closeUtility } = useUtilityNavigation()
 const nativeApp = useRuntimeConfig().public.nativeApp
@@ -12,7 +13,10 @@ const visibleColorMode = computed(() => visibleColorModeOverride.value ?? settin
 const visibleDesignOverride = ref<'2' | '3' | null>(null)
 const visibleDesign = computed(() => visibleDesignOverride.value ?? settingsStore.visualDesign)
 const savingDefault = ref(false)
+const savingDefaultName = ref(false)
 const defaultPersistenceError = ref('')
+const defaultName = ref(settingsStore.defaultParticipantName || accountStore.workspace?.name || '')
+const defaultNamePersistenceError = ref('')
 const visibleDefaultOverride = ref<boolean | null>(null)
 const visibleDefault = computed(() =>
   visibleDefaultOverride.value ?? settingsStore.addSelfAsParticipantByDefault,
@@ -29,7 +33,7 @@ const visibleSettlementRecordingOverride = ref<boolean | null>(null)
 const visibleSettlementRecording = computed(() =>
   visibleSettlementRecordingOverride.value ?? settingsStore.settlementRecordingEnabled,
 )
-const savingSettings = computed(() => savingAppearance.value || savingDefault.value || savingStrategy.value || savingSettlementRecording.value)
+const savingSettings = computed(() => savingAppearance.value || savingDefault.value || savingDefaultName.value || savingStrategy.value || savingSettlementRecording.value)
 const resetDialog = ref<HTMLDialogElement | null>(null)
 const resetTrigger = ref<HTMLButtonElement | null>(null)
 const resetConfirm = ref<HTMLButtonElement | null>(null)
@@ -82,6 +86,20 @@ async function changeDefault(event: Event): Promise<void> {
   } finally {
     visibleDefaultOverride.value = null
     savingDefault.value = false
+  }
+}
+
+async function saveDefaultName(): Promise<void> {
+  savingDefaultName.value = true
+  defaultNamePersistenceError.value = ''
+  try {
+    await settingsStore.setDefaultParticipantName(defaultName.value)
+    defaultName.value = settingsStore.defaultParticipantName
+  } catch {
+    defaultName.value = settingsStore.defaultParticipantName || accountStore.workspace?.name || ''
+    defaultNamePersistenceError.value = 'Der Name konnte nicht lokal gespeichert werden.'
+  } finally {
+    savingDefaultName.value = false
   }
 }
 
@@ -214,6 +232,18 @@ async function confirmReset(): Promise<void> {
 
       <section class="card mt-5 p-5" aria-labelledby="group-defaults">
         <h2 id="group-defaults" class="text-lg font-semibold">Neue Gruppen</h2>
+        <label for="default-participant-name" class="mt-4 block font-medium">Mein Name in neuen Gruppen</label>
+        <input
+          id="default-participant-name"
+          v-model="defaultName"
+          class="field-input mt-2"
+          type="text"
+          autocomplete="name"
+          maxlength="100"
+          :disabled="savingSettings"
+          @change="saveDefaultName"
+        >
+        <p class="mt-2 text-sm text-gray-600">Dieser Name wird in neuen Gruppen vorbelegt und bleibt auf diesem Gerät gespeichert.</p>
         <label class="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-lg">
           <input
             :checked="visibleDefault"
@@ -222,13 +252,16 @@ async function confirmReset(): Promise<void> {
             :disabled="savingSettings"
             @change="changeDefault"
           >
-          <span class="font-medium">Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen</span>
+          <span class="font-medium">{{ defaultName.trim() ? `„${defaultName.trim()}“ bei neuen Gruppen automatisch als Teilnehmer hinzufügen` : 'Bei neuen Gruppen automatisch als Teilnehmer hinzufügen' }}</span>
         </label>
         <p class="mt-3 text-sm text-gray-600">
           Die Auswahl gilt nur für neue Formulare und bleibt auf diesem Gerät gespeichert.
         </p>
         <p v-if="defaultPersistenceError" class="error-text mt-3 text-sm" role="alert">
           {{ defaultPersistenceError }}
+        </p>
+        <p v-if="defaultNamePersistenceError" class="error-text mt-3 text-sm" role="alert">
+          {{ defaultNamePersistenceError }}
         </p>
       </section>
       <section class="card mt-5 p-5" aria-labelledby="settlement-defaults">

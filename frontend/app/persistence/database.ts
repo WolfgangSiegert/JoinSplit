@@ -20,6 +20,7 @@ export interface DurableAccessIdentity {
 }
 export interface DurableAccountWorkspace {
   readonly accountId: string
+  readonly name: string | null
   readonly email: string
   readonly accessIdentityIds: readonly string[]
   readonly groupRevisions: Readonly<Record<string, number>>
@@ -33,6 +34,7 @@ export interface DurableAdoptionAttempt {
 }
 export interface DurableSettings {
   readonly addSelfAsParticipantByDefault: boolean
+  readonly defaultParticipantName: string
   readonly settlementProposalStrategy: 'deterministic' | 'minimum-transfer'
   readonly settlementRecordingEnabled: boolean
   readonly settlementRecordingGroupIds: readonly string[]
@@ -176,6 +178,7 @@ export async function loadDurableState(): Promise<DurableState> {
   if (identities.length > 1 || accountWorkspaces.length > 1 || settingsRecords.length > 1) throw new Error('Invalid persistence singleton records')
   const identity = identities[0]
   const settings = settingsRecords[0] as (SettingsRecord & {
+    defaultParticipantName?: string
     settlementRecordingEnabled?: boolean
     settlementRecordingGroupIds?: readonly string[]
     colorMode?: DurableSettings['colorMode']
@@ -190,6 +193,7 @@ export async function loadDurableState(): Promise<DurableState> {
     } : null,
     accountWorkspace: accountWorkspaces[0] ? {
       accountId: accountWorkspaces[0].accountId,
+      name: typeof accountWorkspaces[0].name === 'string' ? accountWorkspaces[0].name : null,
       email: accountWorkspaces[0].email,
       accessIdentityIds: [...accountWorkspaces[0].accessIdentityIds],
       groupRevisions: { ...accountWorkspaces[0].groupRevisions },
@@ -208,6 +212,7 @@ export async function loadDurableState(): Promise<DurableState> {
     settlements,
     settings: settings ? {
       addSelfAsParticipantByDefault: settings.addSelfAsParticipantByDefault,
+      defaultParticipantName: typeof settings.defaultParticipantName === 'string' ? settings.defaultParticipantName : '',
       settlementProposalStrategy: settings.settlementProposalStrategy,
       settlementRecordingEnabled: settings.settlementRecordingEnabled === true,
       settlementRecordingGroupIds: Array.isArray(settings.settlementRecordingGroupIds)

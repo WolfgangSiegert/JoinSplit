@@ -247,6 +247,7 @@ describe('local Create Group workflow', () => {
     })
     useAccountStore().hydrate({
       accountId: '44444444-4444-4444-8444-444444444444',
+      name: 'Ada',
       email: 'ada@example.test',
       accessIdentityIds: [ACTOR_ID],
       groupRevisions: {},

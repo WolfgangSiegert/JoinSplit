@@ -10,7 +10,7 @@ import {
 import { validateDurableState } from '../persistence/validation'
 import { applicationFetch, clearNativeApiCookies } from './http-transport'
 
-interface AccountData { readonly id: string; readonly email: string }
+interface AccountData { readonly id: string; readonly name: string | null; readonly email: string }
 export interface GroupSnapshot {
   readonly revision: number
   readonly group: Omit<Group, 'participantIds'>
@@ -64,9 +64,9 @@ async function mutate(apiBase: string, path: string, method: string, body: unkno
   return response
 }
 
-export async function registerAccount(apiBase: string, email: string, password: string, fetcher: typeof fetch = applicationFetch): Promise<AccountData> {
+export async function registerAccount(apiBase: string, name: string, email: string, password: string, fetcher: typeof fetch = applicationFetch): Promise<AccountData> {
   const response = await mutate(apiBase, '/api/account/register', 'POST', {
-    email, password, password_confirmation: password, dataAdoptionConfirmed: true,
+    name, email, password, password_confirmation: password, dataAdoptionConfirmed: true,
   }, fetcher)
   return ((await json(response)) as { data: AccountData }).data
 }
@@ -139,6 +139,7 @@ export async function persistHydratedWorkspace(response: AccountWorkspaceRespons
   const identityIds = [...new Set([currentIdentityId, ...groups.map(group => group.ownerAccessIdentityId)])]
   const workspace: DurableAccountWorkspace = {
     accountId: response.account.id,
+    name: response.account.name,
     email: response.account.email,
     accessIdentityIds: identityIds,
     groupRevisions: Object.fromEntries(response.groups.map(item => [item.group.id, item.revision])),

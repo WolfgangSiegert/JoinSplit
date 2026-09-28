@@ -41,6 +41,7 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
 
   await page.goto('/account')
   await page.getByRole('button', { name: 'Registrieren', exact: true }).click()
+  await page.getByLabel('Dein Name').fill('Ada Owner')
   await page.getByLabel('E-Mail').fill(email)
   await page.getByLabel('Passwort').fill(password)
   await page.getByRole('checkbox').check()
@@ -67,9 +68,15 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
     })
   })).toBe(0)
 
+  await page.goto('/settings')
+  await expect(page.getByLabel('Mein Name in neuen Gruppen')).toHaveValue('Ada Owner')
+  await expect(page.getByRole('checkbox', {
+    name: '„Ada Owner“ bei neuen Gruppen automatisch als Teilnehmer hinzufügen',
+  })).toBeChecked()
+
   await page.goto('/groups/new')
   await page.getByLabel('Gruppenname').fill('Account Group')
-  await page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' }).uncheck()
+  await page.getByRole('checkbox', { name: '„Ada Owner“ als Teilnehmer hinzufügen' }).uncheck()
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page).toHaveURL(/\/groups\/[0-9a-f-]+\?created=1$/u)
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
@@ -107,6 +114,7 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   expect(clientStorage.identity.credential).toBeNull()
   expect(clientStorage.identity.synchronizationStatus).toBe('account-linked')
   expect(clientStorage.workspace.email).toBe(email)
+  expect(clientStorage.workspace.name).toBe('Ada Owner')
   expect(clientStorage.localStorageKeys).toEqual([])
 
   await page.getByRole('button', { name: 'Abmelden' }).click()

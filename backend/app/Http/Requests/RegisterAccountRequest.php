@@ -15,6 +15,7 @@ class RegisterAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'email', 'max:254'],
             'password' => ['required', 'string', 'confirmed', 'max:128', Password::min(12)],
             'dataAdoptionConfirmed' => ['accepted'],

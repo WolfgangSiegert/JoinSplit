@@ -82,11 +82,13 @@ test('an existing Participant is linked and unlinked only through explicit actio
   }, { groupId: existingGroupId, personId: existingPersonId, participantId: existingParticipantId })
 
   await page.goto(`/groups/${existingGroupId}/participants`)
+  await page.getByLabel('Details zu Ada in Altbestand').click()
   await page.getByLabel('Bestehende Person verknüpfen').selectOption(existingPersonId)
   await page.getByRole('button', { name: 'Ausdrücklich verknüpfen' }).click()
   await expect(page.getByText('Mit „Ada im Verzeichnis“ im Personenverzeichnis verknüpft.')).toBeVisible()
 
   await page.reload()
+  await page.getByLabel('Details zu Ada in Altbestand').click()
   await expect(page.getByRole('button', { name: 'Verknüpfung von Ada in Altbestand lösen' })).toBeVisible()
   await page.getByRole('button', { name: 'Verknüpfung von Ada in Altbestand lösen' }).click()
   await expect(page.getByLabel('Bestehende Person verknüpfen')).toBeVisible()

@@ -52,6 +52,41 @@ final result: passed
 
 ---
 
+## Participant collapsed-row quick actions — 2026-09-29
+
+### Evidence
+
+- Source visual truth: in-turn browser annotation on `http://127.0.0.1:3004/groups/a563346c-d57a-493b-871d-f69050d5fb57/participants` at 820 × 857 CSS px. The client did not expose a local path for the annotated source image.
+- Desktop implementation: `/private/tmp/joinsplit-participant-quick-actions-desktop-final.png` at 776 × 857 raster px; browser viewport 820 × 857 CSS px.
+- Mobile implementation: `/private/tmp/joinsplit-participant-quick-actions-mobile.png` at 390 × 844 raster and CSS px.
+- State: dark theme, six participants, all rows collapsed, server-unavailable status visible outside the focused list region.
+
+### Comparison and findings
+
+1. The first pass placed the icon actions too close to the existing `Details` disclosure and caused overlap at desktop width. Classified P2.
+2. Reserved explicit space for the two 44 px actions, shifted them left of the disclosure, and retained a separate native `summary` target so interactive buttons are not nested inside another interactive control.
+3. The final desktop and mobile comparisons show rename and deactivate/reactivate controls in every collapsed header without overlap, clipping, or name wrapping. The desktop disclosure retains its text label; the mobile disclosure uses the caret only.
+4. Delete and directory-linking remain inside the expanded secondary level because they are less frequent and, in the delete case, destructive.
+
+### Required fidelity surfaces
+
+- Typography and content: participant name and status hierarchy is unchanged; icon-only controls have explicit accessible names and titles.
+- Spacing and layout rhythm: rows remain compact, dividers stay continuous, and all quick actions retain 44 px targets.
+- Color and tokens: the existing neutral icon-button treatment is reused; status meaning remains textual rather than color-only.
+- Responsive behavior: verified at 820 × 857 and 390 × 844 with no horizontal overflow or control collision.
+- Interaction: rename opens the participant detail and focuses `Neuer Name`; deactivate changes to reactivate and can be reversed from the collapsed row.
+
+### Verification
+
+- Production build passed.
+- Focused Playwright test passed, including collapsed rename, focus transfer, deactivate, reactivate, and participant search.
+- Typecheck and 270 unit tests passed earlier in the same implementation sequence; the final follow-up changed only the focused Playwright assertions.
+- Browser interaction was confirmed at mobile width. The in-app desktop preview intermittently failed to hydrate after a hard reload, so desktop behavior is supported by the passing production-build Playwright test rather than inferred from the static screenshot.
+
+final result: passed
+
+---
+
 ## Fine full-height settlement axis — 2026-09-25
 
 ### Evidence

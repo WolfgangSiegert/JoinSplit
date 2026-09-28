@@ -338,7 +338,7 @@ test('a failed strategy write restores the stored selection and reports its own 
   await page.goto('/settings')
   const strategy = page.getByRole('combobox', { name: 'Standardstrategie' })
   const groupDefault = page.getByRole('checkbox', {
-    name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
+    name: 'Bei neuen Gruppen automatisch als Teilnehmer hinzufügen',
   })
   await expect(strategy).toHaveValue('deterministic')
   await expect(groupDefault).toBeEnabled()
@@ -363,7 +363,7 @@ test('both settings controls stay disabled until one complete-record write finis
   await page.goto('/settings')
   const strategy = page.getByRole('combobox', { name: 'Standardstrategie' })
   const groupDefault = page.getByRole('checkbox', {
-    name: 'Bei neuen Gruppen standardmäßig als Teilnehmer hinzufügen',
+    name: 'Bei neuen Gruppen automatisch als Teilnehmer hinzufügen',
   })
 
   await page.evaluate(() => {

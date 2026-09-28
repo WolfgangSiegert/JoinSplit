@@ -112,6 +112,7 @@ export function validateDurableState(value: DurableState): DurableState {
   }
   const workspace = value.accountWorkspace ?? null
   if (workspace !== null && (typeof workspace.accountId !== 'string' || !SERVER_UUID.test(workspace.accountId)
+    || (workspace.name !== null && (typeof workspace.name !== 'string' || workspace.name.length === 0 || [...workspace.name].length > 100))
     || typeof workspace.email !== 'string' || !workspace.email.includes('@')
     || !Array.isArray(workspace.accessIdentityIds) || !workspace.accessIdentityIds.every(uuid)
     || new Set(workspace.accessIdentityIds).size !== workspace.accessIdentityIds.length
@@ -127,6 +128,7 @@ export function validateDurableState(value: DurableState): DurableState {
     || !value.expenses.every(expense)
     || !value.settlements.every(durableSettlement)
     || (value.settings !== null && (typeof value.settings.addSelfAsParticipantByDefault !== 'boolean'
+      || typeof value.settings.defaultParticipantName !== 'string' || [...value.settings.defaultParticipantName].length > 100
       || (value.settings.settlementProposalStrategy !== 'deterministic' && value.settings.settlementProposalStrategy !== 'minimum-transfer')
       || typeof value.settings.settlementRecordingEnabled !== 'boolean'
       || !Array.isArray(value.settings.settlementRecordingGroupIds)

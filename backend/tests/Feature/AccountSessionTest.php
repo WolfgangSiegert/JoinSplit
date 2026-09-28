@@ -9,6 +9,7 @@ uses(RefreshDatabase::class);
 function accountPayload(array $overrides = []): array
 {
     return array_replace([
+        'name' => 'Ada Example',
         'email' => 'owner@example.test',
         'password' => 'correct horse battery staple',
         'password_confirmation' => 'correct horse battery staple',
@@ -48,11 +49,13 @@ it('registers a normalized Account and never returns its password', function () 
     $response = $this->postJson('/api/account/register', accountPayload([
         'email' => '  Owner@Example.Test ',
     ]))->assertCreated()
+        ->assertJsonPath('data.name', 'Ada Example')
         ->assertJsonPath('data.email', 'owner@example.test')
         ->assertJsonMissingPath('data.password');
 
     $account = Account::findOrFail($response->json('data.id'));
     expect($account->email)->toBe('owner@example.test')
+        ->and($account->name)->toBe('Ada Example')
         ->and($account->password)->not->toBe('correct horse battery staple')
         ->and(Hash::check('correct horse battery staple', $account->password))->toBeTrue();
 
@@ -61,11 +64,12 @@ it('registers a normalized Account and never returns its password', function () 
 
 it('requires explicit adoption confirmation and a 12-character password', function () {
     $this->postJson('/api/account/register', accountPayload([
+        'name' => '   ',
         'password' => 'too-short',
         'password_confirmation' => 'too-short',
         'dataAdoptionConfirmed' => false,
     ]))->assertUnprocessable()
-        ->assertJsonValidationErrors(['password', 'dataAdoptionConfirmed']);
+        ->assertJsonValidationErrors(['name', 'password', 'dataAdoptionConfirmed']);
 
     expect(Account::count())->toBe(0);
 });
@@ -104,7 +108,7 @@ it('logs in case-insensitively, exposes the current Account, and logs out', func
     ])->assertOk()->assertJsonPath('data.id', $account->id);
 
     $this->getJson('/api/account')->assertOk()->assertExactJson([
-        'data' => ['id' => $account->id, 'email' => 'owner@example.test'],
+        'data' => ['id' => $account->id, 'name' => 'Ada Example', 'email' => 'owner@example.test'],
     ]);
 
     $this->postJson('/api/account/logout')->assertNoContent();

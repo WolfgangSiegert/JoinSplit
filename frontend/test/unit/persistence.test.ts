@@ -54,6 +54,7 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
     settlements: [],
     settings: {
       addSelfAsParticipantByDefault: false,
+      defaultParticipantName: 'Wolfgang',
       settlementProposalStrategy: 'deterministic',
       settlementRecordingEnabled: false,
       settlementRecordingGroupIds: [],
@@ -72,6 +73,7 @@ describe('durable state validation and bootstrap', () => {
       accessIdentity: { id: ACTOR_ID, credential: null, synchronizationStatus: 'account-linked' },
       accountWorkspace: {
         accountId: '0199b5df-31d8-7a82-8d6f-8f5315277712',
+        name: 'Wolfgang',
         email: 'owner@example.test',
         accessIdentityIds: [ACTOR_ID],
         groupRevisions: { [GROUP_ID]: 1 },
@@ -97,6 +99,7 @@ describe('durable state validation and bootstrap', () => {
     expect(useGroupsStore().participants[0]?.id).toBe(PARTICIPANT_ID)
     expect(useGroupsStore().createGroupSync[GROUP_ID]).toEqual({ state: 'pending', error: null })
     expect(useSettingsStore().addSelfAsParticipantByDefault).toBe(false)
+    expect(useSettingsStore().defaultParticipantName).toBe('Wolfgang')
     expect(useSettingsStore().settlementProposalStrategy).toBe('deterministic')
     expect(useSettingsStore().settlementRecordingEnabled).toBe(false)
     expect(useSettingsStore().settlementRecordingGroupIds).toEqual([])

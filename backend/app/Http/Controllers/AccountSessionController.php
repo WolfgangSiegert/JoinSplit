@@ -26,6 +26,7 @@ class AccountSessionController extends Controller
     {
         try {
             $account = Account::query()->create([
+                'name' => trim($request->string('name')->toString()),
                 'email' => $this->normalizedEmail($request->string('email')->toString()),
                 'password' => $request->string('password')->toString(),
             ]);
@@ -119,9 +120,9 @@ class AccountSessionController extends Controller
         return Str::lower(trim($email));
     }
 
-    /** @return array{id: string, email: string} */
+    /** @return array{id: string, name: string|null, email: string} */
     private function accountData(Account $account): array
     {
-        return ['id' => $account->getKey(), 'email' => $account->email];
+        return ['id' => $account->getKey(), 'name' => $account->name, 'email' => $account->email];
     }
 }

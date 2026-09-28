@@ -136,6 +136,12 @@ test('balance overview and participant composition use local data, stable order,
   await expect(page.getByRole('link', { name: 'Salden' })).toHaveAttribute('aria-current', 'page')
   await expect(page.locator('.balance-actions--sticky')).toBeVisible()
   await expect(page.locator('.balance-actions--desktop')).toHaveCount(0)
+  const settlementRecording = page.getByRole('region', { name: 'Ausgleichszahlungen dokumentieren' })
+  await expect(settlementRecording.getByRole('button', { name: 'Für diese Gruppe aktivieren' })).toBeVisible()
+  await expect(settlementRecording.getByRole('link', { name: 'Global einstellen' })).toHaveAttribute('href', '/settings#settlement-recording')
+  await settlementRecording.getByRole('button', { name: 'Für diese Gruppe aktivieren' }).click()
+  await expect(page.getByRole('region', { name: 'Ausgleichszahlungen', exact: true }).getByRole('link', { name: 'Zahlung erfassen' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Zahlungen verwalten' })).toHaveAttribute('href', `/groups/${GROUP_ID}/settlements`)
   await expectNoAxeViolations(page)
 
   await page.setViewportSize({ width: 320, height: 700 })
