@@ -76,6 +76,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   }, { groupId: GROUP_ID, debtorId: DEBTOR_ID, creditorId: CREDITOR_ID, expenseId: EXPENSE_ID })
 
   await page.goto(`/groups/${GROUP_ID}/balances`)
+  await page.locator('summary[aria-label="Teilen und exportieren"]').click()
   await page.getByRole('link', { name: 'Zahlungen' }).click()
   await page.getByRole('link', { name: 'Zahlung erfassen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Zahlung erfassen' })).toBeFocused()
@@ -93,6 +94,7 @@ test('Settlement CRUD persists locally, remains FIFO, and updates Balances immed
   await expect(page.getByText('−6,00 €', { exact: true })).toBeVisible()
   await expect(page.getByText('+6,00 €', { exact: true })).toBeVisible()
 
+  await page.locator('summary[aria-label="Teilen und exportieren"]').click()
   await page.getByRole('link', { name: 'Zahlungen' }).click()
   await page.getByRole('link', { name: /Dora → Chris/ }).click()
   await page.getByRole('button', { name: 'Bearbeiten' }).click()

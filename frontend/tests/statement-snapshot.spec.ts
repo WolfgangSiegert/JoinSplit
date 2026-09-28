@@ -138,6 +138,7 @@ test('creates a frozen selectable snapshot and copies its exact text without fin
   })
   await page.goto(`/groups/${GROUP_ID}/balances`)
   await syncObserved
+  await page.locator('summary[aria-label="Teilen und exportieren"]').click()
   await page.getByRole('link', { name: 'Persönlichen Stand teilen' }).click()
 
   await expect(page.getByText('persönliche, leicht verständliche Nachricht')).toBeVisible()
