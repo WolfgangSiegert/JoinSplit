@@ -116,7 +116,7 @@ test('balance overview and participant composition use local data, stable order,
   await seedBalanceState(page)
   await page.goto(`/groups/${GROUP_ID}/balances`)
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Salden' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgleich' })).toBeVisible()
   await expect(page.getByText('Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.')).toBeVisible()
   await expect(participantBalances(page)).not.toHaveAttribute('open', '')
   await expect(participantBalances(page).locator('.participant-balances__preview')).toHaveText('1 erhält Geld · 1 zahlt · 1 ausgeglichen')
@@ -133,7 +133,7 @@ test('balance overview and participant composition use local data, stable order,
   await expect(items.nth(2)).toContainText('Inaktiv')
   await expect(items.nth(2)).toContainText('Ausgeglichen: 0,00 €')
   await expect(items.nth(2).locator('.amount-value')).toHaveClass(/balance-amount--neutral/)
-  await expect(page.getByRole('link', { name: 'Salden' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('link', { name: 'Ausgleich' })).toHaveAttribute('aria-current', 'page')
   await expect(page.locator('.balance-actions--sticky')).toBeVisible()
   await expect(page.locator('.balance-actions--desktop')).toHaveCount(0)
   const settlementRecording = page.getByRole('region', { name: 'Ausgleichszahlungen dokumentieren' })
@@ -159,7 +159,7 @@ test('balance overview and participant composition use local data, stable order,
   expect(stickyGeometry.actionsTop).toBeGreaterThanOrEqual(stickyGeometry.navigationBottom - 1)
   expect(stickyGeometry.actionsTop - stickyGeometry.navigationBottom).toBeLessThanOrEqual(12)
 
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Salden' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Ausgleich' }).click()
   await expect(participantBalances(page)).not.toHaveAttribute('open', '')
   await openParticipantBalances(page)
 
@@ -192,7 +192,8 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
   await expect(page.locator('.group-view-heading').getByText('CRUD-Balance', { exact: true })).toBeVisible()
 
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
@@ -206,7 +207,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await expect(page.getByRole('heading', { level: 1, name: 'Abendessen' })).toBeVisible()
 
   await page.getByRole('link', { name: '← Ausgaben' }).click()
-  await page.getByRole('link', { name: 'Salden' }).click()
+  await page.getByRole('link', { name: 'Ausgleich' }).click()
   await openParticipantBalances(page)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Soll erhalten: +5,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('Soll zahlen: −5,00 €')
@@ -219,7 +220,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await expect(page.getByText('Änderungen wurden lokal gespeichert.')).toBeVisible()
 
   await page.getByRole('link', { name: '← Ausgaben' }).click()
-  await page.getByRole('link', { name: 'Salden' }).click()
+  await page.getByRole('link', { name: 'Ausgleich' }).click()
   await openParticipantBalances(page)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Soll erhalten: +6,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('Soll zahlen: −6,00 €')
@@ -229,7 +230,7 @@ test('real local Expense create, edit, and delete recalculate balances immediate
   await page.getByRole('button', { name: 'Ausgabe löschen' }).click()
   await page.getByRole('button', { name: 'Endgültig löschen' }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Noch keine Ausgaben' })).toBeVisible()
-  await page.getByRole('link', { name: 'Salden' }).click()
+  await page.getByRole('link', { name: 'Ausgleich' }).click()
   await expect(page.getByText('Noch keine Ausgaben oder Zahlungen. Alle Teilnehmer sind derzeit ausgeglichen.')).toBeVisible()
   await openParticipantBalances(page)
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('Ausgeglichen: 0,00 €')

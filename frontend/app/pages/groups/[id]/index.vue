@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { formatAmountMinor } from '../../../domain/expense'
-import { calculateParticipantBalances, formatSignedAmountMinor } from '../../../domain/balance'
+import { calculateParticipantBalances } from '../../../domain/balance'
 const route = useRoute()
 const router = useRouter()
 const groupsStore = useGroupsStore()
+const { t } = useAppI18n()
 const { archive, reactivate, remove } = useGroupLifecycle()
 const heading = ref<HTMLHeadingElement | null>(null)
 const groupId = computed(() => String(route.params.id))
@@ -20,13 +21,10 @@ const filteredExpenses = computed(() => expenses.value.filter((expense) => {
 const participants = computed(() => groupsStore.participantsForGroup(groupId.value))
 const settlements = computed(() => groupsStore.settlementsForGroup(groupId.value))
 const totalExpensesMinor = computed(() => expenses.value.reduce((sum, expense) => sum + expense.amountMinor, 0))
-const balances = computed(() => calculateParticipantBalances(groupId.value, participants.value, expenses.value, settlements.value))
-const balanceByParticipant = computed(() => new Map(balances.value.map(balance => [balance.participantId, balance.balanceAmountMinor])))
 const visibleParticipants = computed(() => participants.value.slice(0, 3))
-const largestAbsoluteBalance = computed(() => balances.value.reduce((largest, balance) => {
-  const absolute = balance.balanceAmountMinor < 0n ? -balance.balanceAmountMinor : balance.balanceAmountMinor
-  return absolute > largest ? absolute : largest
-}, 0n))
+const expenseList = ref<HTMLElement | null>(null)
+const expenseListScrollable = ref(false)
+const expenseListHasMore = ref(false)
 const hasOpenBalances = computed(() => group.value?.hasFinancialHistory === true
   && calculateParticipantBalances(groupId.value, participants.value, expenses.value, settlements.value)
     .some(balance => balance.balanceAmountMinor !== 0n))
@@ -39,23 +37,25 @@ const focusAfterDialogClose = ref<'reactivate' | null>(null)
 const lifecycleBusy = ref(false)
 const lifecycleError = ref('')
 
-function participantState(amount: bigint): string {
-  if (amount > 0n) return 'erhält'
-  if (amount < 0n) return 'zahlt'
-  return 'ausgeglichen'
-}
-
-function balanceBarWidth(amount: bigint): string {
-  const absolute = amount < 0n ? -amount : amount
-  if (largestAbsoluteBalance.value === 0n) return '0%'
-  return `${Math.max(10, Number((absolute * 100n) / largestAbsoluteBalance.value))}%`
-}
-
 function participantSummary(): string {
   const names = visibleParticipants.value.map(participant => participant.name)
   if (participants.value.length > 3) return `${names.join(', ')} und ${participants.value.length - 3} weitere`
   if (names.length < 2) return names[0] ?? 'Noch niemand'
   return `${names.slice(0, -1).join(', ')} und ${names.at(-1)}`
+}
+
+function updateScrollState(element: HTMLElement | null, scrollable: Ref<boolean>, hasMore: Ref<boolean>): void {
+  if (!element) {
+    scrollable.value = false
+    hasMore.value = false
+    return
+  }
+  scrollable.value = element.scrollHeight > element.clientHeight + 1
+  hasMore.value = scrollable.value && element.scrollTop + element.clientHeight < element.scrollHeight - 2
+}
+
+function updateExpenseScrollState(): void {
+  updateScrollState(expenseList.value, expenseListScrollable, expenseListHasMore)
 }
 
 function askLifecycle(action: 'archive' | 'delete', trigger: HTMLButtonElement): void {
@@ -110,22 +110,32 @@ onMounted(async () => {
     await nextTick()
     heading.value?.focus()
   }
+  await nextTick()
+  updateExpenseScrollState()
+  window.addEventListener('resize', updateExpenseScrollState)
 })
+
+watch(filteredExpenses, async () => {
+  await nextTick()
+  updateExpenseScrollState()
+})
+
+onBeforeUnmount(() => window.removeEventListener('resize', updateExpenseScrollState))
 </script>
 
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+      <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" :aria-label="`← ${t('group.back.groups')}`"><AppIcon name="arrow-left" />{{ t('group.back.groups') }}</NuxtLink>
 
       <header class="group-view-heading min-w-0">
         <p class="eyebrow">{{ group.name }}</p>
         <div class="group-view-heading__title-row">
-          <h1 ref="heading" tabindex="-1" class="break-words text-4xl font-bold text-ink-900">Ausgaben</h1>
+          <h1 ref="heading" tabindex="-1" class="break-words text-4xl font-bold text-ink-900">{{ t('group.expenses.title') }}</h1>
           <GroupSyncStatus :group-id="group.id" show-synced compact mobile-collapsible class="group-view-heading__sync" />
         </div>
-        <p class="mt-2 text-ink-700">Was wurde bezahlt, und von wem?</p>
-        <p class="group-view-heading__description mt-2 text-sm text-ink-700">Erfasse gemeinsame Ausgaben und behalte eure bisherigen Einträge im Blick.</p>
+        <p class="mt-2 text-ink-700">{{ t('group.expenses.lead') }}</p>
+        <p class="group-view-heading__description mt-2 text-sm text-ink-700">{{ t('group.expenses.copy') }}</p>
         <p class="mt-2 text-sm font-medium text-ink-700">{{ participants.length }} {{ participants.length === 1 ? 'Person' : 'Personen' }} · {{ group.currency }}</p>
         <p v-if="group.status === 'archived'" class="mt-3 rounded-lg bg-gray-100 p-3 text-gray-800">
           Archiviert und schreibgeschützt. Ausgaben, Salden, Zahlungen und persönliche Stände bleiben lesbar.
@@ -156,19 +166,6 @@ onMounted(async () => {
             <p class="amount-display amount-display--compact mt-2">{{ formatAmountMinor(totalExpensesMinor) }}</p>
           </div>
         </div>
-        <h2 class="mt-5 text-xl font-bold">Salden pro Teilnehmer</h2>
-        <ul class="mt-2 space-y-2" aria-label="Salden im Überblick">
-          <li v-for="(participant, index) in visibleParticipants" :key="participant.id" class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-            <ParticipantAvatar :name="participant.name" :index="index" size="sm" />
-            <div class="min-w-0">
-              <div class="flex items-baseline justify-between gap-2"><p class="truncate text-sm font-bold">{{ participant.name }}</p><p class="text-xs text-ink-700">{{ participantState(balanceByParticipant.get(participant.id) ?? 0n) }}</p></div>
-              <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-200" aria-hidden="true">
-                <div class="h-full rounded-full" :class="index === 0 ? 'bg-sky-500' : index === 1 ? 'bg-amber-400' : 'bg-rose-400'" :style="{ width: balanceBarWidth(balanceByParticipant.get(participant.id) ?? 0n) }" />
-              </div>
-            </div>
-            <p class="amount-value text-sm">{{ formatSignedAmountMinor(balanceByParticipant.get(participant.id) ?? 0n) }}</p>
-          </li>
-        </ul>
       </section>
 
       <section v-if="!expenses.length" class="card mt-7 px-5 py-8 text-center" aria-labelledby="empty-expenses">
@@ -183,19 +180,28 @@ onMounted(async () => {
           </div>
           <ListSearch v-model="expenseSearchQuery" label="Ausgaben durchsuchen" />
         </div>
-        <ul v-if="filteredExpenses.length" class="expense-ledger ledger-list mt-3">
-          <li v-for="(expense, index) in filteredExpenses" :key="expense.id" class="min-w-0">
-            <NuxtLink :to="`/groups/${group.id}/expenses/${expense.id}`" class="ledger-row min-w-0">
-              <ParticipantAvatar :name="participantNames.get(expense.payerParticipantId) ?? '?'" :index="index" size="sm" />
-              <span class="min-w-0 flex-1">
-                <strong class="block truncate text-base">{{ expense.description }}</strong>
-                <span class="mt-1 block break-words text-sm text-ink-700">{{ expense.incurredOn }} · {{ participantNames.get(expense.payerParticipantId) }} hat bezahlt</span>
-              </span>
-              <span class="amount-value">{{ formatAmountMinor(expense.amountMinor) }}</span>
-              <span class="text-xl text-ink-700" aria-hidden="true">›</span>
-            </NuxtLink>
-          </li>
-        </ul>
+        <div v-if="filteredExpenses.length" class="internal-scroll-list internal-scroll-list--expenses" :class="{ 'internal-scroll-list--scrollable': expenseListScrollable }">
+          <ul
+            ref="expenseList"
+            class="expense-ledger ledger-list internal-scroll-list__viewport mt-3"
+            aria-label="Ausgabenliste"
+            :tabindex="expenseListScrollable ? 0 : undefined"
+            @scroll="updateExpenseScrollState"
+          >
+            <li v-for="(expense, index) in filteredExpenses" :key="expense.id" class="min-w-0">
+              <NuxtLink :to="`/groups/${group.id}/expenses/${expense.id}`" class="ledger-row min-w-0">
+                <ParticipantAvatar :name="participantNames.get(expense.payerParticipantId) ?? '?'" :index="index" size="sm" />
+                <span class="min-w-0 flex-1">
+                  <strong class="block truncate text-base">{{ expense.description }}</strong>
+                  <span class="mt-1 block break-words text-sm text-ink-700">{{ expense.incurredOn }} · {{ participantNames.get(expense.payerParticipantId) }} hat bezahlt</span>
+                </span>
+                <span class="amount-value">{{ formatAmountMinor(expense.amountMinor) }}</span>
+                <span class="text-xl text-ink-700" aria-hidden="true">›</span>
+              </NuxtLink>
+            </li>
+          </ul>
+          <p v-if="expenseListHasMore" class="internal-scroll-list__cue" aria-hidden="true"><span>↓</span> Weitere Ausgaben</p>
+        </div>
         <p v-else class="card mt-3 p-4 text-ink-700" role="status">Keine Ausgabe passt zu „{{ expenseSearchQuery.trim() }}“.</p>
       </section>
 
@@ -238,7 +244,7 @@ onMounted(async () => {
     </div>
 
     <div v-else class="page-content">
-      <h1 class="text-3xl font-semibold">Gruppe nicht gefunden</h1>
+      <h1 class="text-3xl font-semibold">{{ t('group.notFound') }}</h1>
       <p class="mt-3 text-gray-600">Der lokale Gruppenstand ist in dieser Sitzung nicht vorhanden.</p>
       <NuxtLink to="/groups" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
     </div>

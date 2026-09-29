@@ -11,6 +11,7 @@ import {
 const route = useRoute()
 const groupsStore = useGroupsStore()
 const settingsStore = useSettingsStore()
+const { t } = useAppI18n()
 const groupId = computed(() => String(route.params.id))
 const group = computed(() => groupsStore.findGroup(groupId.value))
 const participants = computed(() => groupsStore.participantsForGroup(groupId.value))
@@ -75,8 +76,8 @@ function closeParticipantBalances(): void {
   if (participantBalancesDetails.value) participantBalancesDetails.value.open = false
 }
 
-function handleAreaActivation(label: string): void {
-  if (label === 'Salden') closeParticipantBalances()
+function handleAreaActivation(area: string): void {
+  if (area === 'settlement') closeParticipantBalances()
 }
 
 function balanceText(amountMinor: bigint): string {
@@ -224,15 +225,15 @@ function downloadBlob(blob: Blob, filename: string): void {
 <template>
   <main class="page-shell">
     <div v-if="group" class="page-content">
-      <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" aria-label="← Gruppen"><AppIcon name="arrow-left" />Gruppen</NuxtLink>
+      <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" :aria-label="`← ${t('group.back.groups')}`"><AppIcon name="arrow-left" />{{ t('group.back.groups') }}</NuxtLink>
       <header class="group-view-heading">
         <p class="eyebrow">{{ group.name }}</p>
         <div class="group-view-heading__title-row">
-          <h1 class="text-4xl font-bold text-ink-900">Salden</h1>
+          <h1 class="text-4xl font-bold text-ink-900">{{ t('group.settlement.title') }}</h1>
           <GroupSyncStatus :group-id="group.id" mobile-collapsible class="group-view-heading__sync" />
         </div>
-        <p class="mt-2 text-ink-700">Wer bekommt noch Geld, wer zahlt noch?</p>
-        <p class="group-view-heading__description mt-2 text-sm text-ink-700">Berechnet aus den lokal gespeicherten Ausgaben und Zahlungen dieser Gruppe.</p>
+        <p class="mt-2 text-ink-700">{{ t('group.settlement.lead') }}</p>
+        <p class="group-view-heading__description mt-2 text-sm text-ink-700">{{ t('group.settlement.copy') }}</p>
       </header>
 
       <GroupAreaNavigation :group-id="group.id" @area-activated="handleAreaActivation" />
@@ -475,7 +476,7 @@ function downloadBlob(blob: Blob, filename: string): void {
     </div>
 
     <div v-else class="page-content">
-      <h1 class="text-3xl font-semibold">Gruppe nicht gefunden</h1>
+      <h1 class="text-3xl font-semibold">{{ t('group.notFound') }}</h1>
       <p class="mt-3 text-gray-600">Der lokale Gruppenstand ist nicht vorhanden.</p>
       <NuxtLink to="/groups" class="primary-button mt-6">Zur Gruppenliste</NuxtLink>
     </div>
