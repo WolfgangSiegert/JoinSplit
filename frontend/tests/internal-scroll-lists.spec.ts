@@ -59,6 +59,11 @@ test('participant balances grow with the page while long expense lists remain in
   await page.setViewportSize({ width: 320, height: 760 })
   await page.goto(`/groups/${GROUP_ID}`)
 
+  const groupHeading = page.locator('.group-view-heading')
+  await expect(groupHeading.locator('.group-view-heading__group-name')).toHaveText('Scrolltest')
+  await expect(groupHeading.locator('.group-view-heading__group-meta')).toContainText('6 Personen')
+  await expect(groupHeading.locator('.group-view-heading__group-meta')).toContainText('EUR')
+  await expect(groupHeading.getByText('6 Personen · EUR', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Salden pro Teilnehmer' })).toHaveCount(0)
   const expenseList = page.getByRole('list', { name: 'Ausgabenliste' })
   await expect(expenseList.getByRole('listitem')).toHaveCount(6)

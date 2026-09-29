@@ -129,14 +129,19 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateExpenseScrollSt
       <NuxtLink to="/groups" class="secondary-link -ml-4 mb-3" :aria-label="`← ${t('group.back.groups')}`"><AppIcon name="arrow-left" />{{ t('group.back.groups') }}</NuxtLink>
 
       <header class="group-view-heading min-w-0">
-        <p class="eyebrow">{{ group.name }}</p>
+        <p class="group-view-heading__group-meta">
+          <strong class="group-view-heading__group-name">{{ group.name }}</strong>
+          <span aria-hidden="true">•</span>
+          <span>{{ participants.length }} {{ participants.length === 1 ? t('group.meta.person') : t('group.meta.people') }}</span>
+          <span aria-hidden="true">•</span>
+          <span>{{ group.currency }}</span>
+        </p>
         <div class="group-view-heading__title-row">
           <h1 ref="heading" tabindex="-1" class="break-words text-4xl font-bold text-ink-900">{{ t('group.expenses.title') }}</h1>
           <GroupSyncStatus :group-id="group.id" show-synced compact mobile-collapsible class="group-view-heading__sync" />
         </div>
         <p class="mt-2 text-ink-700">{{ t('group.expenses.lead') }}</p>
         <p class="group-view-heading__description mt-2 text-sm text-ink-700">{{ t('group.expenses.copy') }}</p>
-        <p class="mt-2 text-sm font-medium text-ink-700">{{ participants.length }} {{ participants.length === 1 ? 'Person' : 'Personen' }} · {{ group.currency }}</p>
         <p v-if="group.status === 'archived'" class="mt-3 rounded-lg bg-gray-100 p-3 text-gray-800">
           Archiviert und schreibgeschützt. Ausgaben, Salden, Zahlungen und persönliche Stände bleiben lesbar.
         </p>
