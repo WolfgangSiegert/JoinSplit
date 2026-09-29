@@ -11,6 +11,7 @@ const emit = defineEmits<{
 const expanded = ref(false)
 const input = ref<HTMLInputElement | null>(null)
 const inputId = useId()
+const { t } = useAppI18n()
 
 async function openSearch(): Promise<void> {
   expanded.value = true
@@ -53,7 +54,7 @@ function updateSearch(event: Event): void {
         @input="updateSearch"
         @keydown.esc="closeSearch"
       >
-      <button type="button" class="list-search__close" :aria-label="`${label} schließen`" @click="closeSearch">
+      <button type="button" class="list-search__close" :aria-label="t('common.search.close', { label })" @click="closeSearch">
         <AppIcon name="x" />
       </button>
     </div>

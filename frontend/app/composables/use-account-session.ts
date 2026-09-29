@@ -5,6 +5,7 @@ export function useAccountSession() {
   const lifecycleStore = useApplicationLifecycleStore()
   const accountStore = useAccountStore()
   const groupsStore = useGroupsStore()
+  const settingsStore = useSettingsStore()
 
   function markPendingAsExpired(): void {
     const error = Object.freeze({
@@ -25,6 +26,7 @@ export function useAccountSession() {
         markPendingAsExpired()
         return
       }
+      await settingsStore.applyAccountPreferences(account)
       accountStore.activateSession()
     } catch (error) {
       if (error instanceof AccountRequestError && error.status === 401) {

@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { accountInitials } from '../domain/account-display'
+
 const settingsStore = useSettingsStore()
 const accountStore = useAccountStore()
 const groupsStore = useGroupsStore()
 const route = useRoute()
 const { toggleUtility } = useUtilityNavigation()
+const { t } = useAppI18n()
 const systemPrefersDark = ref(false)
 const saving = ref(false)
 const persistenceError = ref('')
@@ -12,18 +15,21 @@ let colorSchemeQuery: MediaQueryList | undefined
 
 const isDark = computed(() => settingsStore.colorMode === 'dark'
   || (settingsStore.colorMode === 'system' && systemPrefersDark.value))
-const toggleLabel = computed(() => isDark.value ? 'Hellen Modus aktivieren' : 'Dunklen Modus aktivieren')
+const toggleLabel = computed(() => isDark.value ? t('header.theme.light') : t('header.theme.dark'))
+const displayedAccountInitials = computed(() => accountStore.workspace
+  ? accountInitials(accountStore.workspace.name, accountStore.workspace.email)
+  : '')
 const mobileTitle = computed(() => {
   const groupId = typeof route.params.id === 'string' ? route.params.id : null
   const currentGroup = groupId && groupId !== 'new' ? groupsStore.findGroup(groupId) : undefined
   if (currentGroup) return currentGroup.name
-  if (route.path === '/groups') return 'Gruppen'
-  if (route.path === '/groups/new') return 'Neue Gruppe'
-  if (route.path === '/people') return 'Personen'
-  if (route.path === '/account' || route.path === '/account-reset') return 'Konto & Einstellungen'
-  if (route.path === '/settings') return 'Einstellungen'
-  if (route.path === '/demo') return 'Demo & Daten'
-  return 'JoinSplit'
+  if (route.path === '/groups') return t('nav.groups')
+  if (route.path === '/groups/new') return t('header.title.newGroup')
+  if (route.path === '/people') return t('nav.people')
+  if (route.path === '/account' || route.path === '/account-reset') return t('header.title.account')
+  if (route.path === '/settings') return t('nav.settings')
+  if (route.path === '/demo') return t('header.title.demo')
+  return t('header.title.app')
 })
 
 function updateSystemColorScheme(event: MediaQueryListEvent): void {
@@ -61,7 +67,7 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
 <template>
   <header class="app-header">
     <div class="mobile-app-header">
-      <NuxtLink to="/" class="mobile-app-header__brand" aria-label="JoinSplit – Startseite">
+      <NuxtLink to="/" class="mobile-app-header__brand" :aria-label="t('header.home')">
         <img src="/favicon.svg" alt="" width="32" height="32">
       </NuxtLink>
       <span class="mobile-app-header__title">{{ mobileTitle }}</span>
@@ -69,42 +75,42 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
         <NuxtLink
           to="/demo"
           class="app-beta-badge app-beta-badge--link"
-          aria-label="Beta-Hinweis und Demodaten"
-          title="Beta-Hinweis und Demodaten"
+          :aria-label="t('header.beta')"
+          :title="t('header.beta')"
         ><AppIcon name="alert-circle" /><span>Beta</span></NuxtLink>
         <button
           type="button"
           class="mobile-app-header__action"
-          :aria-label="accountStore.isAuthenticated ? 'Konto öffnen' : 'Anmelden oder registrieren'"
-          :title="accountStore.isAuthenticated ? 'Konto' : 'Anmelden oder registrieren'"
+          :aria-label="accountStore.isAuthenticated ? t('header.account.open') : t('header.signIn')"
+          :title="accountStore.isAuthenticated ? t('header.account.title') : t('header.signIn')"
           :aria-pressed="route.path === '/account'"
           @click="toggleUtility('/account')"
-        ><AppIcon name="account" /></button>
+        ><span v-if="accountStore.isAuthenticated" class="app-account-initials" aria-hidden="true">{{ displayedAccountInitials }}</span><AppIcon v-else name="account" /></button>
       </div>
     </div>
     <div class="app-header__content app-header__content--desktop">
       <div class="app-brand">
-        <NuxtLink to="/" class="app-wordmark" aria-label="JoinSplit – Startseite">
+        <NuxtLink to="/" class="app-wordmark" :aria-label="t('header.home')">
           <img class="app-wordmark__icon" src="/favicon.svg" alt="" width="32" height="32">
           <span>JoinSplit</span>
         </NuxtLink>
         <NuxtLink
           to="/demo"
           class="app-beta-badge app-beta-badge--link"
-          aria-label="Beta-Hinweis und Demodaten"
-          title="Beta-Hinweis und Demodaten"
+          :aria-label="t('header.beta')"
+          :title="t('header.beta')"
         ><AppIcon name="alert-circle" /><span>Beta</span></NuxtLink>
       </div>
-      <nav class="app-header__utilities" aria-label="Schnellzugriff">
+      <nav class="app-header__utilities" :aria-label="t('header.quick')">
         <button
           type="button"
           class="icon-button"
-          :aria-label="accountStore.isAuthenticated ? 'Account öffnen' : 'Anmelden oder registrieren'"
-          :title="accountStore.isAuthenticated ? 'Account' : 'Anmelden oder registrieren'"
+          :aria-label="accountStore.isAuthenticated ? t('header.account.openDesktop') : t('header.signIn')"
+          :title="accountStore.isAuthenticated ? t('header.account.title') : t('header.signIn')"
           :aria-pressed="route.path === '/account'"
           @click="toggleUtility('/account')"
-        ><AppIcon name="user" /></button>
-        <button type="button" class="icon-button" aria-label="Einstellungen öffnen" title="Einstellungen" :aria-pressed="route.path === '/settings'" @click="toggleUtility('/settings')"><AppIcon name="settings" /></button>
+        ><span v-if="accountStore.isAuthenticated" class="app-account-initials" aria-hidden="true">{{ displayedAccountInitials }}</span><AppIcon v-else name="user" /></button>
+        <button type="button" class="icon-button" :aria-label="t('header.settings.open')" :title="t('header.settings.title')" :aria-pressed="route.path === '/settings'" @click="toggleUtility('/settings')"><AppIcon name="settings" /></button>
         <button
           type="button"
           class="theme-toggle"
@@ -128,16 +134,16 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
           </span>
         </button>
       </nav>
-      <nav class="app-header__nav" aria-label="Hauptnavigation">
-        <NuxtLink to="/groups" class="app-header__action"><AppIcon name="users" /><span>Gruppen</span></NuxtLink>
-        <NuxtLink to="/people" class="app-header__action"><AppIcon name="user" /><span>Personen</span></NuxtLink>
+      <nav class="app-header__nav" :aria-label="t('header.main')">
+        <NuxtLink to="/groups" class="app-header__action"><AppIcon name="users" /><span>{{ t('nav.groups') }}</span></NuxtLink>
+        <NuxtLink to="/people" class="app-header__action"><AppIcon name="user" /><span>{{ t('nav.people') }}</span></NuxtLink>
         <details ref="createMenu" class="app-create-menu">
-          <summary class="app-header__action app-create-menu__trigger" role="button" aria-haspopup="menu" aria-label="Neu">
-            <AppIcon name="plus" /><span>Neu</span><AppIcon name="chevron-down" />
+          <summary class="app-header__action app-create-menu__trigger" role="button" aria-haspopup="menu" :aria-label="t('nav.new')">
+            <AppIcon name="plus" /><span>{{ t('nav.new') }}</span><AppIcon name="chevron-down" />
           </summary>
-          <div class="app-create-menu__panel" role="menu" aria-label="Neu anlegen">
-            <NuxtLink to="/groups/new" class="app-create-menu__item" role="menuitem" aria-label="Neue Gruppe" @click="closeCreateMenu"><AppIcon name="users" /><span><strong>Gruppe</strong><small>Gemeinsame Ausgaben starten</small></span></NuxtLink>
-            <NuxtLink to="/people#person-form" class="app-create-menu__item" role="menuitem" aria-label="Neue Person" @click="closeCreateMenu"><AppIcon name="user" /><span><strong>Person</strong><small>Für spätere Gruppen vormerken</small></span></NuxtLink>
+          <div class="app-create-menu__panel" role="menu" :aria-label="t('create.eyebrow')">
+            <NuxtLink to="/groups/new" class="app-create-menu__item" role="menuitem" :aria-label="t('header.title.newGroup')" @click="closeCreateMenu"><AppIcon name="users" /><span><strong>{{ t('create.group') }}</strong><small>{{ t('create.groupHint') }}</small></span></NuxtLink>
+            <NuxtLink to="/people#person-form" class="app-create-menu__item" role="menuitem" :aria-label="t('header.title.newPerson')" @click="closeCreateMenu"><AppIcon name="user" /><span><strong>{{ t('create.person') }}</strong><small>{{ t('create.personHint') }}</small></span></NuxtLink>
           </div>
         </details>
       </nav>

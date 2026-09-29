@@ -59,7 +59,8 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await page.waitForURL(url => /^\/groups\/[0-9a-f-]{36}$/.test(url.pathname))
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   const bob = (await durableState(page)).participants.find(participant => participant.name === 'Bob')!

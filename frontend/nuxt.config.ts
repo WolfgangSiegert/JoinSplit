@@ -41,8 +41,8 @@ export default defineNuxtConfig({
       id: '/',
       name: 'JoinSplit',
       short_name: 'JoinSplit',
-      description: 'Gemeinsame Ausgaben erfassen, fair aufteilen und übersichtlich ausgleichen.',
-      lang: 'de',
+      description: 'Track shared expenses, split them fairly and settle up clearly.',
+      lang: 'en',
       start_url: '/',
       scope: '/',
       display: 'standalone',
@@ -114,9 +114,9 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'JoinSplit',
-      htmlAttrs: { lang: 'de' },
+      htmlAttrs: { lang: 'en' },
       meta: [
-        { name: 'description', content: 'Gemeinsame Ausgaben mit JoinSplit.' },
+        { name: 'description', content: 'Shared expenses with JoinSplit.' },
         { name: 'theme-color', content: '#c44332' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         ...(nativeBuild

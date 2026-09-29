@@ -97,7 +97,8 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   await expect(syncDetails.locator('.group-sync-status__message')).toHaveText('Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.')
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   await expect(page.getByText('Bob', { exact: true })).toBeVisible()
@@ -149,7 +150,7 @@ test('a mixed offline Group, Participant, and Expense queue survives reload and 
   expect(apiRequests).toEqual([])
 
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Salden' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Ausgleich' })).toBeVisible()
   await page.locator('details.participant-balances > summary').click()
   await expect(page.getByRole('link', { name: /Bobby/ })).toContainText('Ausgeglichen: 0,00 €')
   const afterReload = await durableSnapshot(page)
@@ -297,7 +298,8 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await page.waitForURL(url => /^\/groups\/[0-9a-f-]{36}$/.test(url.pathname))
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   const participantPosts: Request[] = []
   page.on('request', (request) => {
     if (request.url().endsWith('/participants') && request.method() === 'POST') {
@@ -378,6 +380,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await deactivateBob
   expect(participantPatches).toHaveLength(1)
 
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.getByLabel('Teilnehmer hinzufügen').fill('  alice  ')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
   const duplicateAlert = page.getByRole('alert')

@@ -60,6 +60,8 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
       settlementRecordingGroupIds: [],
       colorMode: 'dark',
       visualDesign: '3',
+      groupAreaOrder: ['settlement', 'expenses', 'people'],
+      languagePreference: 'de',
     },
     ...overrides,
   }
@@ -106,6 +108,7 @@ describe('durable state validation and bootstrap', () => {
     expect(useSettingsStore().settlementRecordingGroupIds).toEqual([])
     expect(useSettingsStore().colorMode).toBe('dark')
     expect(useSettingsStore().visualDesign).toBe('3')
+    expect(useSettingsStore().languagePreference).toBe('de')
     expect(persistIdentity).not.toHaveBeenCalled()
   })
 

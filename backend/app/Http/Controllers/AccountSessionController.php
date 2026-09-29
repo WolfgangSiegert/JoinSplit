@@ -29,6 +29,8 @@ class AccountSessionController extends Controller
                 'name' => trim($request->string('name')->toString()),
                 'email' => $this->normalizedEmail($request->string('email')->toString()),
                 'password' => $request->string('password')->toString(),
+                'group_area_order' => $request->validated('groupAreaOrder', ['people', 'expenses', 'settlement']),
+                'language_preference' => $request->validated('languagePreference', 'system'),
             ]);
         } catch (QueryException $exception) {
             if ($exception->getCode() !== '23505') {
@@ -120,9 +122,15 @@ class AccountSessionController extends Controller
         return Str::lower(trim($email));
     }
 
-    /** @return array{id: string, name: string|null, email: string} */
+    /** @return array{id: string, name: string|null, email: string, groupAreaOrder: array<int, string>, languagePreference: string} */
     private function accountData(Account $account): array
     {
-        return ['id' => $account->getKey(), 'name' => $account->name, 'email' => $account->email];
+        return [
+            'id' => $account->getKey(),
+            'name' => $account->name,
+            'email' => $account->email,
+            'groupAreaOrder' => $account->group_area_order ?? ['people', 'expenses', 'settlement'],
+            'languagePreference' => $account->language_preference ?? 'system',
+        ];
     }
 }

@@ -27,6 +27,7 @@ const accountStore = useAccountStore()
 const identityStore = useAccessIdentityStore()
 const groupsStore = useGroupsStore()
 const peopleStore = usePeopleStore()
+const settingsStore = useSettingsStore()
 const mode = ref<'login' | 'register' | 'recover'>('login')
 const name = ref('')
 const email = ref('')
@@ -142,6 +143,7 @@ async function adoptAndHydrate(): Promise<void> {
     serverPeople: remote.people.length,
   }
   const hydration = await persistHydratedWorkspace(remote, identityId)
+  await settingsStore.applyAccountPreferences(remote.account)
   identityStore.hydrate(hydration.identity)
   accountStore.finish(hydration.workspace)
   peopleStore.hydrate(hydration.people, [])
@@ -168,8 +170,9 @@ async function submit(): Promise<void> {
   }
   accountStore.begin()
   try {
-    if (mode.value === 'register') await registerAccount(config.public.apiBase, name.value, email.value, password.value)
-    else await loginAccount(config.public.apiBase, email.value, password.value)
+    if (mode.value === 'register') {
+      await registerAccount(config.public.apiBase, name.value, email.value, password.value, settingsStore.groupAreaOrder, settingsStore.languagePreference)
+    } else await loginAccount(config.public.apiBase, email.value, password.value)
     await adoptAndHydrate()
   } catch (error) {
     accountStore.fail(error instanceof AccountRequestError && error.status === 401
@@ -236,6 +239,7 @@ async function reauthenticate(): Promise<void> {
   try {
     const account = await loginAccount(config.public.apiBase, accountStore.workspace.email, reauthenticationPassword.value)
     if (account.id !== accountStore.workspace.accountId) throw new Error('Die Anmeldung gehört nicht zum lokal gespeicherten Account.')
+    await settingsStore.applyAccountPreferences(account)
     reauthenticationPassword.value = ''
     groupsStore.resetSessionFailures()
     accountStore.activateSession()

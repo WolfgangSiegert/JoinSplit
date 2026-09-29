@@ -2,6 +2,7 @@
 const groupsStore = useGroupsStore()
 const peopleStore = usePeopleStore()
 const route = useRoute()
+const { t } = useAppI18n()
 const showArchived = ref(false)
 const activeGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'active'))
 const archivedGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'archived'))
@@ -17,29 +18,29 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
     <div class="page-content">
       <header class="landing-header">
         <div class="landing-hero">
-          <p class="eyebrow">Gemeinsame Ausgaben. Klar geregelt.</p>
-          <h1 class="landing-hero__title">Gemeinsam den Überblick behalten</h1>
-          <p class="landing-hero__lead">Mehr zusammen erleben. Weniger rechnen.</p>
-          <p class="landing-hero__copy">JoinSplit hält fest, wer bezahlt hat, teilt Ausgaben fair auf und zeigt, wie ihr euch mit wenigen Zahlungen ausgleicht.</p>
-          <a href="#so-funktionierts" class="landing-hero__guide-link">So funktioniert’s<AppIcon name="chevron-down" /></a>
+          <p class="eyebrow">{{ t('home.eyebrow') }}</p>
+          <h1 class="landing-hero__title">{{ t('home.title') }}</h1>
+          <p class="landing-hero__lead">{{ t('home.lead') }}</p>
+          <p class="landing-hero__copy">{{ t('home.copy') }}</p>
+          <a href="#so-funktionierts" class="landing-hero__guide-link">{{ t('home.how') }}<AppIcon name="chevron-down" /></a>
           <div class="landing-hero__actions">
-            <NuxtLink v-if="isFreshStart" to="/groups/new" class="primary-button" aria-label="Neue Gruppe starten"><AppIcon name="plus" />Erste Gruppe starten</NuxtLink>
-            <NuxtLink v-else to="/groups" class="primary-button"><AppIcon name="users" />Zu meinen Gruppen</NuxtLink>
-            <NuxtLink to="/people#person-form" class="secondary-button"><AppIcon name="user" />Person anlegen</NuxtLink>
+            <NuxtLink v-if="isFreshStart" to="/groups/new" class="primary-button" :aria-label="t('home.newGroup')"><AppIcon name="plus" />{{ t('home.firstGroup') }}</NuxtLink>
+            <NuxtLink v-else to="/groups" class="primary-button"><AppIcon name="users" />{{ t('home.myGroups') }}</NuxtLink>
+            <NuxtLink to="/people#person-form" class="secondary-button"><AppIcon name="user" />{{ t('home.addPerson') }}</NuxtLink>
           </div>
         </div>
         <JoinSplitOverviewGraphic />
       </header>
 
-      <nav class="landing-workspaces" aria-label="Deine Bereiche">
+      <nav class="landing-workspaces" :aria-label="t('home.workspaces')">
         <NuxtLink to="/groups" class="landing-workspace-card">
           <span class="landing-workspace-card__icon"><AppIcon name="users" /></span>
-          <span><strong>Meine Gruppen</strong><small>{{ activeGroups.length }} aktiv</small></span>
+          <span><strong>{{ t('home.groups') }}</strong><small>{{ activeGroups.length }} {{ t('common.active') }}</small></span>
           <AppIcon name="chevron-right" />
         </NuxtLink>
         <NuxtLink to="/people" class="landing-workspace-card">
           <span class="landing-workspace-card__icon"><AppIcon name="user" /></span>
-          <span><strong>Meine Personen</strong><small>{{ peopleStore.activePeople.length }} aktiv</small></span>
+          <span><strong>{{ t('home.people') }}</strong><small>{{ peopleStore.activePeople.length }} {{ t('common.active') }}</small></span>
           <AppIcon name="chevron-right" />
         </NuxtLink>
       </nav>
@@ -48,12 +49,12 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
       <p v-if="route.query.reset === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Lokale Daten wurden zurückgesetzt. Eine neue Browser-Identität wurde erstellt.</p>
 
       <section id="gruppen" class="landing-groups" aria-labelledby="group-selector-title">
-        <p class="eyebrow">Dein Bereich</p>
-        <h2 id="group-selector-title" class="mt-2 text-3xl font-bold">Meine Gruppen</h2>
-        <p class="mt-2 text-ink-700">Öffne eine bestehende Gruppe oder starte einen neuen gemeinsamen Stand.</p>
+        <p class="eyebrow">{{ t('home.area') }}</p>
+        <h2 id="group-selector-title" class="mt-2 text-3xl font-bold">{{ t('home.groups') }}</h2>
+        <p class="mt-2 text-ink-700">{{ t('home.groupsCopy') }}</p>
 
         <section v-if="activeGroups.length" class="mt-6" aria-labelledby="active-groups">
-          <h3 id="active-groups" class="text-lg font-semibold">Aktive Gruppen</h3>
+          <h3 id="active-groups" class="text-lg font-semibold">{{ t('home.activeGroups') }}</h3>
           <ul class="ledger-list mt-3">
             <li v-for="(group, index) in activeGroups" :key="group.id">
               <NuxtLink
@@ -101,16 +102,16 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
           </ul>
         </section>
 
-        <NuxtLink to="/groups/new" class="primary-button mt-7 w-full"><AppIcon name="plus" />{{ isFreshStart ? 'Erste Gruppe starten' : 'Neue Gruppe starten' }}</NuxtLink>
+        <NuxtLink to="/groups/new" class="primary-button mt-7 w-full"><AppIcon name="plus" />{{ isFreshStart ? t('home.firstGroup') : t('home.newGroup') }}</NuxtLink>
       </section>
 
       <section id="so-funktionierts" class="landing-guide mt-8" aria-labelledby="landing-guide-title">
-        <p class="eyebrow">In drei Schritten</p>
-        <h2 id="landing-guide-title" class="mt-2 text-2xl font-bold">Von der ersten Ausgabe zum klaren Ausgleich</h2>
+        <p class="eyebrow">{{ t('home.guide.eyebrow') }}</p>
+        <h2 id="landing-guide-title" class="mt-2 text-2xl font-bold">{{ t('home.guide.title') }}</h2>
         <ol class="landing-guide__list">
-          <li><strong>Gruppe anlegen</strong><span>Mit erfundenen Namen starten und Personen jederzeit ergänzen.</span></li>
-          <li><strong>Ausgaben erfassen</strong><span>Betrag und zahlende Person wählen – JoinSplit verteilt auf Cent genau.</span></li>
-          <li><strong>Salden ausgleichen</strong><span>Offene Beträge sehen und tatsächliche Zahlungen dokumentieren.</span></li>
+          <li><strong>{{ t('home.guide.group') }}</strong><span>{{ t('home.guide.groupCopy') }}</span></li>
+          <li><strong>{{ t('home.guide.expense') }}</strong><span>{{ t('home.guide.expenseCopy') }}</span></li>
+          <li><strong>{{ t('home.guide.balance') }}</strong><span>{{ t('home.guide.balanceCopy') }}</span></li>
         </ol>
         <p class="landing-guide__note">Ohne Registrierung. Die Daten bleiben in diesem Browser verfügbar und werden bei Verbindung mit der Demo synchronisiert.</p>
       </section>

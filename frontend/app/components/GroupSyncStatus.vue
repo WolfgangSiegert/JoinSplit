@@ -14,23 +14,41 @@ const props = withDefaults(defineProps<{
 
 const groupId = computed(() => props.groupId)
 const { syncState, visibleState, attemptSync } = useCreateGroupSync(groupId)
+const { t } = useAppI18n()
+
+const failedMessage = computed(() => {
+  switch (syncState.value?.error?.kind) {
+    case 'network': return t('sync.error.network')
+    case 'unauthorized': return t('sync.error.unauthorized')
+    case 'forbidden': return t('sync.error.forbidden')
+    case 'not-found': return t('sync.error.notFound')
+    case 'session-expired':
+    case 'expired': return t('sync.error.sessionExpired')
+    case 'conflict':
+    case 'reconciliation': return t('sync.error.conflict')
+    case 'validation': return t('sync.error.validation')
+    case 'persistence': return t('sync.error.persistence')
+    case undefined: return t('sync.failed')
+    default: return t('sync.error.generic')
+  }
+})
 
 const message = computed(() => {
   if (visibleState.value === 'offline') {
     return props.pendingDeletion
-      ? 'Offline. Die Gruppenlöschung bleibt lokal vorgemerkt und wird später synchronisiert.'
-      : 'Offline. Die Gruppe bleibt lokal nutzbar und wird später synchronisiert.'
+      ? t('sync.offline.deletion')
+      : t('sync.offline.group')
   }
   if (visibleState.value === 'syncing') {
-    return props.pendingDeletion ? 'Die Gruppenlöschung wird synchronisiert.' : 'Synchronisierung läuft. Die Gruppe bleibt lokal nutzbar.'
+    return props.pendingDeletion ? t('sync.syncing.deletion') : t('sync.syncing.group')
   }
   if (visibleState.value === 'failed') {
-    return syncState.value?.error?.message ?? 'Synchronisierung fehlgeschlagen.'
+    return failedMessage.value
   }
   if (visibleState.value === 'pending') {
-    return props.pendingDeletion ? 'Die endgültige Gruppenlöschung ist noch nicht synchronisiert.' : 'Synchronisierung ausstehend. Die Gruppe ist lokal nutzbar.'
+    return props.pendingDeletion ? t('sync.pending.deletion') : t('sync.pending.group')
   }
-  return props.showSynced ? 'Synchronisiert. Die Gruppe wurde vom Server bestätigt.' : ''
+  return props.showSynced ? t('sync.synced.copy') : ''
 })
 
 const canRetry = computed(() => visibleState.value === 'failed'
@@ -43,11 +61,11 @@ const statusClass = computed(() => {
 })
 
 const stateLabel = computed(() => {
-  if (visibleState.value === 'failed') return 'Fehler'
-  if (visibleState.value === 'offline') return 'Offline'
-  if (visibleState.value === 'synced') return 'Synchronisiert'
-  if (visibleState.value === 'syncing') return 'Wird synchronisiert'
-  return 'Ausstehend'
+  if (visibleState.value === 'failed') return t('sync.state.failed')
+  if (visibleState.value === 'offline') return t('sync.state.offline')
+  if (visibleState.value === 'synced') return t('sync.state.synced')
+  if (visibleState.value === 'syncing') return t('sync.state.syncing')
+  return t('sync.state.pending')
 })
 </script>
 
@@ -55,7 +73,7 @@ const stateLabel = computed(() => {
   <div v-if="message" :class="['group-sync-status', { 'group-sync-status--mobile-collapsible': props.mobileCollapsible }]" :data-state="visibleState">
     <span v-if="props.mobileCollapsible" class="sr-only" role="status" aria-live="polite">{{ stateLabel }}: {{ message }}</span>
     <details v-if="props.mobileCollapsible" class="group-sync-status__mobile-details">
-      <summary :class="['group-sync-status__mobile-summary', statusClass]" :aria-label="`${stateLabel}: Details anzeigen`">
+      <summary :class="['group-sync-status__mobile-summary', statusClass]" :aria-label="t('sync.details', { state: stateLabel })">
         <AppIcon :name="visibleState === 'syncing' ? 'refresh' : 'info'" />
         <span>{{ stateLabel }}</span>
         <AppIcon name="chevron-down" />
@@ -66,10 +84,10 @@ const stateLabel = computed(() => {
           v-if="canRetry"
           type="button"
           class="secondary-button group-sync-status__retry mt-3"
-          aria-label="Synchronisierung erneut versuchen"
+          :aria-label="t('sync.retry')"
           @click="attemptSync"
         >
-          <AppIcon name="refresh" />Erneut versuchen
+          <AppIcon name="refresh" />{{ t('sync.retry.short') }}
         </button>
       </div>
     </details>
@@ -85,7 +103,7 @@ const stateLabel = computed(() => {
       aria-atomic="true"
     >
       <template v-if="props.compact && visibleState === 'synced'">
-        <span>Synchronisiert</span>
+        <span>{{ t('sync.state.synced') }}</span>
       </template>
       <template v-else>
         <div class="group-sync-status__content">
@@ -100,10 +118,10 @@ const stateLabel = computed(() => {
         v-if="canRetry"
         type="button"
         class="secondary-button group-sync-status__retry mt-3"
-        aria-label="Synchronisierung erneut versuchen"
+        :aria-label="t('sync.retry')"
         @click="attemptSync"
       >
-        <AppIcon name="refresh" /><span class="group-sync-status__retry-full">Synchronisierung erneut versuchen</span><span class="group-sync-status__retry-short">Erneut</span>
+        <AppIcon name="refresh" /><span class="group-sync-status__retry-full">{{ t('sync.retry') }}</span><span class="group-sync-status__retry-short">{{ t('sync.retry.short') }}</span>
       </button>
     </div>
   </div>

@@ -5,6 +5,8 @@ import type { Expense, ExpenseShare } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 import type { Person } from '../domain/person'
 import type { PendingPersonMutation } from '../domain/pending-person-mutation'
+import { DEFAULT_GROUP_AREA_ORDER, isGroupAreaOrder, type GroupArea } from '../domain/group-area'
+import { isLanguagePreference, type LanguagePreference } from '../domain/locale'
 
 export const DATABASE_NAME = 'joinsplit'
 export const DATABASE_VERSION = 10
@@ -41,6 +43,8 @@ export interface DurableSettings {
   readonly settlementRecordingGroupIds: readonly string[]
   readonly colorMode: 'system' | 'light' | 'dark'
   readonly visualDesign: '2' | '3'
+  readonly groupAreaOrder: readonly GroupArea[]
+  readonly languagePreference: LanguagePreference
 }
 interface AccessIdentityRecord extends DurableAccessIdentity { readonly key: typeof ACCESS_IDENTITY_KEY }
 interface AccountWorkspaceRecord extends DurableAccountWorkspace { readonly key: typeof ACCOUNT_WORKSPACE_KEY }
@@ -184,6 +188,8 @@ export async function loadDurableState(): Promise<DurableState> {
     settlementRecordingGroupIds?: readonly string[]
     colorMode?: DurableSettings['colorMode']
     visualDesign?: DurableSettings['visualDesign']
+    groupAreaOrder?: readonly GroupArea[]
+    languagePreference?: LanguagePreference
   }) | undefined
   const participantOrder = new Map(participants.map(participant => [participant.id, participant.order]))
   return {
@@ -223,6 +229,12 @@ export async function loadDurableState(): Promise<DurableState> {
         : [],
       colorMode: settings.colorMode === 'light' || settings.colorMode === 'dark' ? settings.colorMode : 'system',
       visualDesign: settings.visualDesign === '3' ? '3' : '2',
+      groupAreaOrder: isGroupAreaOrder(settings.groupAreaOrder)
+        ? [...settings.groupAreaOrder]
+        : [...DEFAULT_GROUP_AREA_ORDER],
+      languagePreference: isLanguagePreference(settings.languagePreference)
+        ? settings.languagePreference
+        : 'system',
     } : null,
   }
 }

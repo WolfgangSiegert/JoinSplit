@@ -13,13 +13,13 @@ class Account extends Authenticatable implements CanResetPasswordContract
 {
     use CanResetPassword, HasUuids, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password'];
+    protected $fillable = ['name', 'email', 'password', 'group_area_order', 'language_preference'];
 
     protected $hidden = ['password'];
 
     protected function casts(): array
     {
-        return ['password' => 'hashed'];
+        return ['password' => 'hashed', 'group_area_order' => 'array'];
     }
 
     public function accessIdentities(): HasMany

@@ -40,6 +40,9 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await page.getByRole('button', { name: 'Person anlegen' }).click()
   await expect(page.getByText('Ada Account', { exact: true })).toBeVisible()
 
+  await page.goto('/settings')
+  await page.getByRole('button', { name: 'Ausgleich nach oben verschieben' }).click()
+
   await page.goto('/account')
   await page.getByRole('button', { name: 'Registrieren', exact: true }).click()
   await page.getByLabel('Dein Name').fill('Ada Owner')
@@ -52,6 +55,14 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
 
   await expect(page.getByRole('heading', { name: 'Account auf diesem Gerät' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Account öffnen' })).toContainText('AO')
+  await page.setViewportSize({ width: 525, height: 863 })
+  await expect(page.getByRole('button', { name: 'Konto öffnen' })).toContainText('AO')
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await expect.poll(() => page.evaluate(async () => {
+    const response = await fetch('/api/account', { headers: { Accept: 'application/json' }, credentials: 'include' })
+    return (await response.json()).data.groupAreaOrder
+  })).toEqual(['people', 'settlement', 'expenses'])
   await page.goto('/people')
   await expect(page.getByText('Ada Account', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Ada Account bearbeiten' }).click()
@@ -82,6 +93,9 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await expect(page).toHaveURL(/\/groups\/[0-9a-f-]+\?created=1$/u)
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
   await page.goto(`/groups/${groupId}/participants`)
+  await expect(page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link'))
+    .toHaveText(['Leute', 'Ausgleich', 'Ausgaben'])
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.getByLabel('Person', { exact: true }).selectOption({ label: 'Ada Synced' })
   await page.getByRole('button', { name: 'Ausgewählte Person hinzufügen' }).click()
   await expect(page.getByText('Aktiv · Aus Personenverzeichnis')).toBeVisible()

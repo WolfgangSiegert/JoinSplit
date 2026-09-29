@@ -7,6 +7,8 @@ import { isCalendarDate } from '../domain/expense'
 import { isCanonicalPositiveMinor, type DurableSettlementSnapshot } from '../domain/settlement'
 import type { Person } from '../domain/person'
 import type { PendingPersonMutation } from '../domain/pending-person-mutation'
+import { isGroupAreaOrder } from '../domain/group-area'
+import { isLanguagePreference } from '../domain/locale'
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 const SERVER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
@@ -136,7 +138,9 @@ export function validateDurableState(value: DurableState): DurableState {
       || !value.settings.settlementRecordingGroupIds.every(uuid)
       || new Set(value.settings.settlementRecordingGroupIds).size !== value.settings.settlementRecordingGroupIds.length
       || (value.settings.colorMode !== 'system' && value.settings.colorMode !== 'light' && value.settings.colorMode !== 'dark')
-      || (value.settings.visualDesign !== '2' && value.settings.visualDesign !== '3')))) throw new Error('Invalid persisted state shape')
+      || (value.settings.visualDesign !== '2' && value.settings.visualDesign !== '3')
+      || !isGroupAreaOrder(value.settings.groupAreaOrder)
+      || !isLanguagePreference(value.settings.languagePreference)))) throw new Error('Invalid persisted state shape')
 
   const groupIds = new Set(value.groups.map(item => item.id)); const participantIds = new Set(value.participants.map(item => item.id))
   const personIds = new Set(value.people.map(item => item.id))

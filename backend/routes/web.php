@@ -5,6 +5,7 @@ use App\Http\Controllers\AccountPasswordController;
 use App\Http\Controllers\AccountAccessIdentityController;
 use App\Http\Controllers\AccountWorkspaceController;
 use App\Http\Controllers\AccountPersonController;
+use App\Http\Controllers\AccountPreferencesController;
 use App\Http\Controllers\CreateGroupController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\GroupLifecycleController;
@@ -31,6 +32,7 @@ Route::prefix('/api/account')->middleware('api.origin')->group(function () {
         Route::get('/', [AccountSessionController::class, 'current']);
         Route::post('/logout', [AccountSessionController::class, 'logout']);
         Route::put('/password', [AccountPasswordController::class, 'change']);
+        Route::put('/preferences', [AccountPreferencesController::class, 'update']);
         Route::delete('/', [AccountSessionController::class, 'destroy']);
         Route::post('/access-identities/link', [AccountAccessIdentityController::class, 'store'])
             ->middleware('throttle:account-adoption');

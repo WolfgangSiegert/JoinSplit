@@ -14,7 +14,7 @@ test('ships the approved manifest, icons, and root-scoped service worker', async
     id: '/',
     name: 'JoinSplit',
     short_name: 'JoinSplit',
-    lang: 'de',
+    lang: 'en',
     start_url: '/',
     scope: '/',
     display: 'standalone',

@@ -106,6 +106,23 @@ async function durableDefaultParticipantName(page: Page): Promise<string | null>
   })
 }
 
+async function durableGroupAreaOrder(page: Page): Promise<string[] | null> {
+  return page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 10)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const result = db.transaction('settings').objectStore('settings').get('preferences')
+    const record = await new Promise<{ groupAreaOrder?: unknown } | undefined>((resolve, reject) => {
+      result.onsuccess = () => resolve(result.result)
+      result.onerror = () => reject(result.error)
+    })
+    db.close()
+    return Array.isArray(record?.groupAreaOrder) ? record.groupAreaOrder as string[] : null
+  })
+}
+
 test('the ready Group List is accessible', async ({ page }) => {
   const response = await page.goto('/')
   expect(response?.headers()['content-security-policy']).toContain("default-src 'self'")
@@ -189,6 +206,25 @@ test('a failed durable settings write restores the visible and effective value',
 
   await page.goto('/groups/new')
   await expect(page.getByRole('checkbox', { name: 'Mich als Teilnehmer hinzufügen' })).toBeChecked()
+})
+
+test('group tabs use the new labels and retain their locally configured order', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Reiter-Test')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Ada')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await expect(page).toHaveURL(/\/groups\/[0-9a-f-]+\?created=1$/u)
+  const groupUrl = page.url()
+
+  await page.goto('/settings')
+  await page.getByRole('button', { name: 'Ausgleich nach oben verschieben' }).click()
+  await expect.poll(() => durableGroupAreaOrder(page)).toEqual(['people', 'settlement', 'expenses'])
+  await page.reload()
+
+  await page.goto(groupUrl)
+  const navigation = page.getByRole('navigation', { name: 'Gruppenbereiche' })
+  await expect(navigation.getByRole('link')).toHaveText(['Leute', 'Ausgleich', 'Ausgaben'])
+  await expectNoAxeViolations(page)
 })
 
 test('Create Group is reachable with the approved default and dependent field', async ({ page }) => {
@@ -449,8 +485,8 @@ test('the server-rendered hydration state is blocked and accessible', async ({ p
   })
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { level: 1, name: 'JoinSplit wird vorbereitet' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Neu', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Preparing JoinSplit' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New', exact: true })).toBeVisible()
   await expect(page.getByText('Noch keine Gruppe')).toHaveCount(0)
   await expectNoAxeViolations(page)
 })
@@ -691,7 +727,8 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   const addBob = page.waitForResponse(response => response.url().endsWith('/participants') && response.request().method() === 'POST' && response.status() === 201)
   await page.getByLabel('Teilnehmer hinzufügen').fill('Bob')
   await page.getByRole('button', { name: 'Hinzufügen' }).click()
@@ -726,7 +763,7 @@ test('Expense create, Equal Split preview, edit, reload, and confirmed delete ar
   await page.reload()
   await expect(page.getByText('10,01 €')).toBeVisible()
   await page.getByRole('link', { name: /Ausgaben/ }).click()
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
   await page.getByLabel('Details zu Bob').click()
   const deactivate = page.waitForResponse(response => response.url().includes('/participants/') && response.request().method() === 'PATCH' && response.status() === 200)
   await page.getByRole('button', { name: 'Bob deaktivieren' }).click()
@@ -770,6 +807,7 @@ test('Expense split selection stays compact and searchable for larger groups', a
   const groupId = new URL(page.url()).pathname.split('/').at(-1)!
 
   await page.goto(`/groups/${groupId}/participants`)
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   for (const name of ['Bob', 'Carla', 'Dora', 'Emil']) {
     await page.getByLabel('Teilnehmer hinzufügen').fill(name)
     await page.getByRole('button', { name: 'Hinzufügen' }).click()
@@ -869,7 +907,8 @@ test('Participant persistence failures are visibly and safely reported', async (
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.evaluate(() => {
     const originalAdd = IDBObjectStore.prototype.add
     IDBObjectStore.prototype.add = function (...args) {
@@ -892,11 +931,12 @@ test('Participant management is durable, FIFO synchronized, accessible, and keep
   await page.getByLabel('Mein Name in dieser Gruppe').fill('Alice')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByText('Synchronisiert', { exact: true })).toBeVisible()
-  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Personen' }).click()
+  await page.getByRole('navigation', { name: 'Gruppenbereiche' }).getByRole('link', { name: 'Leute' }).click()
   await expect(page).toHaveURL(/\/participants$/)
-  await expect(page.getByRole('heading', { name: 'Personen', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Leute', exact: true })).toBeVisible()
   await expect(page.getByText('Alice', { exact: true })).toBeVisible()
   await expectNoAxeViolations(page)
+  await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
 
   const methods: string[] = []
   page.on('request', request => { if (request.url().includes('/participants')) methods.push(request.method()) })

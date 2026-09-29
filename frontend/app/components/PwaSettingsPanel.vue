@@ -3,6 +3,7 @@ const pwa = usePWA()
 const installing = ref(false)
 const installFeedback = ref('')
 const installError = ref('')
+const { t } = useAppI18n()
 
 const installed = computed(() => Boolean(pwa?.isPWAInstalled))
 const canInstall = computed(() => Boolean(pwa?.showInstallPrompt) && !installed.value)
@@ -15,10 +16,10 @@ async function install(): Promise<void> {
   try {
     const choice = await pwa.install()
     installFeedback.value = choice?.outcome === 'accepted'
-      ? 'Installationsanfrage bestätigt. Der Browser schließt die Einrichtung ab.'
-      : 'Installation wurde nicht durchgeführt.'
+      ? t('pwa.install.accepted')
+      : t('pwa.install.dismissed')
   } catch {
-    installError.value = 'Der Installationsdialog konnte nicht geöffnet werden.'
+    installError.value = t('pwa.install.failed')
   } finally {
     installing.value = false
   }
@@ -30,17 +31,15 @@ async function install(): Promise<void> {
     <div class="flex items-start gap-3">
       <AppIcon name="download" />
       <div class="min-w-0 flex-1">
-        <h2 id="app-installation-title" class="text-lg font-semibold">App-Installation</h2>
+        <h2 id="app-installation-title" class="text-lg font-semibold">{{ t('pwa.install.title') }}</h2>
         <p v-if="installed" class="mt-2 text-sm text-gray-600">
-          JoinSplit läuft als installierte App auf diesem Gerät.
+          {{ t('pwa.install.installed') }}
         </p>
         <p v-else-if="canInstall" class="mt-2 text-sm text-gray-600">
-          Dieser Browser kann JoinSplit direkt als App installieren.
+          {{ t('pwa.install.available') }}
         </p>
         <p v-else class="mt-2 text-sm text-gray-600">
-          Eine direkte Installation ist hier gerade nicht verfügbar. Je nach Browser kannst du im
-          Browsermenü „App installieren“ oder „Zum Home-Bildschirm“ wählen. Die Website bleibt
-          unabhängig davon vollständig nutzbar.
+          {{ t('pwa.install.unavailable') }}
         </p>
       </div>
     </div>
@@ -53,7 +52,7 @@ async function install(): Promise<void> {
       @click="install"
     >
       <AppIcon name="download" />
-      {{ installing ? 'Installationsdialog wird geöffnet …' : 'JoinSplit installieren' }}
+      {{ installing ? t('pwa.install.pending') : t('pwa.install.action') }}
     </button>
     <p v-if="installFeedback" class="mt-3 text-sm text-gray-700" role="status">{{ installFeedback }}</p>
     <p v-if="installError" class="error-text mt-3 text-sm" role="alert">{{ installError }}</p>

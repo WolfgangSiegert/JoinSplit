@@ -14,6 +14,8 @@ function accountPayload(array $overrides = []): array
         'password' => 'correct horse battery staple',
         'password_confirmation' => 'correct horse battery staple',
         'dataAdoptionConfirmed' => true,
+        'groupAreaOrder' => ['people', 'expenses', 'settlement'],
+        'languagePreference' => 'system',
     ], $overrides);
 }
 
@@ -56,10 +58,26 @@ it('registers a normalized Account and never returns its password', function () 
     $account = Account::findOrFail($response->json('data.id'));
     expect($account->email)->toBe('owner@example.test')
         ->and($account->name)->toBe('Ada Example')
+        ->and($account->group_area_order)->toBe(['people', 'expenses', 'settlement'])
+        ->and($account->language_preference)->toBe('system')
         ->and($account->password)->not->toBe('correct horse battery staple')
         ->and(Hash::check('correct horse battery staple', $account->password))->toBeTrue();
 
     $this->getJson('/api/account')->assertOk()->assertJsonPath('data.id', $account->id);
+});
+
+it('keeps registration compatible with clients that do not send preferences yet', function () {
+    $payload = accountPayload(['email' => 'legacy-client@example.test']);
+    unset($payload['groupAreaOrder'], $payload['languagePreference']);
+
+    $response = $this->postJson('/api/account/register', $payload)
+        ->assertCreated()
+        ->assertJsonPath('data.groupAreaOrder', ['people', 'expenses', 'settlement'])
+        ->assertJsonPath('data.languagePreference', 'system');
+
+    $account = Account::findOrFail($response->json('data.id'));
+    expect($account->group_area_order)->toBe(['people', 'expenses', 'settlement'])
+        ->and($account->language_preference)->toBe('system');
 });
 
 it('requires explicit adoption confirmation and a 12-character password', function () {
@@ -108,11 +126,47 @@ it('logs in case-insensitively, exposes the current Account, and logs out', func
     ])->assertOk()->assertJsonPath('data.id', $account->id);
 
     $this->getJson('/api/account')->assertOk()->assertExactJson([
-        'data' => ['id' => $account->id, 'name' => 'Ada Example', 'email' => 'owner@example.test'],
+        'data' => [
+            'id' => $account->id,
+            'name' => 'Ada Example',
+            'email' => 'owner@example.test',
+            'groupAreaOrder' => ['people', 'expenses', 'settlement'],
+            'languagePreference' => 'system',
+        ],
     ]);
 
     $this->postJson('/api/account/logout')->assertNoContent();
     $this->getJson('/api/account')->assertUnauthorized();
+});
+
+it('persists a validated group area order per account', function () {
+    $account = Account::query()->create(accountPayload());
+    $this->actingAs($account, 'web');
+
+    $this->putJson('/api/account/preferences', [
+        'groupAreaOrder' => ['people', 'expenses', 'settlement'],
+    ])->assertOk()->assertExactJson([
+        'data' => [
+            'groupAreaOrder' => ['people', 'expenses', 'settlement'],
+            'languagePreference' => 'system',
+        ],
+    ]);
+
+    expect($account->fresh()->group_area_order)->toBe(['people', 'expenses', 'settlement']);
+    $this->getJson('/api/account')->assertOk()
+        ->assertJsonPath('data.groupAreaOrder', ['people', 'expenses', 'settlement']);
+
+    $this->putJson('/api/account/preferences', [
+        'groupAreaOrder' => ['people', 'people', 'settlement'],
+    ])->assertUnprocessable()->assertJsonValidationErrors(['groupAreaOrder.1']);
+
+    $this->putJson('/api/account/preferences', ['languagePreference' => 'en'])
+        ->assertOk()
+        ->assertJsonPath('data.languagePreference', 'en');
+    expect($account->fresh()->language_preference)->toBe('en');
+
+    $this->putJson('/api/account/preferences', ['languagePreference' => 'fr'])
+        ->assertUnprocessable()->assertJsonValidationErrors(['languagePreference']);
 });
 
 it('requires fresh password confirmation before deleting an Account', function () {
@@ -154,5 +208,6 @@ it('changes the password only after confirming the current password', function (
 it('protects Account reads and mutations from unauthenticated requests', function () {
     $this->getJson('/api/account')->assertUnauthorized();
     $this->postJson('/api/account/logout')->assertUnauthorized();
+    $this->putJson('/api/account/preferences', ['groupAreaOrder' => ['expenses', 'settlement', 'people']])->assertUnauthorized();
     $this->deleteJson('/api/account', ['password' => 'irrelevant'])->assertUnauthorized();
 });

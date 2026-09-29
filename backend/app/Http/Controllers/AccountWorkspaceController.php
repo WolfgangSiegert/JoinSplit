@@ -42,7 +42,13 @@ class AccountWorkspaceController extends Controller
 
         return response()->json([
             'data' => [
-                'account' => ['id' => $account->id, 'name' => $account->name, 'email' => $account->email],
+                'account' => [
+                    'id' => $account->id,
+                    'name' => $account->name,
+                    'email' => $account->email,
+                    'groupAreaOrder' => $account->group_area_order ?? ['people', 'expenses', 'settlement'],
+                    'languagePreference' => $account->language_preference ?? 'system',
+                ],
                 'people' => $people,
                 'groups' => $groups,
             ],

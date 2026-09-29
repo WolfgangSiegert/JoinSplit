@@ -9,8 +9,16 @@ import {
 } from '../persistence/database'
 import { validateDurableState } from '../persistence/validation'
 import { applicationFetch, clearNativeApiCookies } from './http-transport'
+import { isGroupAreaOrder, type GroupArea } from '../domain/group-area'
+import { isLanguagePreference, type LanguagePreference } from '../domain/locale'
 
-interface AccountData { readonly id: string; readonly name: string | null; readonly email: string }
+export interface AccountData {
+  readonly id: string
+  readonly name: string | null
+  readonly email: string
+  readonly groupAreaOrder: readonly GroupArea[]
+  readonly languagePreference: LanguagePreference
+}
 export interface GroupSnapshot {
   readonly revision: number
   readonly group: Omit<Group, 'participantIds'>
@@ -64,9 +72,9 @@ async function mutate(apiBase: string, path: string, method: string, body: unkno
   return response
 }
 
-export async function registerAccount(apiBase: string, name: string, email: string, password: string, fetcher: typeof fetch = applicationFetch): Promise<AccountData> {
+export async function registerAccount(apiBase: string, name: string, email: string, password: string, groupAreaOrder: readonly GroupArea[], languagePreference: LanguagePreference, fetcher: typeof fetch = applicationFetch): Promise<AccountData> {
   const response = await mutate(apiBase, '/api/account/register', 'POST', {
-    name, email, password, password_confirmation: password, dataAdoptionConfirmed: true,
+    name, email, password, password_confirmation: password, dataAdoptionConfirmed: true, groupAreaOrder, languagePreference,
   }, fetcher)
   return ((await json(response)) as { data: AccountData }).data
 }
@@ -136,8 +144,31 @@ export async function fetchCurrentAccount(apiBase: string, fetcher: typeof fetch
     headers: { Accept: 'application/json' }, credentials: 'include',
   })
   const body = await json(response) as { data?: AccountData } | null
-  if (!response.ok || !body?.data) throw new AccountRequestError(response.status, 'Die Account-Sitzung konnte nicht bestätigt werden.')
+  if (!response.ok || !body?.data || !isGroupAreaOrder(body.data.groupAreaOrder) || !isLanguagePreference(body.data.languagePreference)) throw new AccountRequestError(response.status, 'Die Account-Sitzung konnte nicht bestätigt werden.')
   return body.data
+}
+
+export async function updateAccountGroupAreaOrder(
+  apiBase: string,
+  groupAreaOrder: readonly GroupArea[],
+  fetcher: typeof fetch = applicationFetch,
+): Promise<readonly GroupArea[]> {
+  if (!isGroupAreaOrder(groupAreaOrder)) throw new Error('Invalid group area order')
+  const response = await mutate(apiBase, '/api/account/preferences', 'PUT', { groupAreaOrder }, fetcher)
+  const body = await json(response) as { data?: { groupAreaOrder?: unknown } } | null
+  if (!isGroupAreaOrder(body?.data?.groupAreaOrder)) throw new AccountRequestError(response.status, 'Die Account-Einstellung konnte nicht bestätigt werden.')
+  return body.data.groupAreaOrder
+}
+
+export async function updateAccountLanguagePreference(
+  apiBase: string,
+  languagePreference: LanguagePreference,
+  fetcher: typeof fetch = applicationFetch,
+): Promise<LanguagePreference> {
+  const response = await mutate(apiBase, '/api/account/preferences', 'PUT', { languagePreference }, fetcher)
+  const body = await json(response) as { data?: { languagePreference?: unknown } } | null
+  if (!isLanguagePreference(body?.data?.languagePreference)) throw new AccountRequestError(response.status, 'Die Spracheinstellung des Accounts konnte nicht bestätigt werden.')
+  return body.data.languagePreference
 }
 
 export async function persistHydratedWorkspace(response: AccountWorkspaceResponse, currentIdentityId: string): Promise<AccountHydration> {

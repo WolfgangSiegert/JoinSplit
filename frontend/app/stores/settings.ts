@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { persistSettings, type DurableSettings } from '../persistence/database'
+import { DEFAULT_GROUP_AREA_ORDER, isGroupAreaOrder, type GroupArea } from '../domain/group-area'
+import { detectSystemLocale, resolveLocale, type AppLocale, type LanguagePreference } from '../domain/locale'
 
 export const useSettingsStore = defineStore('settings', () => {
   const addSelfAsParticipantByDefault = ref(true)
@@ -10,6 +12,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const settlementRecordingGroupIds = ref<string[]>([])
   const colorMode = ref<DurableSettings['colorMode']>('system')
   const visualDesign = ref<DurableSettings['visualDesign']>('2')
+  const groupAreaOrder = ref<GroupArea[]>([...DEFAULT_GROUP_AREA_ORDER])
+  const languagePreference = ref<LanguagePreference>('system')
+  const systemLocale = ref<AppLocale>('en')
+  const resolvedLocale = computed(() => resolveLocale(languagePreference.value, systemLocale.value))
 
   function currentSettings(overrides: Partial<DurableSettings> = {}): DurableSettings {
     return {
@@ -20,6 +26,8 @@ export const useSettingsStore = defineStore('settings', () => {
       settlementRecordingGroupIds: [...settlementRecordingGroupIds.value],
       colorMode: colorMode.value,
       visualDesign: visualDesign.value,
+      groupAreaOrder: [...groupAreaOrder.value],
+      languagePreference: languagePreference.value,
       ...overrides,
     }
   }
@@ -32,6 +40,10 @@ export const useSettingsStore = defineStore('settings', () => {
     settlementRecordingGroupIds.value = [...(settings?.settlementRecordingGroupIds ?? [])]
     colorMode.value = settings?.colorMode ?? 'system'
     visualDesign.value = settings?.visualDesign ?? '2'
+    groupAreaOrder.value = isGroupAreaOrder(settings?.groupAreaOrder)
+      ? [...settings.groupAreaOrder]
+      : [...DEFAULT_GROUP_AREA_ORDER]
+    languagePreference.value = settings?.languagePreference ?? 'system'
   }
 
   async function setAddSelfAsParticipantByDefault(value: boolean): Promise<void> {
@@ -84,6 +96,32 @@ export const useSettingsStore = defineStore('settings', () => {
     visualDesign.value = value
   }
 
+  async function setGroupAreaOrder(value: readonly GroupArea[]): Promise<void> {
+    if (!isGroupAreaOrder(value)) throw new Error('Invalid group area order')
+    const normalized = [...value]
+    await persistSettings(currentSettings({ groupAreaOrder: normalized }))
+    groupAreaOrder.value = normalized
+  }
+
+  function detectLanguage(languages: readonly string[]): void {
+    systemLocale.value = detectSystemLocale(languages)
+  }
+
+  async function setLanguagePreference(value: LanguagePreference): Promise<void> {
+    await persistSettings(currentSettings({ languagePreference: value }))
+    languagePreference.value = value
+  }
+
+  async function applyAccountPreferences(value: { readonly groupAreaOrder: readonly GroupArea[]; readonly languagePreference: LanguagePreference }): Promise<void> {
+    if (!isGroupAreaOrder(value.groupAreaOrder)) throw new Error('Invalid group area order')
+    await persistSettings(currentSettings({
+      groupAreaOrder: [...value.groupAreaOrder],
+      languagePreference: value.languagePreference,
+    }))
+    groupAreaOrder.value = [...value.groupAreaOrder]
+    languagePreference.value = value.languagePreference
+  }
+
   return {
     addSelfAsParticipantByDefault,
     defaultParticipantName,
@@ -92,6 +130,9 @@ export const useSettingsStore = defineStore('settings', () => {
     settlementRecordingGroupIds,
     colorMode,
     visualDesign,
+    groupAreaOrder,
+    languagePreference,
+    resolvedLocale,
     hydrate,
     setAddSelfAsParticipantByDefault,
     setDefaultParticipantName,
@@ -102,5 +143,9 @@ export const useSettingsStore = defineStore('settings', () => {
     disableSettlementRecordingForGroup,
     setColorMode,
     setVisualDesign,
+    setGroupAreaOrder,
+    detectLanguage,
+    setLanguagePreference,
+    applyAccountPreferences,
   }
 })
