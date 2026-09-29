@@ -13,6 +13,7 @@ export function usePendingCreateGroupSync() {
   const config = useRuntimeConfig()
   const lifecycleStore = useApplicationLifecycleStore()
   const identityStore = useAccessIdentityStore()
+  const accountStore = useAccountStore()
   const groupsStore = useGroupsStore()
   const { online } = useConnectivity()
   let running = false
@@ -63,11 +64,14 @@ export function usePendingCreateGroupSync() {
     if (result.outcome === 'failed' && result.error.kind === 'expired') {
       try { await markAccessIdentityExpired({ identity: identityStore }) } catch { /* terminal in memory */ }
     }
+    if (result.outcome === 'failed' && result.error.kind === 'session-expired') accountStore.expireSession(result.error.message)
+    if (result.outcome === 'synced' && identityStore.credential === null) accountStore.recordSynchronization()
     return result
   }
 
   async function synchronizePending(): Promise<void> {
-    if (running || lifecycleStore.state !== 'ready' || !online.value) return
+    const accountModeWithoutSession = identityStore.credential === null && !accountStore.hasActiveSession
+    if (running || lifecycleStore.state !== 'ready' || !online.value || accountModeWithoutSession) return
     running = true
     try {
       const blockedGroups = new Set<string>()
@@ -81,7 +85,7 @@ export function usePendingCreateGroupSync() {
     } finally { running = false }
   }
 
-  watch([() => lifecycleStore.state, online, () => groupsStore.pendingMutations.length], ([state, isOnline]) => {
+  watch([() => lifecycleStore.state, online, () => groupsStore.pendingMutations.length, () => accountStore.sessionRevision], ([state, isOnline]) => {
     if (state === 'ready' && isOnline) void synchronizePending()
   })
   return { synchronizePending }

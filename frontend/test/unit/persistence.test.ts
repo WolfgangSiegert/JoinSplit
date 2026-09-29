@@ -79,6 +79,7 @@ describe('durable state validation and bootstrap', () => {
         groupRevisions: { [GROUP_ID]: 1 },
         personRevisions: {},
         conflictedGroupIds: [],
+        lastSuccessfulSyncAt: null,
       },
     })
 

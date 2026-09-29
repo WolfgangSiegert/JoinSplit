@@ -30,6 +30,7 @@ Route::prefix('/api/account')->middleware('api.origin')->group(function () {
     Route::middleware(['auth:web', 'throttle:account-session'])->group(function () {
         Route::get('/', [AccountSessionController::class, 'current']);
         Route::post('/logout', [AccountSessionController::class, 'logout']);
+        Route::put('/password', [AccountPasswordController::class, 'change']);
         Route::delete('/', [AccountSessionController::class, 'destroy']);
         Route::post('/access-identities/link', [AccountAccessIdentityController::class, 'store'])
             ->middleware('throttle:account-adoption');

@@ -89,7 +89,7 @@ describe('Group lifecycle', () => {
     const archive: PendingArchiveGroup = { id: MUTATION_ID, type: 'ArchiveGroup', groupId: GROUP_ID, createdOrder: 0, payload: { status: 'archived' } }
     const archiveStore = useGroupsStore(); archiveStore.hydrate({ groups: [{ ...group, hasFinancialHistory: true, status: 'archived' }], participants: [participant], pendingMutations: [archive] })
     const archiveResult = await synchronizeGroupLifecycleMutation({ mutationId: MUTATION_ID, apiBase: 'https://example.test', identity, groupsStore: archiveStore, online: true, fetcher: vi.fn(async () => new Response(null, { status: 404 })), acknowledgeStatus: vi.fn(async () => undefined) })
-    expect(archiveResult).toMatchObject({ outcome: 'failed', error: { kind: 'unauthorized' } })
+    expect(archiveResult).toMatchObject({ outcome: 'failed', error: { kind: 'not-found' } })
     expect(archiveStore.pendingMutations).toEqual([archive])
   })
 

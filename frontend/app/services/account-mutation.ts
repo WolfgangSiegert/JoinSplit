@@ -1,6 +1,6 @@
 import { persistAccountConflict } from '../persistence/database'
 import type { PendingMutation } from '../domain/pending-mutation'
-import type { useGroupsStore } from '../stores/groups'
+import type { MutationSyncError, useGroupsStore } from '../stores/groups'
 
 interface Identity { readonly accessIdentityId: string | null; readonly credential: string | null }
 
@@ -9,6 +9,30 @@ export interface AccountMutationContext {
   readonly headers: Record<string, string>
   readonly credentials?: RequestCredentials
   readonly accountMode: boolean
+}
+
+export function accountMutationAuthorizationError(
+  response: Response,
+  accountMode: boolean,
+  subject: string,
+): Readonly<MutationSyncError> | null {
+  if (response.status === 401 && accountMode) {
+    return Object.freeze({
+      kind: 'session-expired',
+      message: 'Deine Anmeldung ist abgelaufen. Melde dich erneut an; die lokalen Änderungen bleiben erhalten.',
+      retryable: false,
+    })
+  }
+  if (response.status === 401) {
+    return Object.freeze({ kind: 'unauthorized', message: `${subject} konnte mit dieser Gerätefreigabe nicht bestätigt werden.`, retryable: false })
+  }
+  if (response.status === 403) {
+    return Object.freeze({ kind: 'forbidden', message: `Für ${subject.toLowerCase()} fehlt die Berechtigung.`, retryable: false })
+  }
+  if (response.status === 404) {
+    return Object.freeze({ kind: 'not-found', message: `Die zugehörige Gruppe wurde auf dem Server nicht gefunden.`, retryable: false })
+  }
+  return null
 }
 
 export async function accountMutationContext(

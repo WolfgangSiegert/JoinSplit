@@ -118,7 +118,8 @@ export function validateDurableState(value: DurableState): DurableState {
     || new Set(workspace.accessIdentityIds).size !== workspace.accessIdentityIds.length
     || !record(workspace.groupRevisions) || Object.entries(workspace.groupRevisions).some(([id, revision]) => !uuid(id) || !integer(revision))
     || !record(workspace.personRevisions) || Object.entries(workspace.personRevisions).some(([id, revision]) => !uuid(id) || !integer(revision))
-    || !Array.isArray(workspace.conflictedGroupIds) || !workspace.conflictedGroupIds.every(uuid))) {
+    || !Array.isArray(workspace.conflictedGroupIds) || !workspace.conflictedGroupIds.every(uuid)
+    || (workspace.lastSuccessfulSyncAt !== null && (typeof workspace.lastSuccessfulSyncAt !== 'string' || Number.isNaN(Date.parse(workspace.lastSuccessfulSyncAt)))))) {
     throw new Error('Invalid persisted Account workspace')
   }
   if ((workspace === null) !== (identity?.synchronizationStatus !== 'account-linked')) throw new Error('Account workspace and identity mode mismatch')

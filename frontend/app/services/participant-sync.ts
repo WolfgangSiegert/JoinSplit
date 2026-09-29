@@ -1,6 +1,6 @@
 import type { PendingAddParticipant, PendingAssociateParticipant, PendingDeactivateParticipant, PendingDeleteParticipant, PendingMutation, PendingReactivateParticipant, PendingRenameParticipant } from '../domain/pending-mutation'
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
-import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
+import { accountMutationAuthorizationError, accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
 import { applicationFetch } from './http-transport'
 
@@ -81,7 +81,9 @@ async function send(mutation: ParticipantMutation, options: Options): Promise<Pa
   }
   if (response.status === 410) return failed('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
   if (response.status === 429) return failed('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
-  if (response.status === 401 || response.status === 403 || response.status === 404) return failed('unauthorized', 'Die Änderung konnte für diese Gruppe nicht bestätigt werden.', false)
+  if (response.status === 401 || response.status === 403 || response.status === 404) {
+    return { outcome: 'failed', error: accountMutationAuthorizationError(response, context.accountMode, 'Die Personenänderung')! }
+  }
   if (response.status === 409) return failed('conflict', 'Die Änderung steht im Konflikt mit dem Serverstand. Lokal wurde nichts überschrieben.', false)
   if (response.status === 422) return failed('validation', 'Der Server hat die lokale Änderung abgelehnt.', false)
   if (response.status >= 500) return failed('server', 'Der Server konnte die Änderung nicht bestätigen.', true)

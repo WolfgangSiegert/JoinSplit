@@ -2,19 +2,40 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ChangeAccountPasswordRequest;
 use App\Http\Requests\ForgotAccountPasswordRequest;
 use App\Http\Requests\ResetAccountPasswordRequest;
 use App\Models\Account;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class AccountPasswordController extends Controller
 {
+    public function change(ChangeAccountPasswordRequest $request): Response|JsonResponse
+    {
+        /** @var Account $account */
+        $account = $request->user('web');
+        if (! Hash::check($request->string('currentPassword')->toString(), $account->getAuthPassword())) {
+            return response()->json(['message' => 'Current password confirmation failed.'], 422);
+        }
+
+        $account->forceFill(['password' => $request->string('password')->toString()])->save();
+        DB::table('sessions')
+            ->where('user_id', $account->getKey())
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
+        $request->session()->regenerate();
+
+        return response()->noContent();
+    }
+
     public function forgot(ForgotAccountPasswordRequest $request): JsonResponse
     {
         if (config('app.env') === 'production' && config('mail.default') === 'log') {

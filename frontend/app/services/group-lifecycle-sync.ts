@@ -1,6 +1,6 @@
 import type { PendingArchiveGroup, PendingDeleteGroup, PendingReactivateGroup } from '../domain/pending-mutation'
 import { acknowledgeAccountGroupDelete, acknowledgeAccountMutation, acknowledgeGroupDelete, removePendingMutation } from '../persistence/database'
-import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
+import { accountMutationAuthorizationError, accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
 import { applicationFetch } from './http-transport'
 
@@ -51,9 +51,11 @@ export async function synchronizeGroupLifecycleMutation(options: Options): Promi
   }
 
   let response: Response
+  let accountMode = false
   try {
     const fetcher = options.fetcher ?? applicationFetch
     const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
+    accountMode = context.accountMode
     const url = `${context.urlPrefix}/groups/${mutation.groupId}`
     response = await fetcher(url, {
       method: mutation.type === 'DeleteGroup' ? 'DELETE' : 'PATCH',
@@ -82,7 +84,9 @@ export async function synchronizeGroupLifecycleMutation(options: Options): Promi
     }
   } else if (response.status === 410) result = failure('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
   else if (response.status === 429) result = failure('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
-  else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Gruppenänderung konnte nicht bestätigt werden.', false)
+  else if ([401, 403, 404].includes(response.status)) {
+    result = { outcome: 'failed', error: accountMutationAuthorizationError(response, accountMode, 'Die Gruppenänderung')! }
+  }
   else if (response.status === 409) result = failure('conflict', 'Die Gruppenänderung steht im Konflikt mit dem Serverstand.', false)
   else if (response.status === 422) result = failure('validation', 'Der Server hat die Gruppenänderung abgelehnt.', false)
   else if (response.status >= 500) result = failure('server', 'Der Server konnte die Gruppenänderung nicht bestätigen.', true)

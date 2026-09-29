@@ -26,6 +26,7 @@ export interface DurableAccountWorkspace {
   readonly groupRevisions: Readonly<Record<string, number>>
   readonly personRevisions: Readonly<Record<string, number>>
   readonly conflictedGroupIds: readonly string[]
+  readonly lastSuccessfulSyncAt: string | null
 }
 export interface DurableAdoptionAttempt {
   readonly adoptionId: string
@@ -199,6 +200,8 @@ export async function loadDurableState(): Promise<DurableState> {
       groupRevisions: { ...accountWorkspaces[0].groupRevisions },
       personRevisions: { ...accountWorkspaces[0].personRevisions },
       conflictedGroupIds: [...accountWorkspaces[0].conflictedGroupIds],
+      lastSuccessfulSyncAt: typeof accountWorkspaces[0].lastSuccessfulSyncAt === 'string'
+        ? accountWorkspaces[0].lastSuccessfulSyncAt : null,
     } : null,
     groups, participants, people, pendingPersonMutations, pendingMutations,
     expenses: expenseRecords.map(expense => ({
@@ -295,7 +298,7 @@ export async function acknowledgePersonMutation(mutationId: string, personId: st
     const personRevisions = { ...workspace.personRevisions }
     if (deleted) delete personRevisions[personId]
     else personRevisions[personId] = revision
-    await tx.objectStore('accountWorkspace').put({ ...workspace, personRevisions })
+    await tx.objectStore('accountWorkspace').put({ ...workspace, personRevisions, lastSuccessfulSyncAt: new Date().toISOString() })
   }
   await tx.objectStore('pendingPersonMutations').delete(mutationId)
   await tx.done
@@ -441,6 +444,7 @@ export async function acknowledgeAccountGroupDelete(group: Group, mutationId: st
       ...workspace,
       groupRevisions,
       conflictedGroupIds: workspace.conflictedGroupIds.filter(id => id !== group.id),
+      lastSuccessfulSyncAt: new Date().toISOString(),
     }),
   ])
   await tx.done
@@ -460,6 +464,7 @@ export async function acknowledgeAccountMutation(mutationId: string, groupId: st
     ...workspace,
     groupRevisions: { ...workspace.groupRevisions, [groupId]: revision },
     conflictedGroupIds: workspace.conflictedGroupIds.filter(id => id !== groupId),
+    lastSuccessfulSyncAt: new Date().toISOString(),
   })
   await tx.done
 }
@@ -471,6 +476,60 @@ export async function persistAccountConflict(groupId: string): Promise<void> {
   if (!workspace.conflictedGroupIds.includes(groupId)) {
     await tx.store.put({ ...workspace, conflictedGroupIds: [...workspace.conflictedGroupIds, groupId] })
   }
+  await tx.done
+}
+
+export async function acceptServerGroupVersion(snapshot: {
+  revision: number
+  group: Omit<Group, 'participantIds'>
+  participants: readonly Participant[]
+  expenses: readonly Expense[]
+  settlements: readonly DurableSettlementSnapshot[]
+}): Promise<void> {
+  const db = await database()
+  const stores = ['accountWorkspace', 'groups', 'participants', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const
+  const tx = db.transaction(stores, 'readwrite')
+  const groupId = snapshot.group.id
+  const workspace = await tx.objectStore('accountWorkspace').get(ACCOUNT_WORKSPACE_KEY)
+  if (!workspace) throw new Error('Account workspace is missing')
+  const localParticipants = (await tx.objectStore('participants').getAll()).filter(item => item.groupId === groupId)
+  const localExpenses = (await tx.objectStore('expenses').getAll()).filter(item => item.groupId === groupId)
+  const localExpenseIds = new Set(localExpenses.map(item => item.id))
+  const localShares = (await tx.objectStore('expenseShares').getAll()).filter(item => localExpenseIds.has(item.expenseId))
+  const localSettlements = (await tx.objectStore('settlements').getAll()).filter(item => item.groupId === groupId)
+  const localMutations = (await tx.objectStore('pendingMutations').getAll()).filter(item => item.groupId === groupId)
+  await Promise.all([
+    ...localParticipants.map(item => tx.objectStore('participants').delete(item.id)),
+    ...localExpenses.map(item => tx.objectStore('expenses').delete(item.id)),
+    ...localShares.map(item => tx.objectStore('expenseShares').delete([item.expenseId, item.participantId])),
+    ...localSettlements.map(item => tx.objectStore('settlements').delete(item.id)),
+    ...localMutations.map(item => tx.objectStore('pendingMutations').delete(item.id)),
+  ])
+  await tx.objectStore('groups').put({ ...snapshot.group, participantIds: [...snapshot.participants].sort((a, b) => a.order - b.order).map(item => item.id) })
+  for (const participant of snapshot.participants) await tx.objectStore('participants').put(participant)
+  for (const expense of snapshot.expenses) {
+    await tx.objectStore('expenses').put(expenseRecord(expense))
+    for (const share of expense.shares) await tx.objectStore('expenseShares').put({ expenseId: expense.id, ...share })
+  }
+  for (const settlement of snapshot.settlements) await tx.objectStore('settlements').put(settlement)
+  await tx.objectStore('accountWorkspace').put({
+    ...workspace,
+    groupRevisions: { ...workspace.groupRevisions, [groupId]: snapshot.revision },
+    conflictedGroupIds: workspace.conflictedGroupIds.filter(id => id !== groupId),
+    lastSuccessfulSyncAt: new Date().toISOString(),
+  })
+  await tx.done
+}
+
+export async function rebaseLocalGroupVersion(groupId: string, serverRevision: number): Promise<void> {
+  const db = await database(); const tx = db.transaction('accountWorkspace', 'readwrite')
+  const workspace = await tx.store.get(ACCOUNT_WORKSPACE_KEY)
+  if (!workspace) throw new Error('Account workspace is missing')
+  await tx.store.put({
+    ...workspace,
+    groupRevisions: { ...workspace.groupRevisions, [groupId]: serverRevision },
+    conflictedGroupIds: workspace.conflictedGroupIds.filter(id => id !== groupId),
+  })
   await tx.done
 }
 

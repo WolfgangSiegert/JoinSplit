@@ -11,6 +11,7 @@ function unreachableMutation(mutation: never): never { throw new Error(`Unsuppor
 export function useCreateGroupSync(groupId: Ref<string>) {
   const config = useRuntimeConfig()
   const identityStore = useAccessIdentityStore()
+  const accountStore = useAccountStore()
   const groupsStore = useGroupsStore()
   const { online } = useConnectivity()
 
@@ -66,10 +67,13 @@ export function useCreateGroupSync(groupId: Ref<string>) {
     if (result.outcome === 'failed' && result.error.kind === 'expired') {
       try { await markAccessIdentityExpired({ identity: identityStore }) } catch { /* terminal in memory */ }
     }
+    if (result.outcome === 'failed' && result.error.kind === 'session-expired') accountStore.expireSession(result.error.message)
+    if (result.outcome === 'synced' && identityStore.credential === null) accountStore.recordSynchronization()
     return result
   }
 
   async function attemptSync(): Promise<void> {
+    if (identityStore.credential === null && !accountStore.hasActiveSession) return
     while (online.value) {
       const mutation = groupsStore.pendingMutations
         .filter(item => item.groupId === groupId.value)
@@ -88,6 +92,9 @@ export function useCreateGroupSync(groupId: Ref<string>) {
     const canRetryAfterReconnect = state?.state === 'pending'
       || (state?.state === 'failed' && state.error.retryable)
     if (isOnline && canRetryAfterReconnect) void attemptSync()
+  })
+  watch(() => accountStore.sessionRevision, () => {
+    if (online.value) void attemptSync()
   })
 
   return { syncState, visibleState, online, attemptSync }

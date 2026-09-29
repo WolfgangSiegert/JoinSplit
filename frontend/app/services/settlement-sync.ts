@@ -1,7 +1,7 @@
 import type { PendingCreateSettlement, PendingDeleteSettlement, PendingUpdateSettlement } from '../domain/pending-mutation'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
-import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
+import { accountMutationAuthorizationError, accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { durableSettlement } from '../persistence/validation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
 import { applicationFetch } from './http-transport'
@@ -43,9 +43,11 @@ export async function synchronizeSettlementMutation(options: Options): Promise<S
     return result
   }
   let response: Response
+  let accountMode = false
   try {
     const fetcher = options.fetcher ?? applicationFetch
     const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
+    accountMode = context.accountMode
     const collection = `${context.urlPrefix}/groups/${mutation.groupId}/settlements`
     const url = mutation.type === 'CreateSettlement' ? collection : `${collection}/${mutation.payload.settlement.id}`
     const body = requestBody(mutation)
@@ -68,7 +70,9 @@ export async function synchronizeSettlementMutation(options: Options): Promise<S
     catch { result = failure('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Zahlung.', false) }
   } else if (response.status === 410) result = failure('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
   else if (response.status === 429) result = failure('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
-  else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Zahlung konnte für diese Gruppe nicht bestätigt werden.', false)
+  else if ([401, 403, 404].includes(response.status)) {
+    result = { outcome: 'failed', error: accountMutationAuthorizationError(response, accountMode, 'Die Zahlung')! }
+  }
   else if (response.status === 409) result = failure('conflict', 'Die Zahlung steht im Konflikt mit dem Serverstand. Lokal wurde nichts überschrieben.', false)
   else if (response.status === 422) result = failure('validation', 'Der Server hat die lokale Zahlung abgelehnt.', false)
   else if (response.status >= 500) result = failure('server', 'Der Server konnte die Zahlung nicht bestätigen.', true)

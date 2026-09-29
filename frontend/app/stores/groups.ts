@@ -7,6 +7,7 @@ import type { Settlement } from '../domain/settlement'
 export type MutationSyncErrorKind =
   | 'network' | 'unauthorized' | 'conflict' | 'validation' | 'server'
   | 'unexpected' | 'reconciliation' | 'identity' | 'persistence' | 'expired' | 'rate-limited'
+  | 'session-expired' | 'forbidden' | 'not-found'
 
 export interface MutationSyncError {
   readonly kind: MutationSyncErrorKind
@@ -207,6 +208,15 @@ export const useGroupsStore = defineStore('groups', {
     failMutationSync(mutationId: string, error: MutationSyncError): void {
       if (!this.pendingMutations.some(item => item.id === mutationId)) return
       this.mutationSync[mutationId] = { state: 'failed', error: Object.freeze({ ...error }) }
+    },
+
+    resetSessionFailures(): void {
+      for (const mutation of this.pendingMutations) {
+        if (this.mutationSync[mutation.id]?.state === 'failed'
+          && this.mutationSync[mutation.id]?.error?.kind === 'session-expired') {
+          this.mutationSync[mutation.id] = { state: 'pending', error: null }
+        }
+      }
     },
 
     confirmMutationSync(mutationId: string): void {

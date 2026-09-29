@@ -131,6 +131,15 @@ export async function fetchAccountWorkspace(apiBase: string, fetcher: typeof fet
   return body.data
 }
 
+export async function fetchCurrentAccount(apiBase: string, fetcher: typeof fetch = applicationFetch): Promise<AccountData> {
+  const response = await fetcher(`${base(apiBase)}/api/account`, {
+    headers: { Accept: 'application/json' }, credentials: 'include',
+  })
+  const body = await json(response) as { data?: AccountData } | null
+  if (!response.ok || !body?.data) throw new AccountRequestError(response.status, 'Die Account-Sitzung konnte nicht bestätigt werden.')
+  return body.data
+}
+
 export async function persistHydratedWorkspace(response: AccountWorkspaceResponse, currentIdentityId: string): Promise<AccountHydration> {
   const groups: Group[] = response.groups.map(item => ({
     ...item.group,
@@ -145,6 +154,7 @@ export async function persistHydratedWorkspace(response: AccountWorkspaceRespons
     groupRevisions: Object.fromEntries(response.groups.map(item => [item.group.id, item.revision])),
     personRevisions: Object.fromEntries(response.people.map(person => [person.id, person.revision])),
     conflictedGroupIds: [],
+    lastSuccessfulSyncAt: new Date().toISOString(),
   }
   const hydration: AccountHydration = {
     identity: { id: currentIdentityId, credential: null, synchronizationStatus: 'account-linked' },
@@ -167,6 +177,18 @@ export async function persistHydratedWorkspace(response: AccountWorkspaceRespons
 export async function logoutAccount(apiBase: string, fetcher: typeof fetch = applicationFetch): Promise<boolean> {
   await mutate(apiBase, '/api/account/logout', 'POST', undefined, fetcher)
   return clearNativeApiCookies(apiBase)
+}
+
+export async function changeAccountPassword(
+  apiBase: string,
+  currentPassword: string,
+  password: string,
+  passwordConfirmation: string,
+  fetcher: typeof fetch = applicationFetch,
+): Promise<void> {
+  await mutate(apiBase, '/api/account/password', 'PUT', {
+    currentPassword, password, password_confirmation: passwordConfirmation,
+  }, fetcher)
 }
 
 export async function deleteAccount(apiBase: string, password: string, fetcher: typeof fetch = applicationFetch): Promise<boolean> {

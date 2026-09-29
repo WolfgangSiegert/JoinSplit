@@ -253,6 +253,7 @@ describe('local Create Group workflow', () => {
       groupRevisions: {},
       personRevisions: {},
       conflictedGroupIds: [],
+      lastSuccessfulSyncAt: null,
     })
     const persistCreation = vi.fn(async () => undefined)
     const { createGroup } = useCreateGroup({ persistCreation })

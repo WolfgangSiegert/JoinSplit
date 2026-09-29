@@ -17,7 +17,7 @@ export async function synchronizePersonMutation(options: {
   mutation: PendingPersonMutation
   peopleStore: ReturnType<typeof usePeopleStore>
   fetcher?: typeof fetch
-}): Promise<'synced' | 'conflict' | 'failed'> {
+}): Promise<'synced' | 'conflict' | 'session-expired' | 'failed'> {
   const fetcher = options.fetcher ?? applicationFetch
   try {
     const token = await csrf(options.apiBase, fetcher)
@@ -39,6 +39,7 @@ export async function synchronizePersonMutation(options: {
       options.peopleStore.conflict(mutation.personId)
       return 'conflict'
     }
+    if (response.status === 401) return 'session-expired'
     const revision = Number(response.headers.get('X-Person-Revision'))
     if (!response.ok || !Number.isSafeInteger(revision) || revision < 1) return 'failed'
     await acknowledgePersonMutation(mutation.id, mutation.personId, revision, mutation.type === 'DeletePerson')

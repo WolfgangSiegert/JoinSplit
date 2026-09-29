@@ -15,6 +15,7 @@ defineProps<{
     | 'home'
     | 'info'
     | 'link'
+    | 'lock'
     | 'plus'
     | 'pencil'
     | 'receipt'
@@ -91,6 +92,9 @@ defineProps<{
     </template>
     <template v-else-if="name === 'link'">
       <path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1.1M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1" />
+    </template>
+    <template v-else-if="name === 'lock'">
+      <rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" />
     </template>
     <template v-else-if="name === 'plus'">
       <path d="M12 5v14M5 12h14" />

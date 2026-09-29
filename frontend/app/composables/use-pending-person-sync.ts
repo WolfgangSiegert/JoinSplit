@@ -9,7 +9,7 @@ export function usePendingPersonSync() {
   let running = false
 
   async function synchronizePendingPeople(): Promise<void> {
-    if (running || lifecycleStore.state !== 'ready' || !accountStore.isAuthenticated || !online.value) return
+    if (running || lifecycleStore.state !== 'ready' || !accountStore.hasActiveSession || !online.value) return
     running = true
     try {
       const blocked = new Set<string>()
@@ -19,13 +19,16 @@ export function usePendingPersonSync() {
           .find(item => !blocked.has(item.personId))
         if (!mutation) break
         const result = await synchronizePersonMutation({ apiBase: config.public.apiBase, mutation, peopleStore })
+        if (result === 'synced') accountStore.recordSynchronization()
+        if (result === 'session-expired') accountStore.expireSession()
         if (result !== 'synced') blocked.add(mutation.personId)
       }
     } finally { running = false }
   }
 
   watch([
-    () => lifecycleStore.state, online, () => accountStore.isAuthenticated,
+    () => lifecycleStore.state, online, () => accountStore.hasActiveSession,
+    () => accountStore.sessionRevision,
     () => peopleStore.pendingMutations.length,
   ], ([state, isOnline, authenticated]) => {
     if (state === 'ready' && isOnline && authenticated) void synchronizePendingPeople()

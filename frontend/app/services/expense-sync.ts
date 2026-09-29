@@ -1,7 +1,7 @@
 import type { Expense } from '../domain/expense'
 import type { PendingCreateExpense, PendingDeleteExpense, PendingUpdateExpense } from '../domain/pending-mutation'
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
-import { accountMutationContext, applyAccountMutationResponse } from './account-mutation'
+import { accountMutationAuthorizationError, accountMutationContext, applyAccountMutationResponse } from './account-mutation'
 import { useGroupsStore, type MutationSyncError } from '../stores/groups'
 import { applicationFetch } from './http-transport'
 
@@ -45,9 +45,11 @@ export async function synchronizeExpenseMutation(options: Options): Promise<Expe
     return result
   }
   let response: Response
+  let accountMode = false
   try {
     const fetcher = options.fetcher ?? applicationFetch
     const context = await accountMutationContext(options.apiBase, options.identity, options.groupsStore, mutation, fetcher)
+    accountMode = context.accountMode
     const collection = `${context.urlPrefix}/groups/${mutation.groupId}/expenses`
     const url = mutation.type === 'CreateExpense' ? collection : `${collection}/${mutation.payload.expense.id}`
     const body = requestBody(mutation)
@@ -66,7 +68,9 @@ export async function synchronizeExpenseMutation(options: Options): Promise<Expe
     catch { result = failure('reconciliation', 'Die Serverbestätigung passt nicht zur lokalen Ausgabe.', false) }
   } else if (response.status === 410) result = failure('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
   else if (response.status === 429) result = failure('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
-  else if ([401, 403, 404].includes(response.status)) result = failure('unauthorized', 'Die Ausgabe konnte für diese Gruppe nicht bestätigt werden.', false)
+  else if ([401, 403, 404].includes(response.status)) {
+    result = { outcome: 'failed', error: accountMutationAuthorizationError(response, accountMode, 'Die Ausgabe')! }
+  }
   else if (response.status === 409) result = failure('conflict', 'Die Ausgabe steht im Konflikt mit dem Serverstand. Lokal wurde nichts überschrieben.', false)
   else if (response.status === 422) result = failure('validation', 'Der Server hat die lokale Ausgabe abgelehnt.', false)
   else if (response.status >= 500) result = failure('server', 'Der Server konnte die Ausgabe nicht bestätigen.', true)

@@ -5,7 +5,7 @@ import {
   type PendingCreateGroupMutation,
 } from '../stores/groups'
 import { acknowledgeAccountMutation, removePendingMutation } from '../persistence/database'
-import { accountMutationContext, applyAccountMutationResponse, type AccountMutationContext } from './account-mutation'
+import { accountMutationAuthorizationError, accountMutationContext, applyAccountMutationResponse, type AccountMutationContext } from './account-mutation'
 import { applicationFetch } from './http-transport'
 
 interface AccessIdentityForSync {
@@ -116,12 +116,8 @@ async function sendPendingCreateGroup(
     return { outcome: 'synced', status: response.status }
   }
 
-  if (response.status === 401) {
-    return failure(
-      'unauthorized',
-      'Die Zugriffsidentität konnte nicht bestätigt werden. Die Gruppe bleibt lokal verfügbar.',
-      false,
-    )
+  if ([401, 403, 404].includes(response.status)) {
+    return { outcome: 'failed', error: accountMutationAuthorizationError(response, context.accountMode, 'Die Gruppe')! }
   }
   if (response.status === 410) {
     return failure(

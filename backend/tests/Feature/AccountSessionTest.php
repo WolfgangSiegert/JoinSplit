@@ -131,6 +131,26 @@ it('requires fresh password confirmation before deleting an Account', function (
     $this->getJson('/api/account')->assertUnauthorized();
 });
 
+it('changes the password only after confirming the current password', function () {
+    $account = Account::query()->create(accountPayload());
+    $this->actingAs($account, 'web');
+
+    $this->putJson('/api/account/password', [
+        'currentPassword' => 'wrong password',
+        'password' => 'new correct horse battery staple',
+        'password_confirmation' => 'new correct horse battery staple',
+    ])->assertUnprocessable()->assertExactJson(['message' => 'Current password confirmation failed.']);
+
+    $this->putJson('/api/account/password', [
+        'currentPassword' => 'correct horse battery staple',
+        'password' => 'new correct horse battery staple',
+        'password_confirmation' => 'new correct horse battery staple',
+    ])->assertNoContent();
+
+    expect(Hash::check('new correct horse battery staple', $account->fresh()->password))->toBeTrue();
+    $this->getJson('/api/account')->assertOk();
+});
+
 it('protects Account reads and mutations from unauthenticated requests', function () {
     $this->getJson('/api/account')->assertUnauthorized();
     $this->postJson('/api/account/logout')->assertUnauthorized();

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 const password = 'correct horse battery staple'
+const changedPassword = 'new correct horse battery staple'
 
 test('requests a recovery link without Account disclosure and completes the reset-link UI', async ({ page }) => {
   const requests: Array<{ path: string; body: Record<string, unknown> }> = []
@@ -46,10 +47,10 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await page.getByLabel('Passwort').fill(password)
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: 'Registrieren und Daten übernehmen' }).click()
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL(/\/account$/u)
+  await expect(page.getByRole('heading', { name: 'Datenübernahme abgeschlossen' })).toBeVisible()
 
-  await page.goto('/account')
-  await expect(page.getByRole('heading', { name: 'Angemeldet' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Account auf diesem Gerät' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
   await page.goto('/people')
   await expect(page.getByText('Ada Account', { exact: true })).toBeVisible()
@@ -117,14 +118,18 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   expect(clientStorage.workspace.name).toBe('Ada Owner')
   expect(clientStorage.localStorageKeys).toEqual([])
 
-  await page.getByRole('button', { name: 'Abmelden' }).click()
-  await expect(page).toHaveURL('/')
+  await page.getByLabel('Aktuelles Passwort').fill(password)
+  await page.getByLabel('Neues Passwort', { exact: true }).fill(changedPassword)
+  await page.getByLabel('Neues Passwort wiederholen').fill(changedPassword)
+  await page.getByRole('button', { name: 'Passwort ändern' }).click()
+  await expect(page.getByText('Das Passwort wurde geändert.', { exact: true })).toBeVisible()
 
-  await page.goto('/account')
-  await page.getByLabel('E-Mail').fill(email)
-  await page.getByLabel('Passwort').fill(password)
-  await page.getByRole('button', { name: 'Anmelden und Daten übernehmen' }).click()
-  await expect(page).toHaveURL('/')
+  await page.getByRole('button', { name: 'Abmelden' }).click()
+  await expect(page).toHaveURL(/\/account/u)
+  await expect(page.getByText('Erneute Anmeldung erforderlich. Lokale Daten und Warteschlange bleiben erhalten.')).toBeVisible()
+  await page.getByLabel('Passwort erneut eingeben').fill(changedPassword)
+  await page.getByRole('button', { name: 'Erneut anmelden und synchronisieren' }).click()
+  await expect(page.getByText('Serversitzung aktiv', { exact: true })).toBeVisible()
   await page.goto('/people')
   await expect(page.getByText('Ada Synced', { exact: true })).toBeVisible()
   await page.goto(`/groups/${groupId}/participants`)
@@ -132,7 +137,7 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await page.goto('/account')
   await expect(page.getByText(email)).toBeVisible()
 
-  await page.getByLabel('Passwort bestätigen').fill(password)
+  await page.getByLabel('Passwort bestätigen').fill(changedPassword)
   await page.getByRole('button', { name: 'Account endgültig löschen' }).click()
   await expect(page).toHaveURL('/')
 })

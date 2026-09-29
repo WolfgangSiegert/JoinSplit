@@ -4,6 +4,7 @@ const settingsStore = useSettingsStore()
 const nativeApp = useRuntimeConfig().public.nativeApp
 const { synchronizePending } = usePendingCreateGroupSync()
 usePendingPersonSync()
+useAccountSession()
 
 const systemPrefersDark = ref(import.meta.client && window.matchMedia('(prefers-color-scheme: dark)').matches)
 const resolvedColorMode = computed(() => settingsStore.colorMode === 'system'
