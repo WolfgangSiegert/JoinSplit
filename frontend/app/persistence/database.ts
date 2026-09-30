@@ -42,7 +42,7 @@ export interface DurableSettings {
   readonly settlementRecordingEnabled: boolean
   readonly settlementRecordingGroupIds: readonly string[]
   readonly colorMode: 'system' | 'light' | 'dark'
-  readonly visualDesign: '2' | '3'
+  readonly visualDesign: '2' | '3' | '4' | '5'
   readonly groupAreaOrder: readonly GroupArea[]
   readonly languagePreference: LanguagePreference
 }
@@ -228,7 +228,9 @@ export async function loadDurableState(): Promise<DurableState> {
         ? [...new Set(settings.settlementRecordingGroupIds.filter(id => typeof id === 'string'))]
         : [],
       colorMode: settings.colorMode === 'light' || settings.colorMode === 'dark' ? settings.colorMode : 'system',
-      visualDesign: settings.visualDesign === '3' ? '3' : '2',
+      visualDesign: settings.visualDesign === '3' || settings.visualDesign === '4' || settings.visualDesign === '5'
+        ? settings.visualDesign
+        : '2',
       groupAreaOrder: isGroupAreaOrder(settings.groupAreaOrder)
         ? [...settings.groupAreaOrder]
         : [...DEFAULT_GROUP_AREA_ORDER],

@@ -15,7 +15,7 @@ const savingAppearance = ref(false)
 const appearancePersistenceError = ref('')
 const visibleColorModeOverride = ref<'system' | 'light' | 'dark' | null>(null)
 const visibleColorMode = computed(() => visibleColorModeOverride.value ?? settingsStore.colorMode)
-const visibleDesignOverride = ref<'2' | '3' | null>(null)
+const visibleDesignOverride = ref<'2' | '3' | '4' | '5' | null>(null)
 const visibleDesign = computed(() => visibleDesignOverride.value ?? settingsStore.visualDesign)
 const savingDefault = ref(false)
 const savingDefaultName = ref(false)
@@ -68,7 +68,7 @@ async function changeColorMode(event: Event): Promise<void> {
 
 async function changeVisualDesign(event: Event): Promise<void> {
   const value = (event.target as HTMLInputElement).value
-  if (value !== '2' && value !== '3') return
+  if (value !== '2' && value !== '3' && value !== '4' && value !== '5') return
 
   visibleDesignOverride.value = value
   savingAppearance.value = true
@@ -251,7 +251,7 @@ async function confirmReset(): Promise<void> {
 
         <fieldset class="mt-5">
           <legend class="font-semibold">{{ t('settings.appearance.color') }}</legend>
-          <div class="appearance-options mt-2 grid grid-cols-3 gap-2">
+          <div class="appearance-options color-mode-options mt-2 grid grid-cols-3 gap-2">
             <label v-for="option in [{ value: 'system', label: t('settings.appearance.system') }, { value: 'light', label: t('settings.appearance.light') }, { value: 'dark', label: t('settings.appearance.dark') }]" :key="option.value" class="appearance-option">
               <input
                 type="radio"
@@ -268,7 +268,7 @@ async function confirmReset(): Promise<void> {
 
         <fieldset class="mt-6">
           <legend class="font-semibold">{{ t('settings.appearance.design') }}</legend>
-          <div class="appearance-options mt-2 grid gap-2 sm:grid-cols-2">
+          <div class="appearance-options design-options mt-2 grid gap-2 sm:grid-cols-2">
             <label class="appearance-option appearance-option--descriptive">
               <input type="radio" name="visual-design" value="2" :checked="visibleDesign === '2'" :disabled="savingSettings" @change="changeVisualDesign">
               <span><strong>{{ t('settings.appearance.together') }}</strong><small>{{ t('settings.appearance.togetherHint') }}</small></span>
@@ -276,6 +276,14 @@ async function confirmReset(): Promise<void> {
             <label class="appearance-option appearance-option--descriptive">
               <input type="radio" name="visual-design" value="3" :checked="visibleDesign === '3'" :disabled="savingSettings" @change="changeVisualDesign">
               <span><strong>{{ t('settings.appearance.plain') }}</strong><small>{{ t('settings.appearance.plainHint') }}</small></span>
+            </label>
+            <label class="appearance-option appearance-option--descriptive">
+              <input type="radio" name="visual-design" value="4" :checked="visibleDesign === '4'" :disabled="savingSettings" @change="changeVisualDesign">
+              <span><strong>{{ t('settings.appearance.material') }}</strong><small>{{ t('settings.appearance.materialHint') }}</small></span>
+            </label>
+            <label class="appearance-option appearance-option--descriptive">
+              <input type="radio" name="visual-design" value="5" :checked="visibleDesign === '5'" :disabled="savingSettings" @change="changeVisualDesign">
+              <span><strong>{{ t('settings.appearance.ios') }}</strong><small>{{ t('settings.appearance.iosHint') }}</small></span>
             </label>
           </div>
         </fieldset>

@@ -1,303 +1,64 @@
-# JoinSplit visual redesign — design QA
+# Design QA: Material and iOS skins
 
 ## Evidence
 
-- Source visual truth: `/Users/Wolfgang/.codex/generated_images/01a0d8c3-53e2-77c0-b7a2-38a663a7dee1/exec-9f604894-a1b8-4908-98ac-add704159f53.png`
-- Normalized source: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-source-normalized.png`
-- Browser-rendered implementation: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-implementation.png`
-- Side-by-side comparison: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-comparison.png`
-- Viewport and CSS size: 390 × 844 px
-- Source pixels: 853 × 1844, normalized to 390 × 844
-- Implementation pixels: 390 × 844 at device pixel ratio 1
-- State: active group, three participants, three expenses, synchronized, no open dialog
+- Material source visual truth: `/var/folders/38/84xwncmx44z4kvm60cfgj0j00000gn/T/codex-clipboard-c7923df2-cd0e-4294-b3c9-39c4f8924cd6.png`
+- Material implementation: `/tmp/joinsplit-material-final.png`
+- iOS implementation: `/tmp/joinsplit-ios-final.png`
+- Combined Material comparison: `/tmp/joinsplit-material-comparison.png`
+- Viewport: 390 x 844 CSS pixels, mobile light-mode group overview.
+- Source pixels: 778 x 1284. The source was proportionally normalized to 390 px width for comparison.
+- Implementation pixels: 390 x 844 at browser screenshot density 1.
+- Combined comparison pixels: 1608 x 1688 because the macOS image compositor used a 2x backing scale; both columns were laid out at the same 390 CSS-pixel width before encoding.
+- Material source scope: visual primitives and surface treatment, not JoinSplit content or information architecture. The source's red app bar was intentionally replaced with the user-requested light-blue primary.
+- iOS guidance: Apple Human Interface Guidelines for grouped lists, tab bars, toolbars, and materials. No pixel-exact iOS screenshot was supplied, so this part is principle-based rather than a literal clone.
 
 ## Full-view comparison
 
-The final side-by-side comparison shows the selected people-first hierarchy in both images: group context, section navigation, participant identities, total expenses, explicit participant balances, expense list, and a coral primary action. The implementation intentionally omits the mock's duplicate bottom navigation and category icons. The former is redundant with the existing approved navigation; the latter would require a new icon asset dependency or online icon loading, which conflicts with the project's no-new-dependency and local-first constraints.
+The combined comparison shows the requested Material characteristics in the JoinSplit screen: a solid blue app bar, high-contrast blue selected state, square white tiles, restrained elevation, flat rectangular controls, and a circular elevated create action. The implementation preserves JoinSplit's content and navigation while adopting the reference's visual hierarchy.
+
+The iOS capture shows a separate system: grouped white list surfaces on a light grouped background, segmented selection, fine separators, system-blue accents, and a floating translucent tab bar. It no longer shares Klartext's angular cards or raised central create button.
 
 ## Focused-region comparison
 
-No separate crop was required. At 390 × 844 the source and implementation text, balance rows, expense rows, navigation states, and primary action are readable in the full comparison. Form, error, archive, offline, and statement states are governed by the shared tokens but are not represented in the selected source mock, so exact visual fidelity for those states cannot be claimed from this comparison alone.
-
-## Findings
-
-- P3: The real implementation uses a larger accessible text scale than the generated mock, so the third expense sits partly behind the sticky primary action at the initial scroll position. It remains reachable by scrolling and is not clipped from the document.
-- P3: Native system typography replaces the mock's approximate rounded grotesk. This avoids a network font dependency and keeps the local-first app shell reliable.
-- Accepted intentional deviation: one section navigation is used instead of duplicating the same routes at the top and bottom.
+The header, group-area switcher, expense list, and bottom navigation were inspected at readable scale because these carry the strongest skin identity. Settings controls were also checked in-browser: Material uses individual raised tiles; iOS uses a segmented color-mode control and grouped selection rows.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: navy humanist system stack, strong tabular amount hierarchy, readable 15–16 px body text, and stable fallbacks. The mock font is approximated rather than downloaded.
-- Spacing and layout rhythm: mobile-first 390 px layout, 44–48 px targets, continuous ledger rows, minimal nested surfaces, and a persistent primary action.
-- Colors and visual tokens: warm sand base, navy ink, coral action, and blue/ochre/clay participant accents. Meaning is always repeated in text.
-- Image and asset fidelity: no raster imagery or custom brand illustration exists in the selected mock. Initial avatars and functional balance bars are native UI data visualizations; no placeholder art is used.
-- Copy and content: group name, participant names, amounts, dates, payer relationships, sync state, navigation labels, and action label match the grounded product state.
+- Fonts and typography: Material uses the Roboto/Noto/Segoe UI/system stack and normal tracking; iOS uses the Apple system stack and tighter native-style tracking. Roboto is not bundled, so exact Material typography depends on local availability.
+- Spacing and layout rhythm: Material uses square cards and explicit elevation; iOS uses inset grouped surfaces, rounded list containers, hairline separators, and a floating tab bar.
+- Colors and visual tokens: Material uses `#2196f3` as the light primary with a darker blue interaction tone; iOS uses system blue on `#f2f2f7` and white grouped surfaces. Dark-mode token sets remain defined for both.
+- Image quality and assets: No new raster assets were required. The supplied source is a UI-component reference rather than product imagery. Existing JoinSplit logo and icon components were preserved.
+- Copy and content: JoinSplit labels and financial data remain unchanged; the skins do not alter product semantics.
 
 ## Comparison history
 
-1. Initial pass found a P1: the full sync message and oversized heading pushed the expense list below the first viewport. Fixed by moving the synchronized normal state into the top context row and reducing heading density; offline, pending, and error states remain detailed.
-2. Second pass found a P1: participant identity and balance relationships were materially weaker than the selected direction. Fixed with a participant summary, repeated avatar identity, explicit “erhält/zahlt” labels, and proportional balance bars.
-3. Final pass found no actionable P0, P1, or P2 mismatch. The remaining differences above are P3 or intentional product constraints.
+### Iteration 1
 
-## Browser and interaction checks
+- P1: Material and iOS were mostly token swaps and looked too similar to Miteinander/Klartext.
+- Fix: Rebuilt Material around blue app-bar, square tiles, classic elevation, underlined fields, flat tab tiles, and a FAB. Rebuilt iOS around segmented controls, grouped rows, inset lists, and a non-raised floating tab bar.
+- Post-fix evidence: `/tmp/joinsplit-material-final.png` and `/tmp/joinsplit-ios-final.png`.
 
-- Loaded the browser-rendered group screen at 390 × 844.
-- Verified navigation to Salden, Personen, and back to Ausgaben.
-- Verified the primary action opens the existing Ausgabe-erfassen route.
-- Checked a fresh browser tab after hot reload: no console errors.
-- Typecheck, 234 unit tests, and production build passed.
-- The configured end-to-end suite could not start its external test servers in this environment; this is recorded as a verification gap, not a visual QA failure.
+### Iteration 2
 
-final result: passed
+- P2: Material's active group tab was being overridden by utility classes, and the Beta chip had insufficient contrast in the blue header.
+- Fix: Gave the active Material/iOS segmented states explicit precedence and added a dark translucent Beta-chip surface.
+- Post-fix evidence: `/tmp/joinsplit-material-comparison.png`; computed Material active tab is `rgb(33, 150, 243)` with white text, and the Beta chip is white on `rgba(0, 0, 0, 0.16)` over the blue app bar.
 
----
+## Browser verification
 
-## Participant collapsed-row quick actions — 2026-09-29
+- Selected Material and iOS from Settings.
+- Verified immediate visual application and persistence after reload.
+- Verified the 390 px mobile breakpoint and no horizontal overflow in the affected Settings controls.
+- Verified the group overview, segmented group navigation, expense list, and bottom navigation in both skins.
+- Checked a fresh final browser tab for warnings and errors: none.
 
-### Evidence
+## Remaining P3 polish
 
-- Source visual truth: in-turn browser annotation on `http://127.0.0.1:3004/groups/a563346c-d57a-493b-871d-f69050d5fb57/participants` at 820 × 857 CSS px. The client did not expose a local path for the annotated source image.
-- Desktop implementation: `/private/tmp/joinsplit-participant-quick-actions-desktop-final.png` at 776 × 857 raster px; browser viewport 820 × 857 CSS px.
-- Mobile implementation: `/private/tmp/joinsplit-participant-quick-actions-mobile.png` at 390 × 844 raster and CSS px.
-- State: dark theme, six participants, all rows collapsed, server-unavailable status visible outside the focused list region.
+- Bundle a licensed Material-compatible font only if exact Roboto typography becomes a product requirement; no dependency or remote font request was added in this pass.
+- A future native-wrapper milestone could replace the shared web icon set with platform-specific Material Symbols and SF Symbols. The current web skin intentionally preserves the existing accessible icon components.
+- The shared `New` action remains in the iOS tab bar for product consistency, even though current Apple guidance reserves tab bars primarily for navigation.
 
-### Comparison and findings
-
-1. The first pass placed the icon actions too close to the existing `Details` disclosure and caused overlap at desktop width. Classified P2.
-2. Reserved explicit space for the two 44 px actions, shifted them left of the disclosure, and retained a separate native `summary` target so interactive buttons are not nested inside another interactive control.
-3. The final desktop and mobile comparisons show rename and deactivate/reactivate controls in every collapsed header without overlap, clipping, or name wrapping. The desktop disclosure retains its text label; the mobile disclosure uses the caret only.
-4. Delete and directory-linking remain inside the expanded secondary level because they are less frequent and, in the delete case, destructive.
-
-### Required fidelity surfaces
-
-- Typography and content: participant name and status hierarchy is unchanged; icon-only controls have explicit accessible names and titles.
-- Spacing and layout rhythm: rows remain compact, dividers stay continuous, and all quick actions retain 44 px targets.
-- Color and tokens: the existing neutral icon-button treatment is reused; status meaning remains textual rather than color-only.
-- Responsive behavior: verified at 820 × 857 and 390 × 844 with no horizontal overflow or control collision.
-- Interaction: rename opens the participant detail and focuses `Neuer Name`; deactivate changes to reactivate and can be reversed from the collapsed row.
-
-### Verification
-
-- Production build passed.
-- Focused Playwright test passed, including collapsed rename, focus transfer, deactivate, reactivate, and participant search.
-- Typecheck and 270 unit tests passed earlier in the same implementation sequence; the final follow-up changed only the focused Playwright assertions.
-- Browser interaction was confirmed at mobile width. The in-app desktop preview intermittently failed to hydrate after a hard reload, so desktop behavior is supported by the passing production-build Playwright test rather than inferred from the static screenshot.
-
-final result: passed
-
----
-
-## Fine full-height settlement axis — 2026-09-25
-
-### Evidence
-
-- Annotated baseline: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-caret-groups.png`.
-- Browser-rendered implementation: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-fine-caret-span.png`.
-- Generated PNG overview: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-settlement-overview-fine-carets.png`.
-- Browser pixels and CSS viewport: 402 × 870 at device scale 1.
-- State: active group, dark theme, Klartext design, two proposed settlement payments.
-
-### Full-view and focused comparison
-
-The settlement row now uses a two-row card grid. The step number occupies the upper-left row, participants occupy the lower outer cells, and the complete payment axis spans both rows. This makes the caret-plus-amount element fill the vertical interval from the step row's top to the participant row's bottom.
-
-Each caret is a 0.5 px line treatment. The payer and receiver groups retain fixed internal spacing, but each complete group is centered in the available interval between its participant column and the padded central amount. The amount remains geometrically centered in the card.
-
-Measured on the first 402 px row: the axis is 74.88 px high; the amount center differs from the axis center by less than 1 px; the left and right group centers differ from their respective participant-to-amount interval centers by less than 1 px.
-
-### Required fidelity surfaces
-
-- Fonts and typography: amount hierarchy and tabular figures are unchanged; 0.65 rem horizontal padding adds the requested breathing room.
-- Spacing and layout rhythm: the central axis spans both grid rows, while the outer content preserves number-above-participant hierarchy.
-- Colors and tokens: the existing coral-to-blue-to-mint sequence is preserved at reduced visual weight.
-- Image and asset fidelity: browser and canvas export use the same 0.5 px line treatment; no placeholder imagery was introduced.
-- Copy and content: no labels, names, amounts, actions, or explanatory text changed.
-
-### Findings and comparison history
-
-- No actionable P0, P1, or P2 issue remains at 402 px.
-- The 0.5 px strokes are intentionally subtle, especially in the light PNG export. This is the requested line weight rather than an accidental contrast loss.
-
-### Verification
-
-- Browser rendering and geometric bounds checked at 402 × 870.
-- Frozen PNG overview generated and inspected.
-- Typecheck passed.
-- 234 unit tests passed.
-- Production build passed.
-
-final result: passed
-
----
-
-## Fixed settlement caret groups — 2026-09-25
-
-### Evidence
-
-- Source visual truth and annotated baseline: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-implementation-caret-v6-unboxed.png`, supplemented by the user's browser annotation on the first transfer row.
-- Browser-rendered implementation: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-caret-groups.png`.
-- Generated PNG overview: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-settlement-overview-caret-groups.png`.
-- Implementation pixels and CSS viewport: 402 × 870 at device scale 1.
-- State: active group, dark theme, Klartext design, two proposed settlement payments.
-
-### Full-view and focused comparison
-
-The updated rows preserve the existing participant and amount hierarchy while using the transfer-row height more deliberately. Each side is now a single fixed three-caret group with a constant 0.18 rem internal gap. Both groups and the central amount share one vertical center line. The carets are taller, visually thinner, and end in a short flat tip rather than a sharp point.
-
-The focused 402 px comparison confirms that `8,80 €` and `66,40 €` stay centrally anchored while the two groups remain symmetric. The PNG export reproduces the same grouped rhythm and blunt, narrow caret treatment.
-
-### Required fidelity surfaces
-
-- Fonts and typography: the amount remains the strongest row label, uses tabular numerals, and stays on one line.
-- Spacing and layout rhythm: fixed intra-group spacing replaces distribution across the entire middle track; equal flexible tracks keep the amount centered.
-- Colors and tokens: the existing coral-to-blue-to-mint sequence is unchanged.
-- Image and asset fidelity: no raster placeholder was introduced; the existing transfer visualization and its canvas export were updated together.
-- Copy and content: payer, recipient, amount, step number, notice, and CTA copy are unchanged.
-
-### Comparison history
-
-1. First grouped pass exposed a P2 at 402 px: the longer `66,40 €` row pushed the receiver group toward the participant label, and `Noor` wrapped.
-2. Rebalanced the three flow columns, reduced only the avatar/name gap, and set transfer-row avatars to 40 px.
-3. Post-fix measurements show all participant names at exactly one 24 px line, a 188.85 px direction track, fixed 40.72 px caret groups, and no overlap for either amount.
-
-### Verification
-
-- Browser rendering checked at 402 × 870.
-- Frozen PNG overview generated and inspected.
-- Typecheck passed.
-- 234 unit tests passed.
-- Production build passed.
-
-final result: passed
-
----
-
-## Settlement direction carets — selected six-caret revision — 2026-09-25
-
-### Evidence
-
-- Source visual truth: `/Users/Wolfgang/.codex/generated_images/01a0d8c3-53e2-77c0-b7a2-38a663a7dee1/exec-f852528e-3212-4afa-a7fb-045e186f2d06.png`
-- Browser-rendered implementation: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-implementation-caret-v6-unboxed.png`
-- Generated PNG overview: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-settlement-overview-export-v6-unboxed.png`
-- Source pixels: 965 × 1630.
-- Implementation pixels and CSS viewport: 402 × 870 at device scale 1.
-- State: active group, dark theme, Klartext design, three participants, two proposed settlement payments.
-
-### Full-view comparison
-
-The selected source, final browser screenshot, and generated PNG were inspected together. The implementation now reproduces the defining visual structure of the chosen direction: three filled carets before the amount, three after it, a muted coral-to-blue-to-mint progression, and the amount fixed at the visual center between payer and recipient.
-
-The central amount is intentionally larger in type than the carets and vertically centered with them. Following the user's explicit correction, it is rendered directly on the row without the framed box shown in the exploratory source. It remains a readable anchor without interrupting the left-to-right payment direction.
-
-### Focused-region comparison
-
-The two payment rows were compared at 402 px and additionally measured at 389 px. Both participant names remain on one line, the longer `66,40 €` amount remains centered, and the carets retain visible spacing on both sides. The PNG export was inspected separately because it is a distinct shareable rendering surface.
-
-### Findings and fixes
-
-1. Initial six-caret implementation used scaled Lucide outlines. In the real 389 px viewport they remained too thin and visually weaker than the source. Classified P2.
-2. Replaced only the financial-flow markers with compact filled caret shapes; ordinary application actions continue to use the existing Lucide icon system.
-3. A later pass still used a framed amount field. The user rejected that interpretation; classified P2 and removed the border, background, radius, fixed height, and box padding.
-4. Increased only the amount typography, centered it vertically with the carets, and added balanced inline breathing room.
-5. A 402 px check found the first grid adjustment wrapped `Noor`; classified P2. Rebalanced the participant and direction tracks, then verified all four displayed participant names at 389 px remain exactly one text line high.
-6. Reproduced the same unframed six-stage direction and enlarged central amount in the frozen PNG export.
-7. Final comparison found no remaining actionable P0, P1, or P2 mismatch for the requested component.
-
-### Accessibility and behavior
-
-- The carets are decorative and do not carry meaning alone; the existing screen-reader sentence still announces step, payer, recipient, inactive status, and amount.
-- All six carets point from payer to recipient, so direction remains understandable without color.
-- The central amount uses tabular numerals and stays on one line.
-- The below-360 px person-column reflow remains in place.
-- No route, settlement calculation, persistence behavior, or CTA behavior changed.
-
-### Verification
-
-- Browser rendering checked at 402 × 870 and responsive text metrics checked at 389 × 870.
-- Generated PNG inspected independently.
-- Typecheck passed.
-- 234 unit tests passed.
-- Production build passed.
-
-final result: passed
-
----
-
-## Settlement direction carets — superseded four-caret iteration — 2026-09-25
-
-### Evidence
-
-- Source visual truth: `/Users/Wolfgang/.codex/generated_images/01a0d8c3-53e2-77c0-b7a2-38a663a7dee1/exec-f852528e-3212-4afa-a7fb-045e186f2d06.png`
-- Browser-rendered implementation: `/Users/Wolfgang/developer/projects/JoinSplit/source/design-qa-implementation-caret.png`
-- Source pixels: 965 × 1630.
-- Implementation pixels and CSS viewport: 389 × 870 at browser screenshot density.
-- State: active group, dark theme, Klartext design, three participants, two proposed settlement payments.
-- Comparison method: the source and implementation were opened together in one visual comparison input. A browser-hosted contact sheet was not used because the browser correctly blocked the local data URL.
-
-### Full-view comparison
-
-The implementation preserves the selected concept's payer-to-recipient flow, amount as the central anchor, warm-to-cool-to-mint progression, participant identities, row order, and surrounding balance screen. The implementation intentionally reduces six heavy filled carets to four slimmer Lucide carets and removes the amount border, following the approved refinement brief rather than copying the exploratory image literally.
-
-### Focused-region comparison
-
-The two transfer rows remain readable at 389 px. Amounts stay on one line, names do not wrap, and the four carets use the available middle track without touching the people columns. The direction remains legible in grayscale because every caret points toward the recipient; color is secondary.
-
-### Required fidelity surfaces
-
-- Fonts and typography: existing JoinSplit display and UI typography is preserved. Amounts retain tabular numerals, strong weight, and stable one-line formatting.
-- Spacing and layout rhythm: the middle track is balanced around the amount; payer and recipient columns receive equal minimum width. Below 360 px the people stacks reflow vertically rather than clipping.
-- Colors and visual tokens: four semantic transfer tokens progress from muted coral through mauve and blue to mint. Dark-theme values remain restrained and sufficiently distinct from the page surface.
-- Image quality and asset fidelity: the UI uses the existing Lucide icon library rather than raster placeholders or custom SVG art. The locally generated PNG snapshot reproduces the same four-step direction sequence using the Lucide chevron geometry.
-- Copy and content: participant names, roles, amounts, payment count, explanatory notice, CTA, and strategy label are unchanged.
-
-### Comparison history
-
-1. Initial implementation at the narrow browser width made the carets too faint and allowed participant names to wrap. Classified P2.
-2. Increased caret size and stroke modestly, rebalanced the three grid tracks, and added a below-360 px stacked person layout.
-3. Post-fix comparison found no remaining actionable P0, P1, or P2 differences. The lower caret count and unframed amount are approved intentional refinements.
-
-### Browser and interaction checks
-
-- Inspected both settlement rows in the running application.
-- Generated and inspected the frozen PNG overview with the new transfer visualization.
-- Confirmed the existing accessible sentence still announces payer, recipient, step, and amount independently of the decorative carets.
-- Typecheck passed.
-- 234 unit tests passed.
-- Production build passed.
-
-### Follow-up polish
-
-- P3: The four color steps could be tuned further after reviewing the light theme on a physical device, but this does not affect meaning or layout.
-
-historical result before the selected six-caret revision: passed
-
----
-
-## Appearance modes extension — 2026-09-25
-
-### Source visual truth
-
-- Design 2 remains the default design language and continues to use the source above.
-- Design 3 source: `/Users/Wolfgang/.codex/generated_images/01a0d8c3-53e2-77c0-b7a2-38a663a7dee1/exec-20c7cac6-d722-401f-ac1f-b45f02b8a106.png`
-- Scope added: independent device-local controls for `System / Hell / Dunkel` and `Entwurf 2 / Entwurf 3`.
-
-### Visual and interaction checks
-
-- Inspected the settings screen and the representative group-expenses screen in the running application.
-- Checked Design 3 in light and dark color schemes at the existing mobile viewport.
-- Checked Design 2 in dark mode and verified both selected states remain visible without relying on color alone.
-- Verified the design switch changes typography, corner geometry, primary accent, participant shapes, navigation treatment, shadows, and ledger separators—not only color.
-- Verified the dark theme covers shared surfaces, controls, muted text, status states, dialogs, and participant identities.
-- Initial dark-mode inspection found insufficient inherited contrast on labels and participant names. Fixed by applying the semantic ink color at the body and form-label level, then re-inspected both settings and group screens.
-- The options are native radio controls with text labels, visible focus treatment, and 48 px target height.
-- Existing settings records without the two new fields are normalized to `System` and `Entwurf 2` when loaded; no IndexedDB schema change is required.
-
-### Verification
-
-- Typecheck passed.
-- 234 unit tests passed.
-- Production build passed.
-- Browser interaction verified switching among Design 2, Design 3, light, and dark; preferences persisted through navigation.
-- The full configured end-to-end suite was not rerun because its external test-server startup remains an environment limitation from the preceding redesign pass.
+## Final result
 
 final result: passed

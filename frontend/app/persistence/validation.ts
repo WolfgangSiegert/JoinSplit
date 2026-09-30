@@ -138,7 +138,8 @@ export function validateDurableState(value: DurableState): DurableState {
       || !value.settings.settlementRecordingGroupIds.every(uuid)
       || new Set(value.settings.settlementRecordingGroupIds).size !== value.settings.settlementRecordingGroupIds.length
       || (value.settings.colorMode !== 'system' && value.settings.colorMode !== 'light' && value.settings.colorMode !== 'dark')
-      || (value.settings.visualDesign !== '2' && value.settings.visualDesign !== '3')
+      || (value.settings.visualDesign !== '2' && value.settings.visualDesign !== '3'
+        && value.settings.visualDesign !== '4' && value.settings.visualDesign !== '5')
       || !isGroupAreaOrder(value.settings.groupAreaOrder)
       || !isLanguagePreference(value.settings.languagePreference)))) throw new Error('Invalid persisted state shape')
 
