@@ -3,6 +3,8 @@ import type { Expense } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 import type { Person } from '../domain/person'
 import {
+  appendAccountHydration,
+  loadDurableState,
   replaceWithAccountHydration,
   type AccountHydration,
   type DurableAccountWorkspace,
@@ -215,6 +217,68 @@ export async function persistHydratedWorkspace(response: AccountWorkspaceRespons
     expenses: [...hydration.expenses], settlements: [...hydration.settlements], settings: null,
   })
   await replaceWithAccountHydration(hydration)
+  return hydration
+}
+
+export async function persistAccountWorkspaceAdditions(
+  response: AccountWorkspaceResponse,
+  currentIdentityId: string,
+): Promise<AccountHydration> {
+  const current = await loadDurableState()
+  if (!current.accountWorkspace || current.accountWorkspace.accountId !== response.account.id || !current.accessIdentity) {
+    throw new Error('Der Serverstand gehört nicht zum lokal gespeicherten Account.')
+  }
+  const localGroupIds = new Set(current.groups.map(group => group.id))
+  const localPersonIds = new Set(current.people.map(person => person.id))
+  const addedSnapshots = response.groups.filter(item => !localGroupIds.has(item.group.id))
+  const addedGroupIds = new Set(addedSnapshots.map(item => item.group.id))
+  const addedPeople = response.people.filter(person => !localPersonIds.has(person.id))
+  const addedPersonIds = new Set(addedPeople.map(person => person.id))
+  const addedGroups: Group[] = addedSnapshots.map(item => ({
+    ...item.group,
+    participantIds: [...item.participants].sort((a, b) => a.order - b.order).map(participant => participant.id),
+  }))
+  const workspace: DurableAccountWorkspace = {
+    ...current.accountWorkspace,
+    name: response.account.name,
+    email: response.account.email,
+    accessIdentityIds: [...new Set([
+      ...current.accountWorkspace.accessIdentityIds,
+      currentIdentityId,
+      ...addedGroups.map(group => group.ownerAccessIdentityId),
+    ])],
+    groupRevisions: {
+      ...current.accountWorkspace.groupRevisions,
+      ...Object.fromEntries(addedSnapshots.map(item => [item.group.id, item.revision])),
+    },
+    personRevisions: {
+      ...current.accountWorkspace.personRevisions,
+      ...Object.fromEntries(addedPeople.map(person => [person.id, person.revision])),
+    },
+    lastSuccessfulSyncAt: new Date().toISOString(),
+  }
+  const hydration: AccountHydration = {
+    identity: { id: currentIdentityId, credential: null, synchronizationStatus: 'account-linked' },
+    workspace,
+    groups: [...current.groups, ...addedGroups],
+    participants: [...current.participants, ...addedSnapshots.flatMap(item => item.participants)],
+    people: [...current.people, ...addedPeople],
+    expenses: [...current.expenses, ...addedSnapshots.flatMap(item => item.expenses)],
+    settlements: [...current.settlements, ...addedSnapshots.flatMap(item => item.settlements)],
+  }
+  validateDurableState({
+    accessIdentity: hydration.identity,
+    accountWorkspace: workspace,
+    groups: [...hydration.groups],
+    participants: [...hydration.participants],
+    people: [...hydration.people],
+    pendingPersonMutations: current.pendingPersonMutations,
+    pendingMutations: current.pendingMutations,
+    expenses: [...hydration.expenses],
+    settlements: [...hydration.settlements],
+    settings: current.settings,
+  })
+  await appendAccountHydration(hydration, addedGroupIds, addedPersonIds)
   return hydration
 }
 

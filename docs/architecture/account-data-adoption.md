@@ -31,7 +31,7 @@ M5 must allow a person to:
 - Accountless use remains available indefinitely in IndexedDB.
 - Anonymous server synchronization remains active and retains the M4
   browser-bound, temporary-copy boundary.
-- Registration adopts all locally available Groups after explicit confirmation.
+- Registration and sign-in adopt all locally available Groups after explicit confirmation.
 - Already synchronized Groups are linked to the Account through their existing
   Access Identity.
 - Never-synchronized and expired-local-only Groups use an idempotent,
@@ -131,8 +131,8 @@ survive replacement of the free Render instance.
 
 ## Data-adoption classification
 
-Registration takes one durable snapshot of the local adoption manifest. Every
-local Group is classified independently:
+Registration and sign-in take one durable snapshot of the local adoption
+manifest. Every local Group is classified independently:
 
 1. **Already synchronized and active** — verify the current anonymous
    credential, link its Access Identity to the Account, and expose all Groups
@@ -145,6 +145,14 @@ local Group is classified independently:
    data.
 5. **Owned by another Account or conflicting server data** — reject without
    disclosing foreign data and without overwriting either copy.
+
+After the browser identity has been linked, the client reads the authenticated
+Account workspace before hydration. A local Group already present there is
+kept as server data; a local Group missing there is uploaded through the
+idempotent aggregate import. The final Account workspace must confirm every
+Group from the durable manifest before IndexedDB is replaced. This prevents an
+existing Account login from silently dropping local-only Groups while it loads
+Groups created on another device.
 
 The authenticated import in cases 2 and 3 is the deliberate M5 exception to
 the M4 supported-client rule that an expired anonymous identity is never

@@ -8,16 +8,17 @@ import {
   deleteAccount,
   fetchCurrentAccount,
   fetchAccountWorkspace,
-  importAccountGroup,
   importAccountPeople,
   linkAnonymousIdentity,
   loginAccount,
   logoutAccount,
+  persistAccountWorkspaceAdditions,
   persistHydratedWorkspace,
   registerAccount,
   requestPasswordReset,
   type GroupSnapshot,
 } from '~/services/account'
+import { adoptMissingAccountGroups } from '~/services/account-adoption'
 import { restoreSettlement, serializeSettlement } from '~/domain/settlement'
 
 const config = useRuntimeConfig()
@@ -44,7 +45,15 @@ const newPassword = ref('')
 const newPasswordConfirmation = ref('')
 const passwordChanged = ref(false)
 const resumableAccountEmail = ref('')
-const adoptionSummary = ref<{ localGroups: number; localPeople: number; serverGroups: number; serverPeople: number } | null>(null)
+const adoptionSummary = ref<{
+  localGroups: number
+  localPeople: number
+  serverGroups: number
+  serverPeople: number
+  importedGroups: number
+  alreadyAvailableGroups: number
+} | null>(null)
+const adoptionStatus = ref('')
 const remoteConflictGroups = ref<GroupSnapshot[]>([])
 const conflictDiscardConfirmed = ref(false)
 const pendingCount = computed(() => groupsStore.pendingMutations.length + peopleStore.pendingMutations.length)
@@ -83,7 +92,7 @@ function localSnapshots(): GroupSnapshot[] {
 
 async function adoptionAttempt(): Promise<DurableAdoptionAttempt> {
   const existing = await loadAdoptionAttempt()
-  if (existing?.peopleImport) return existing
+  const snapshots = localSnapshots()
   const peopleImport = {
     importId: crypto.randomUUID(),
     people: peopleStore.people.map(({ id, name, status }) => ({ id, name, status })),
@@ -91,13 +100,25 @@ async function adoptionAttempt(): Promise<DurableAdoptionAttempt> {
       ? [{ participantId: participant.id, personId: participant.personId }] : []),
   }
   if (existing) {
-    const upgraded = { ...existing, peopleImport }
+    const preparedGroupIds = new Set(existing.imports.map(item => item.groupId))
+    const additionalImports = snapshots
+      .filter(snapshot => !preparedGroupIds.has(snapshot.group.id))
+      .map(snapshot => ({
+        groupId: snapshot.group.id,
+        importId: crypto.randomUUID(),
+        snapshot: { group: snapshot.group, participants: snapshot.participants, expenses: snapshot.expenses, settlements: snapshot.settlements },
+      }))
+    const upgraded = {
+      ...existing,
+      imports: [...existing.imports, ...additionalImports],
+      peopleImport: existing.peopleImport ?? peopleImport,
+    }
     await persistAdoptionAttempt(upgraded)
     return upgraded
   }
   const attempt: DurableAdoptionAttempt = {
     adoptionId: crypto.randomUUID(),
-    imports: localSnapshots().map(snapshot => ({
+    imports: snapshots.map(snapshot => ({
       groupId: snapshot.group.id,
       importId: crypto.randomUUID(),
       snapshot: { group: snapshot.group, participants: snapshot.participants, expenses: snapshot.expenses, settlements: snapshot.settlements },
@@ -112,13 +133,14 @@ async function adoptAndHydrate(): Promise<void> {
   const identityId = identityStore.accessIdentityId
   if (!identityId) throw new Error('Die lokale Browser-Identität fehlt.')
   const attempt = await adoptionAttempt()
+  const localGroupTotal = attempt.imports.length
+  const localPeopleTotal = Array.isArray(attempt.peopleImport?.people) ? attempt.peopleImport.people.length : peopleCount.value
 
   if (identityStore.synchronizationStatus === 'expired-local-only') {
+    adoptionStatus.value = 'Die lokale Geräteidentität wird für den Account vorbereitet …'
     if (!attempt.imports.length) await createAccountIdentity(config.public.apiBase, identityId)
-    for (const item of attempt.imports) {
-      await importAccountGroup(config.public.apiBase, attempt.adoptionId, item.importId, item.snapshot as Omit<GroupSnapshot, 'revision'>)
-    }
   } else {
+    adoptionStatus.value = 'Die lokale Geräteidentität wird mit dem Account verknüpft …'
     const registration = await ensureAccessIdentityRegistered({
       apiBase: config.public.apiBase, identity: identityStore, online: navigator.onLine,
     })
@@ -127,7 +149,19 @@ async function adoptAndHydrate(): Promise<void> {
     await linkAnonymousIdentity(config.public.apiBase, identityId, identityStore.credential)
   }
 
+  adoptionStatus.value = 'Lokale und bereits vorhandene Accountgruppen werden verglichen …'
+  const groupAdoption = await adoptMissingAccountGroups({
+    apiBase: config.public.apiBase,
+    attempt,
+    onProgress: (completed, total) => {
+      adoptionStatus.value = total === 0
+        ? 'Alle lokalen Gruppen sind bereits im Account vorhanden.'
+        : `Lokale Gruppen werden hochgeladen: ${completed} von ${total}`
+    },
+  })
+
   if (!attempt.peopleImport) throw new Error('Die Personenübernahme konnte nicht vorbereitet werden.')
+  adoptionStatus.value = 'Das lokale Personenverzeichnis wird übernommen …'
   await importAccountPeople(
     config.public.apiBase,
     attempt.adoptionId,
@@ -136,24 +170,37 @@ async function adoptAndHydrate(): Promise<void> {
     attempt.peopleImport.associations as Parameters<typeof importAccountPeople>[4],
   )
 
+  adoptionStatus.value = 'Der gemeinsame Accountstand wird auf diesem Gerät gespeichert …'
+  // People are imported after Groups because their associations may reference newly
+  // imported Participants. Fetch once more so hydration includes both operations.
   const remote = await fetchAccountWorkspace(config.public.apiBase)
   adoptionSummary.value = {
-    localGroups: groupCount.value,
-    localPeople: peopleCount.value,
+    localGroups: localGroupTotal,
+    localPeople: localPeopleTotal,
     serverGroups: remote.groups.length,
     serverPeople: remote.people.length,
+    importedGroups: groupAdoption.importedGroupIds.length,
+    alreadyAvailableGroups: groupAdoption.alreadyAvailableGroupIds.length,
   }
   const hydration = await persistHydratedWorkspace(remote, identityId)
   await settingsStore.applyAccountPreferences(remote.account)
+  applyAccountHydration(hydration, false)
+  adoptionStatus.value = ''
+}
+
+function applyAccountHydration(
+  hydration: Awaited<ReturnType<typeof persistHydratedWorkspace>>,
+  preservePendingMutations: boolean,
+): void {
   identityStore.hydrate(hydration.identity)
   accountStore.finish(hydration.workspace)
-  peopleStore.hydrate(hydration.people, [])
+  peopleStore.hydrate(hydration.people, preservePendingMutations ? [...peopleStore.pendingMutations] : [])
   groupsStore.hydrate({
     groups: [...hydration.groups],
     participants: [...hydration.participants],
     expenses: [...hydration.expenses],
     settlements: hydration.settlements.map(restoreSettlement),
-    pendingMutations: [],
+    pendingMutations: preservePendingMutations ? [...groupsStore.pendingMutations] : [],
     groupRevisions: hydration.workspace.groupRevisions,
     conflictedGroupIds: hydration.workspace.conflictedGroupIds,
   })
@@ -170,12 +217,14 @@ async function submit(): Promise<void> {
     return
   }
   accountStore.begin()
+  adoptionStatus.value = 'Account wird angemeldet …'
   try {
     if (mode.value === 'register') {
       await registerAccount(config.public.apiBase, name.value, email.value, password.value, settingsStore.groupAreaOrder, settingsStore.defaultGroupArea, settingsStore.languagePreference)
     } else await loginAccount(config.public.apiBase, email.value, password.value)
     await adoptAndHydrate()
   } catch (error) {
+    adoptionStatus.value = ''
     accountStore.fail(error instanceof AccountRequestError && error.status === 401
       ? 'E-Mail oder Passwort ist nicht korrekt.'
       : error instanceof Error ? error.message : 'Der Account-Vorgang ist fehlgeschlagen.')
@@ -185,10 +234,12 @@ async function submit(): Promise<void> {
 async function resumeAdoption(): Promise<void> {
   if (accountStore.busy) return
   accountStore.begin()
+  adoptionStatus.value = 'Die unterbrochene Übernahme wird fortgesetzt …'
   try {
     await fetchCurrentAccount(config.public.apiBase)
     await adoptAndHydrate()
   } catch (error) {
+    adoptionStatus.value = ''
     accountStore.fail(error instanceof AccountRequestError && error.status === 401
       ? 'Die Serversitzung ist abgelaufen. Melde dich erneut an; der vorbereitete Import bleibt erhalten.'
       : error instanceof Error ? error.message : 'Die Übernahme konnte nicht fortgesetzt werden.')
@@ -243,12 +294,37 @@ async function reauthenticate(): Promise<void> {
     await settingsStore.applyAccountPreferences(account)
     reauthenticationPassword.value = ''
     groupsStore.resetSessionFailures()
-    accountStore.activateSession()
+    const identityId = identityStore.accessIdentityId
+    if (!identityId) throw new Error('Die lokale Browser-Identität fehlt.')
+    const hydration = await persistAccountWorkspaceAdditions(
+      await fetchAccountWorkspace(config.public.apiBase),
+      identityId,
+    )
+    applyAccountHydration(hydration, true)
   } catch (error) {
     accountStore.fail(error instanceof AccountRequestError && error.status === 401
       ? 'E-Mail oder Passwort ist nicht korrekt.'
       : error instanceof Error ? error.message : 'Die erneute Anmeldung ist fehlgeschlagen.')
     accountStore.expireSession(accountStore.error)
+  }
+}
+
+async function refreshAccountWorkspace(): Promise<void> {
+  if (accountStore.busy || accountStore.sessionState !== 'active') return
+  const identityId = identityStore.accessIdentityId
+  if (!identityId) {
+    accountStore.fail('Die lokale Browser-Identität fehlt.')
+    return
+  }
+  accountStore.begin()
+  try {
+    const hydration = await persistAccountWorkspaceAdditions(
+      await fetchAccountWorkspace(config.public.apiBase),
+      identityId,
+    )
+    applyAccountHydration(hydration, true)
+  } catch (error) {
+    accountStore.fail(error instanceof Error ? error.message : 'Neue Accountdaten konnten nicht geladen werden.')
   }
 }
 
@@ -424,6 +500,11 @@ watch(() => accountStore.sessionState, state => {
           <div v-if="groupCount > 0 || peopleCount > 0" class="rounded-xl border border-gray-200 p-4">
             <strong>Lokale Daten auf diesem Gerät</strong>
             <p class="mt-1 text-sm text-gray-600">{{ groupCount }} Gruppe(n) und {{ peopleCount }} Person(en) werden dem angemeldeten Account hinzugefügt. Serverdaten werden nicht stillschweigend ersetzt.</p>
+            <ol class="mt-3 list-decimal space-y-1 pl-5 text-sm text-gray-600">
+              <li>Bereits synchronisierte Gruppen werden mit dem Account verknüpft.</li>
+              <li>Auf dem Server fehlende lokale Gruppen werden vollständig hochgeladen.</li>
+              <li>Danach wird der gemeinsame Accountstand auf dieses Gerät geladen.</li>
+            </ol>
           </div>
           <label v-if="mode === 'register'" class="block font-medium">Dein Name<input v-model="name" class="field-input mt-2" type="text" autocomplete="name" maxlength="100" required></label>
           <label class="block font-medium">E-Mail<input v-model="email" class="field-input mt-2" type="email" autocomplete="email" required></label>
@@ -434,6 +515,7 @@ watch(() => accountStore.sessionState, state => {
           </label>
           <button v-if="mode === 'login'" type="button" class="secondary-link -ml-4" @click="mode = 'recover'; accountStore.clearError()">Passwort vergessen?</button>
           <p v-if="accountStore.error" class="error-text" role="alert">{{ accountStore.error }}</p>
+          <p v-if="adoptionStatus" class="rounded-lg bg-brand-50 p-3 text-sm text-brand-900" role="status" aria-live="polite">{{ adoptionStatus }}</p>
           <button class="primary-button w-full" type="submit" :disabled="accountStore.busy">
             <AppIcon name="users" />{{ accountStore.busy ? 'Wird vorbereitet …' : mode === 'login' ? 'Anmelden und Daten übernehmen' : 'Registrieren und Daten übernehmen' }}
           </button>
@@ -452,6 +534,7 @@ watch(() => accountStore.sessionState, state => {
         <section v-if="adoptionSummary" class="card mt-6 border-emerald-300 p-5" role="status">
           <h2 class="text-xl font-semibold">Datenübernahme abgeschlossen</h2>
           <p class="mt-2 text-sm text-gray-600">Vorher lokal: {{ adoptionSummary.localGroups }} Gruppe(n), {{ adoptionSummary.localPeople }} Person(en). Jetzt im Account: {{ adoptionSummary.serverGroups }} Gruppe(n), {{ adoptionSummary.serverPeople }} Person(en).</p>
+          <p class="mt-2 text-sm text-gray-600">{{ adoptionSummary.importedGroups }} lokale Gruppe(n) wurden neu hochgeladen; {{ adoptionSummary.alreadyAvailableGroups }} waren bereits über die Geräteidentität im Account verfügbar.</p>
         </section>
         <section class="card mt-6 p-5">
           <h2 class="text-xl font-semibold">Account auf diesem Gerät</h2>
@@ -469,6 +552,8 @@ watch(() => accountStore.sessionState, state => {
             <button class="primary-button w-full" type="submit" :disabled="accountStore.busy"><AppIcon name="refresh" />Erneut anmelden und synchronisieren</button>
           </form>
           <button v-if="accountStore.sessionState === 'active'" type="button" class="secondary-button mt-4 w-full" :disabled="accountStore.busy" @click="signOut">Abmelden · lokale Daten behalten</button>
+          <button v-if="accountStore.sessionState === 'active'" type="button" class="secondary-button mt-3 w-full" :disabled="accountStore.busy" @click="refreshAccountWorkspace"><AppIcon name="refresh" />Neue Accountdaten laden</button>
+          <p v-if="accountStore.sessionState === 'active'" class="mt-2 text-sm text-gray-600">Ergänzt Gruppen und Personen anderer Geräte. Bereits lokale Datensätze werden nicht ersetzt.</p>
         </section>
         <section class="card mt-5 p-5" aria-labelledby="sync-overview-title">
           <h2 id="sync-overview-title" class="text-xl font-semibold">Synchronisierungsübersicht</h2>

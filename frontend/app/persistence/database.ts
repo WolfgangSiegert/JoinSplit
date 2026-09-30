@@ -372,6 +372,35 @@ export async function replaceWithAccountHydration(hydration: AccountHydration): 
   await tx.done
 }
 
+export async function appendAccountHydration(
+  hydration: AccountHydration,
+  addedGroupIds: ReadonlySet<string>,
+  addedPersonIds: ReadonlySet<string>,
+): Promise<void> {
+  const db = await database()
+  const stores = ['accessIdentity', 'accountWorkspace', 'groups', 'participants', 'people', 'expenses', 'expenseShares', 'settlements'] as const
+  const tx = db.transaction(stores, 'readwrite')
+  await tx.objectStore('accessIdentity').put({ key: ACCESS_IDENTITY_KEY, ...hydration.identity })
+  await tx.objectStore('accountWorkspace').put({ key: ACCOUNT_WORKSPACE_KEY, ...hydration.workspace })
+  for (const group of hydration.groups.filter(item => addedGroupIds.has(item.id))) {
+    await tx.objectStore('groups').add(group)
+  }
+  for (const participant of hydration.participants.filter(item => addedGroupIds.has(item.groupId))) {
+    await tx.objectStore('participants').add(participant)
+  }
+  for (const person of hydration.people.filter(item => addedPersonIds.has(item.id))) {
+    await tx.objectStore('people').add(person)
+  }
+  for (const expense of hydration.expenses.filter(item => addedGroupIds.has(item.groupId))) {
+    await tx.objectStore('expenses').add(expenseRecord(expense))
+    for (const share of expense.shares) await tx.objectStore('expenseShares').add({ expenseId: expense.id, ...share })
+  }
+  for (const settlement of hydration.settlements.filter(item => addedGroupIds.has(item.groupId))) {
+    await tx.objectStore('settlements').add(settlement)
+  }
+  await tx.done
+}
+
 export async function clearAccountLocalData(): Promise<void> {
   const db = await database()
   const stores = ['accessIdentity', 'accountWorkspace', 'accountAdoption', 'groups', 'participants', 'people', 'pendingPersonMutations', 'pendingMutations', 'expenses', 'expenseShares', 'settlements'] as const

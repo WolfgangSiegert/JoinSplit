@@ -97,7 +97,7 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
     .toHaveText(['Leute', 'Ausgleich', 'Ausgaben'])
   await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.getByLabel('Person', { exact: true }).selectOption({ label: 'Ada Synced' })
-  await page.getByRole('button', { name: 'Ausgewählte Person hinzufügen' }).click()
+  await page.getByRole('button', { name: 'Ausgewählte Person als Teilnehmer hinzufügen' }).click()
   await expect(page.getByText('Aktiv · Aus Personenverzeichnis')).toBeVisible()
   await expect.poll(() => page.evaluate(async () => {
     const request = indexedDB.open('joinsplit')
@@ -154,4 +154,77 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
   await page.getByLabel('Passwort bestätigen').fill(changedPassword)
   await page.getByRole('button', { name: 'Account endgültig löschen' }).click()
   await expect(page).toHaveURL('/')
+})
+
+test('loads Groups added on another device after reauthentication', async ({ browser, baseURL }) => {
+  const email = `multi-device-${Date.now()}@example.test`
+  const firstContext = await browser.newContext({ baseURL })
+  const secondContext = await browser.newContext({ baseURL })
+  const firstDevice = await firstContext.newPage()
+  const secondDevice = await secondContext.newPage()
+
+  try {
+    await firstDevice.goto('/account')
+    await firstDevice.getByRole('button', { name: 'Registrieren', exact: true }).click()
+    await firstDevice.getByLabel('Dein Name').fill('Multi Device')
+    await firstDevice.getByLabel('E-Mail').fill(email)
+    await firstDevice.getByLabel('Passwort').fill(password)
+    await firstDevice.getByRole('button', { name: 'Registrieren und Daten übernehmen' }).click()
+    await expect(firstDevice.getByRole('heading', { name: 'Account auf diesem Gerät' })).toBeVisible()
+
+    await firstDevice.goto('/groups/new')
+    await firstDevice.getByLabel('Gruppenname').fill('Erste Servergruppe')
+    await firstDevice.getByRole('checkbox').uncheck()
+    await firstDevice.getByRole('button', { name: 'Gruppe erstellen' }).click()
+    await expect.poll(() => firstDevice.evaluate(async () => {
+      const response = await fetch('/api/account/workspace', { headers: { Accept: 'application/json' }, credentials: 'include' })
+      return ((await response.json()).data.groups as Array<{ group: { name: string } }>).map(item => item.group.name)
+    })).toContain('Erste Servergruppe')
+
+    await secondDevice.goto('/account')
+    await secondDevice.getByLabel('E-Mail').fill(email)
+    await secondDevice.getByLabel('Passwort').fill(password)
+    await secondDevice.getByRole('button', { name: 'Anmelden und Daten übernehmen' }).click()
+    await expect(secondDevice.getByRole('heading', { name: 'Account auf diesem Gerät' })).toBeVisible()
+    await secondDevice.goto('/groups')
+    await expect(secondDevice.getByText('Erste Servergruppe', { exact: true })).toBeVisible()
+
+    await firstDevice.goto('/groups/new')
+    await firstDevice.getByLabel('Gruppenname').fill('Zweite Servergruppe')
+    await firstDevice.getByRole('checkbox').uncheck()
+    await firstDevice.getByRole('button', { name: 'Gruppe erstellen' }).click()
+    await expect.poll(() => firstDevice.evaluate(async () => {
+      const response = await fetch('/api/account/workspace', { headers: { Accept: 'application/json' }, credentials: 'include' })
+      return ((await response.json()).data.groups as Array<{ group: { name: string } }>).map(item => item.group.name)
+    })).toContain('Zweite Servergruppe')
+
+    await secondDevice.goto('/account')
+    await secondDevice.getByRole('button', { name: 'Abmelden · lokale Daten behalten' }).click()
+    await secondDevice.getByLabel('Passwort erneut eingeben').fill(password)
+    await secondDevice.getByRole('button', { name: 'Erneut anmelden und synchronisieren' }).click()
+    await expect(secondDevice.getByText('Serversitzung aktiv', { exact: true })).toBeVisible()
+    const serverNames = await secondDevice.evaluate(async () => {
+      const response = await fetch('/api/account/workspace', { headers: { Accept: 'application/json' }, credentials: 'include' })
+      return ((await response.json()).data.groups as Array<{ group: { name: string } }>).map(item => item.group.name)
+    })
+    expect(serverNames).toContain('Zweite Servergruppe')
+    expect(await secondDevice.locator('.error-text').allTextContents()).toEqual([])
+    await expect.poll(() => secondDevice.evaluate(async () => {
+      const request = indexedDB.open('joinsplit')
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+      })
+      const all = database.transaction('groups').objectStore('groups').getAll()
+      const local = await new Promise<Array<{ name: string }>>((resolve, reject) => {
+        all.onsuccess = () => resolve(all.result); all.onerror = () => reject(all.error)
+      })
+      return local.map(group => group.name)
+    })).toContain('Zweite Servergruppe')
+    await secondDevice.goto('/groups')
+    await expect(secondDevice.getByText('Erste Servergruppe', { exact: true })).toBeVisible()
+    await expect(secondDevice.getByText('Zweite Servergruppe', { exact: true })).toBeVisible()
+  } finally {
+    await firstContext.close()
+    await secondContext.close()
+  }
 })
