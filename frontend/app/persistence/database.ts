@@ -5,7 +5,7 @@ import type { Expense, ExpenseShare } from '../domain/expense'
 import type { DurableSettlementSnapshot } from '../domain/settlement'
 import type { Person } from '../domain/person'
 import type { PendingPersonMutation } from '../domain/pending-person-mutation'
-import { DEFAULT_GROUP_AREA_ORDER, isGroupAreaOrder, type GroupArea } from '../domain/group-area'
+import { DEFAULT_GROUP_AREA, DEFAULT_GROUP_AREA_ORDER, isGroupArea, isGroupAreaOrder, type GroupArea } from '../domain/group-area'
 import { isLanguagePreference, type LanguagePreference } from '../domain/locale'
 
 export const DATABASE_NAME = 'joinsplit'
@@ -44,6 +44,7 @@ export interface DurableSettings {
   readonly colorMode: 'system' | 'light' | 'dark'
   readonly visualDesign: '2' | '3' | '4' | '5'
   readonly groupAreaOrder: readonly GroupArea[]
+  readonly defaultGroupArea: GroupArea
   readonly languagePreference: LanguagePreference
 }
 interface AccessIdentityRecord extends DurableAccessIdentity { readonly key: typeof ACCESS_IDENTITY_KEY }
@@ -189,6 +190,7 @@ export async function loadDurableState(): Promise<DurableState> {
     colorMode?: DurableSettings['colorMode']
     visualDesign?: DurableSettings['visualDesign']
     groupAreaOrder?: readonly GroupArea[]
+    defaultGroupArea?: GroupArea
     languagePreference?: LanguagePreference
   }) | undefined
   const participantOrder = new Map(participants.map(participant => [participant.id, participant.order]))
@@ -234,6 +236,9 @@ export async function loadDurableState(): Promise<DurableState> {
       groupAreaOrder: isGroupAreaOrder(settings.groupAreaOrder)
         ? [...settings.groupAreaOrder]
         : [...DEFAULT_GROUP_AREA_ORDER],
+      defaultGroupArea: isGroupArea(settings.defaultGroupArea)
+        ? settings.defaultGroupArea
+        : DEFAULT_GROUP_AREA,
       languagePreference: isLanguagePreference(settings.languagePreference)
         ? settings.languagePreference
         : 'system',

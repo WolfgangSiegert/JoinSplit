@@ -15,6 +15,7 @@ function accountPayload(array $overrides = []): array
         'password_confirmation' => 'correct horse battery staple',
         'dataAdoptionConfirmed' => true,
         'groupAreaOrder' => ['people', 'expenses', 'settlement'],
+        'defaultGroupArea' => 'expenses',
         'languagePreference' => 'system',
     ], $overrides);
 }
@@ -59,6 +60,7 @@ it('registers a normalized Account and never returns its password', function () 
     expect($account->email)->toBe('owner@example.test')
         ->and($account->name)->toBe('Ada Example')
         ->and($account->group_area_order)->toBe(['people', 'expenses', 'settlement'])
+        ->and($account->default_group_area)->toBe('expenses')
         ->and($account->language_preference)->toBe('system')
         ->and($account->password)->not->toBe('correct horse battery staple')
         ->and(Hash::check('correct horse battery staple', $account->password))->toBeTrue();
@@ -68,15 +70,17 @@ it('registers a normalized Account and never returns its password', function () 
 
 it('keeps registration compatible with clients that do not send preferences yet', function () {
     $payload = accountPayload(['email' => 'legacy-client@example.test']);
-    unset($payload['groupAreaOrder'], $payload['languagePreference']);
+    unset($payload['groupAreaOrder'], $payload['defaultGroupArea'], $payload['languagePreference']);
 
     $response = $this->postJson('/api/account/register', $payload)
         ->assertCreated()
         ->assertJsonPath('data.groupAreaOrder', ['people', 'expenses', 'settlement'])
+        ->assertJsonPath('data.defaultGroupArea', 'expenses')
         ->assertJsonPath('data.languagePreference', 'system');
 
     $account = Account::findOrFail($response->json('data.id'));
     expect($account->group_area_order)->toBe(['people', 'expenses', 'settlement'])
+        ->and($account->default_group_area)->toBe('expenses')
         ->and($account->language_preference)->toBe('system');
 });
 
@@ -131,6 +135,7 @@ it('logs in case-insensitively, exposes the current Account, and logs out', func
             'name' => 'Ada Example',
             'email' => 'owner@example.test',
             'groupAreaOrder' => ['people', 'expenses', 'settlement'],
+            'defaultGroupArea' => 'expenses',
             'languagePreference' => 'system',
         ],
     ]);
@@ -148,6 +153,7 @@ it('persists a validated group area order per account', function () {
     ])->assertOk()->assertExactJson([
         'data' => [
             'groupAreaOrder' => ['people', 'expenses', 'settlement'],
+            'defaultGroupArea' => 'expenses',
             'languagePreference' => 'system',
         ],
     ]);
@@ -159,6 +165,14 @@ it('persists a validated group area order per account', function () {
     $this->putJson('/api/account/preferences', [
         'groupAreaOrder' => ['people', 'people', 'settlement'],
     ])->assertUnprocessable()->assertJsonValidationErrors(['groupAreaOrder.1']);
+
+    $this->putJson('/api/account/preferences', ['defaultGroupArea' => 'settlement'])
+        ->assertOk()
+        ->assertJsonPath('data.defaultGroupArea', 'settlement');
+    expect($account->fresh()->default_group_area)->toBe('settlement');
+
+    $this->putJson('/api/account/preferences', ['defaultGroupArea' => 'unknown'])
+        ->assertUnprocessable()->assertJsonValidationErrors(['defaultGroupArea']);
 
     $this->putJson('/api/account/preferences', ['languagePreference' => 'en'])
         ->assertOk()

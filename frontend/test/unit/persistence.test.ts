@@ -61,6 +61,7 @@ function durableState(overrides: Partial<DurableState> = {}): DurableState {
       colorMode: 'dark',
       visualDesign: '3',
       groupAreaOrder: ['settlement', 'expenses', 'people'],
+      defaultGroupArea: 'settlement',
       languagePreference: 'de',
     },
     ...overrides,

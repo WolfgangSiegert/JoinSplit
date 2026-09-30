@@ -47,6 +47,7 @@ class AccountWorkspaceController extends Controller
                     'name' => $account->name,
                     'email' => $account->email,
                     'groupAreaOrder' => $account->group_area_order ?? ['people', 'expenses', 'settlement'],
+                    'defaultGroupArea' => $account->default_group_area ?? 'expenses',
                     'languagePreference' => $account->language_preference ?? 'system',
                 ],
                 'people' => $people,

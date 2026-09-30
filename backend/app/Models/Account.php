@@ -13,7 +13,7 @@ class Account extends Authenticatable implements CanResetPasswordContract
 {
     use CanResetPassword, HasUuids, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'group_area_order', 'language_preference'];
+    protected $fillable = ['name', 'email', 'password', 'group_area_order', 'default_group_area', 'language_preference'];
 
     protected $hidden = ['password'];
 

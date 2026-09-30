@@ -123,6 +123,23 @@ async function durableGroupAreaOrder(page: Page): Promise<string[] | null> {
   })
 }
 
+async function durableDefaultGroupArea(page: Page): Promise<string | null> {
+  return page.evaluate(async () => {
+    const request = indexedDB.open('joinsplit', 10)
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const result = db.transaction('settings').objectStore('settings').get('preferences')
+    const record = await new Promise<{ defaultGroupArea?: unknown } | undefined>((resolve, reject) => {
+      result.onsuccess = () => resolve(result.result)
+      result.onerror = () => reject(result.error)
+    })
+    db.close()
+    return typeof record?.defaultGroupArea === 'string' ? record.defaultGroupArea : null
+  })
+}
+
 test('the ready Group List is accessible', async ({ page }) => {
   const response = await page.goto('/')
   expect(response?.headers()['content-security-policy']).toContain("default-src 'self'")
@@ -236,6 +253,30 @@ test('group tabs use the new labels and retain their locally configured order', 
   await page.goto(groupUrl)
   const navigation = page.getByRole('navigation', { name: 'Gruppenbereiche' })
   await expect(navigation.getByRole('link')).toHaveText(['Leute', 'Ausgleich', 'Ausgaben'])
+  await expectNoAxeViolations(page)
+})
+
+test('the configured default group tab is persisted and used when opening a group', async ({ page }) => {
+  await openCreateGroup(page)
+  await page.getByLabel('Gruppenname').fill('Startansicht-Test')
+  await page.getByLabel('Mein Name in dieser Gruppe').fill('Ada')
+  await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
+  await expect(page).toHaveURL(/\/groups\/[0-9a-f-]+\?created=1$/u)
+  const groupId = new URL(page.url()).pathname.split('/').at(-1)!
+
+  await page.setViewportSize({ width: 320, height: 760 })
+  await page.goto('/settings')
+  const navigationSettings = page.getByRole('region', { name: 'Gruppenreiter' })
+  expect(await navigationSettings.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+  await page.getByRole('radio', { name: 'Leute' }).check()
+  await expect.poll(() => durableDefaultGroupArea(page)).toBe('people')
+  await page.reload()
+  await expect(page.getByRole('radio', { name: 'Leute' })).toBeChecked()
+
+  await page.goto('/groups')
+  await page.getByRole('link', { name: /Startansicht-Test/u }).click()
+  await expect(page).toHaveURL(`/groups/${groupId}/participants`)
+  await expect(page.getByRole('heading', { level: 1, name: 'Leute' })).toBeVisible()
   await expectNoAxeViolations(page)
 })
 

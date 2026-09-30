@@ -3,6 +3,7 @@ const groupsStore = useGroupsStore()
 const peopleStore = usePeopleStore()
 const route = useRoute()
 const { t } = useAppI18n()
+const { groupStartPath } = useGroupStartPath()
 const showArchived = ref(false)
 const activeGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'active'))
 const archivedGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'archived'))
@@ -69,7 +70,7 @@ function scrollToOverview(event: MouseEvent): void {
           <ul class="ledger-list mt-3">
             <li v-for="(group, index) in activeGroups" :key="group.id">
               <NuxtLink
-                :to="`/groups/${group.id}`"
+                :to="groupStartPath(group.id)"
                 class="ledger-row font-semibold"
               >
                 <ParticipantAvatar :name="group.name" :index="index" size="lg" />
@@ -95,7 +96,7 @@ function scrollToOverview(event: MouseEvent): void {
             <h3 id="archived-groups-title" class="text-lg font-semibold">Archivierte Gruppen</h3>
             <ul class="mt-3 space-y-3">
               <li v-for="group in archivedGroups" :key="group.id" class="card">
-                <NuxtLink :to="`/groups/${group.id}`" class="flex min-h-14 items-center justify-between rounded-2xl px-4 py-3 font-semibold">
+                <NuxtLink :to="groupStartPath(group.id)" class="flex min-h-14 items-center justify-between rounded-2xl px-4 py-3 font-semibold">
                   <span>{{ group.name }}</span><span aria-hidden="true">→</span>
                 </NuxtLink>
               </li>

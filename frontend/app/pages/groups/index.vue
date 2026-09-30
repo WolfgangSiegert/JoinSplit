@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const groupsStore = useGroupsStore()
 const route = useRoute()
+const { groupStartPath } = useGroupStartPath()
 const showArchived = ref(false)
 const searchQuery = ref('')
 const activeGroups = computed(() => groupsStore.visibleGroups.filter(group => group.status === 'active'))
@@ -35,7 +36,7 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
         </div>
         <ul v-if="filteredActiveGroups.length" class="ledger-list mt-3">
           <li v-for="(group, index) in filteredActiveGroups" :key="group.id">
-            <NuxtLink :to="`/groups/${group.id}`" class="ledger-row">
+            <NuxtLink :to="groupStartPath(group.id)" class="ledger-row">
               <ParticipantAvatar :name="group.name" :index="index" size="lg" />
               <span class="min-w-0 flex-1">
                 <strong class="block break-words">{{ group.name }}</strong>
@@ -61,7 +62,7 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
         </label>
         <ul v-if="showArchived && filteredArchivedGroups.length" class="ledger-list mt-3">
           <li v-for="group in filteredArchivedGroups" :key="group.id">
-            <NuxtLink :to="`/groups/${group.id}`" class="ledger-row">
+            <NuxtLink :to="groupStartPath(group.id)" class="ledger-row">
               <span class="min-w-0 flex-1"><strong class="block break-words">{{ group.name }}</strong><span class="mt-1 block text-sm text-ink-700">Archiviert · {{ group.currency }}</span></span>
               <AppIcon name="chevron-right" />
             </NuxtLink>

@@ -15,9 +15,10 @@ class UpdateAccountPreferencesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'groupAreaOrder' => ['required_without:languagePreference', 'array', 'size:3'],
+            'groupAreaOrder' => ['required_without_all:languagePreference,defaultGroupArea', 'array', 'size:3'],
             'groupAreaOrder.*' => ['required_with:groupAreaOrder', 'string', 'distinct', Rule::in(['expenses', 'settlement', 'people'])],
-            'languagePreference' => ['required_without:groupAreaOrder', 'string', Rule::in(['system', 'de', 'en'])],
+            'defaultGroupArea' => ['required_without_all:groupAreaOrder,languagePreference', 'string', Rule::in(['expenses', 'settlement', 'people'])],
+            'languagePreference' => ['required_without_all:groupAreaOrder,defaultGroupArea', 'string', Rule::in(['system', 'de', 'en'])],
         ];
     }
 }

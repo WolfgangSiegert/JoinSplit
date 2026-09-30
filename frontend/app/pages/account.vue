@@ -28,6 +28,7 @@ const identityStore = useAccessIdentityStore()
 const groupsStore = useGroupsStore()
 const peopleStore = usePeopleStore()
 const settingsStore = useSettingsStore()
+const { groupStartPath } = useGroupStartPath()
 const mode = ref<'login' | 'register' | 'recover'>('login')
 const name = ref('')
 const email = ref('')
@@ -171,7 +172,7 @@ async function submit(): Promise<void> {
   accountStore.begin()
   try {
     if (mode.value === 'register') {
-      await registerAccount(config.public.apiBase, name.value, email.value, password.value, settingsStore.groupAreaOrder, settingsStore.languagePreference)
+      await registerAccount(config.public.apiBase, name.value, email.value, password.value, settingsStore.groupAreaOrder, settingsStore.defaultGroupArea, settingsStore.languagePreference)
     } else await loginAccount(config.public.apiBase, email.value, password.value)
     await adoptAndHydrate()
   } catch (error) {
@@ -474,7 +475,7 @@ watch(() => accountStore.sessionState, state => {
           <p class="mt-2 text-sm text-gray-600">{{ pendingCount === 0 ? 'Alle lokalen Änderungen sind auf dem Server.' : `${pendingCount} lokale Änderung(en) warten auf den Server.` }}</p>
           <ul v-if="pendingByGroup.length" class="mt-4 divide-y divide-gray-200">
             <li v-for="group in pendingByGroup" :key="group.id" class="py-3">
-              <NuxtLink :to="`/groups/${group.id}`" class="flex items-center justify-between gap-4 font-medium">
+              <NuxtLink :to="groupStartPath(group.id)" class="flex items-center justify-between gap-4 font-medium">
                 <span>{{ group.name }}</span><span>{{ group.count }}</span>
               </NuxtLink>
               <p v-if="group.error" class="mt-1 text-sm text-amber-700">{{ group.error }}</p>

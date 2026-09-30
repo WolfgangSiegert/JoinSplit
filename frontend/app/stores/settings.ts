@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { persistSettings, type DurableSettings } from '../persistence/database'
-import { DEFAULT_GROUP_AREA_ORDER, isGroupAreaOrder, type GroupArea } from '../domain/group-area'
+import { DEFAULT_GROUP_AREA, DEFAULT_GROUP_AREA_ORDER, isGroupArea, isGroupAreaOrder, type GroupArea } from '../domain/group-area'
 import { detectSystemLocale, resolveLocale, type AppLocale, type LanguagePreference } from '../domain/locale'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -13,6 +13,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const colorMode = ref<DurableSettings['colorMode']>('system')
   const visualDesign = ref<DurableSettings['visualDesign']>('2')
   const groupAreaOrder = ref<GroupArea[]>([...DEFAULT_GROUP_AREA_ORDER])
+  const defaultGroupArea = ref<GroupArea>(DEFAULT_GROUP_AREA)
   const languagePreference = ref<LanguagePreference>('system')
   const systemLocale = ref<AppLocale>('en')
   const resolvedLocale = computed(() => resolveLocale(languagePreference.value, systemLocale.value))
@@ -27,6 +28,7 @@ export const useSettingsStore = defineStore('settings', () => {
       colorMode: colorMode.value,
       visualDesign: visualDesign.value,
       groupAreaOrder: [...groupAreaOrder.value],
+      defaultGroupArea: defaultGroupArea.value,
       languagePreference: languagePreference.value,
       ...overrides,
     }
@@ -43,6 +45,9 @@ export const useSettingsStore = defineStore('settings', () => {
     groupAreaOrder.value = isGroupAreaOrder(settings?.groupAreaOrder)
       ? [...settings.groupAreaOrder]
       : [...DEFAULT_GROUP_AREA_ORDER]
+    defaultGroupArea.value = isGroupArea(settings?.defaultGroupArea)
+      ? settings.defaultGroupArea
+      : DEFAULT_GROUP_AREA
     languagePreference.value = settings?.languagePreference ?? 'system'
   }
 
@@ -103,6 +108,12 @@ export const useSettingsStore = defineStore('settings', () => {
     groupAreaOrder.value = normalized
   }
 
+  async function setDefaultGroupArea(value: GroupArea): Promise<void> {
+    if (!isGroupArea(value)) throw new Error('Invalid default group area')
+    await persistSettings(currentSettings({ defaultGroupArea: value }))
+    defaultGroupArea.value = value
+  }
+
   function detectLanguage(languages: readonly string[]): void {
     systemLocale.value = detectSystemLocale(languages)
   }
@@ -112,13 +123,16 @@ export const useSettingsStore = defineStore('settings', () => {
     languagePreference.value = value
   }
 
-  async function applyAccountPreferences(value: { readonly groupAreaOrder: readonly GroupArea[]; readonly languagePreference: LanguagePreference }): Promise<void> {
+  async function applyAccountPreferences(value: { readonly groupAreaOrder: readonly GroupArea[]; readonly defaultGroupArea: GroupArea; readonly languagePreference: LanguagePreference }): Promise<void> {
     if (!isGroupAreaOrder(value.groupAreaOrder)) throw new Error('Invalid group area order')
+    if (!isGroupArea(value.defaultGroupArea)) throw new Error('Invalid default group area')
     await persistSettings(currentSettings({
       groupAreaOrder: [...value.groupAreaOrder],
+      defaultGroupArea: value.defaultGroupArea,
       languagePreference: value.languagePreference,
     }))
     groupAreaOrder.value = [...value.groupAreaOrder]
+    defaultGroupArea.value = value.defaultGroupArea
     languagePreference.value = value.languagePreference
   }
 
@@ -131,6 +145,7 @@ export const useSettingsStore = defineStore('settings', () => {
     colorMode,
     visualDesign,
     groupAreaOrder,
+    defaultGroupArea,
     languagePreference,
     resolvedLocale,
     hydrate,
@@ -144,6 +159,7 @@ export const useSettingsStore = defineStore('settings', () => {
     setColorMode,
     setVisualDesign,
     setGroupAreaOrder,
+    setDefaultGroupArea,
     detectLanguage,
     setLanguagePreference,
     applyAccountPreferences,

@@ -30,6 +30,7 @@ class AccountSessionController extends Controller
                 'email' => $this->normalizedEmail($request->string('email')->toString()),
                 'password' => $request->string('password')->toString(),
                 'group_area_order' => $request->validated('groupAreaOrder', ['people', 'expenses', 'settlement']),
+                'default_group_area' => $request->validated('defaultGroupArea', 'expenses'),
                 'language_preference' => $request->validated('languagePreference', 'system'),
             ]);
         } catch (QueryException $exception) {
@@ -122,7 +123,7 @@ class AccountSessionController extends Controller
         return Str::lower(trim($email));
     }
 
-    /** @return array{id: string, name: string|null, email: string, groupAreaOrder: array<int, string>, languagePreference: string} */
+    /** @return array{id: string, name: string|null, email: string, groupAreaOrder: array<int, string>, defaultGroupArea: string, languagePreference: string} */
     private function accountData(Account $account): array
     {
         return [
@@ -130,6 +131,7 @@ class AccountSessionController extends Controller
             'name' => $account->name,
             'email' => $account->email,
             'groupAreaOrder' => $account->group_area_order ?? ['people', 'expenses', 'settlement'],
+            'defaultGroupArea' => $account->default_group_area ?? 'expenses',
             'languagePreference' => $account->language_preference ?? 'system',
         ];
     }

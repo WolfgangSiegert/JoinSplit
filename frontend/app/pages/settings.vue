@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { resetDurableState } from '~/persistence/database'
 import { GROUP_AREA_PRESENTATION, type GroupArea } from '~/domain/group-area'
-import { updateAccountGroupAreaOrder, updateAccountLanguagePreference } from '~/services/account'
+import { updateAccountDefaultGroupArea, updateAccountGroupAreaOrder, updateAccountLanguagePreference } from '~/services/account'
 import { isLanguagePreference } from '~/domain/locale'
 
 const settingsStore = useSettingsStore()
@@ -34,15 +34,17 @@ const visibleStrategy = computed(() =>
 )
 const savingSettlementRecording = ref(false)
 const savingGroupAreaOrder = ref(false)
+const savingDefaultGroupArea = ref(false)
 const savingLanguage = ref(false)
 const languagePersistenceError = ref('')
 const groupAreaOrderPersistenceError = ref('')
+const defaultGroupAreaPersistenceError = ref('')
 const settlementRecordingPersistenceError = ref('')
 const visibleSettlementRecordingOverride = ref<boolean | null>(null)
 const visibleSettlementRecording = computed(() =>
   visibleSettlementRecordingOverride.value ?? settingsStore.settlementRecordingEnabled,
 )
-const savingSettings = computed(() => savingAppearance.value || savingDefault.value || savingDefaultName.value || savingStrategy.value || savingSettlementRecording.value || savingGroupAreaOrder.value || savingLanguage.value)
+const savingSettings = computed(() => savingAppearance.value || savingDefault.value || savingDefaultName.value || savingStrategy.value || savingSettlementRecording.value || savingGroupAreaOrder.value || savingDefaultGroupArea.value || savingLanguage.value)
 const resetDialog = ref<HTMLDialogElement | null>(null)
 const resetTrigger = ref<HTMLButtonElement | null>(null)
 const resetConfirm = ref<HTMLButtonElement | null>(null)
@@ -167,6 +169,28 @@ async function moveGroupArea(area: GroupArea, direction: -1 | 1): Promise<void> 
     groupAreaOrderPersistenceError.value = 'Die Reihenfolge konnte nicht lokal gespeichert werden.'
   } finally {
     savingGroupAreaOrder.value = false
+  }
+}
+
+async function changeDefaultGroupArea(event: Event): Promise<void> {
+  const value = (event.target as HTMLInputElement).value as GroupArea
+  if (!settingsStore.groupAreaOrder.includes(value) || savingDefaultGroupArea.value) return
+
+  savingDefaultGroupArea.value = true
+  defaultGroupAreaPersistenceError.value = ''
+  try {
+    await settingsStore.setDefaultGroupArea(value)
+    if (accountStore.hasActiveSession) {
+      try {
+        await updateAccountDefaultGroupArea(config.public.apiBase, value)
+      } catch {
+        defaultGroupAreaPersistenceError.value = t('settings.tabs.defaultError.account')
+      }
+    }
+  } catch {
+    defaultGroupAreaPersistenceError.value = t('settings.tabs.defaultError.local')
+  } finally {
+    savingDefaultGroupArea.value = false
   }
 }
 
@@ -339,6 +363,24 @@ async function confirmReset(): Promise<void> {
             </span>
           </li>
         </ol>
+        <fieldset class="mt-5 border-t border-gray-300 pt-4">
+          <legend class="font-semibold">{{ t('settings.tabs.defaultTitle') }}</legend>
+          <p class="mt-1 text-sm text-gray-600">{{ t('settings.tabs.defaultCopy') }}</p>
+          <div class="appearance-options mt-3 grid gap-2">
+            <label v-for="area in settingsStore.groupAreaOrder" :key="area" class="appearance-option">
+              <input
+                type="radio"
+                name="default-group-area"
+                :value="area"
+                :checked="settingsStore.defaultGroupArea === area"
+                :disabled="savingSettings"
+                @change="changeDefaultGroupArea"
+              >
+              <span class="flex items-center gap-2"><AppIcon :name="GROUP_AREA_PRESENTATION[area].icon" />{{ t(`nav.area.${area}`) }}</span>
+            </label>
+          </div>
+          <p v-if="defaultGroupAreaPersistenceError" class="error-text mt-3 text-sm" role="alert">{{ defaultGroupAreaPersistenceError }}</p>
+        </fieldset>
         <p class="mt-3 text-sm text-gray-600">
           {{ accountStore.hasActiveSession ? t('settings.tabs.note.account') : t('settings.tabs.note.local') }}
         </p>

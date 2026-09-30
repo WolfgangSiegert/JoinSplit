@@ -22,6 +22,7 @@ class RegisterAccountRequest extends FormRequest
             'dataAdoptionConfirmed' => ['accepted'],
             'groupAreaOrder' => ['sometimes', 'array', 'size:3'],
             'groupAreaOrder.*' => ['required', 'string', 'distinct', Rule::in(['expenses', 'settlement', 'people'])],
+            'defaultGroupArea' => ['sometimes', 'string', Rule::in(['expenses', 'settlement', 'people'])],
             'languagePreference' => ['sometimes', 'string', Rule::in(['system', 'de', 'en'])],
         ];
     }

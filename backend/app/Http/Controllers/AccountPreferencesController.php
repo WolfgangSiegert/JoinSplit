@@ -19,10 +19,14 @@ class AccountPreferencesController extends Controller
         if (array_key_exists('languagePreference', $preferences)) {
             $account->language_preference = $preferences['languagePreference'];
         }
+        if (array_key_exists('defaultGroupArea', $preferences)) {
+            $account->default_group_area = $preferences['defaultGroupArea'];
+        }
         $account->save();
 
         return response()->json(['data' => [
             'groupAreaOrder' => $account->group_area_order,
+            'defaultGroupArea' => $account->default_group_area ?? 'expenses',
             'languagePreference' => $account->language_preference ?? 'system',
         ]]);
     }

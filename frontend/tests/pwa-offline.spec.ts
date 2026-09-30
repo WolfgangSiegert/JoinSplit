@@ -37,7 +37,7 @@ test('a controlled app relaunches offline from presentation caches without cachi
   await page.getByLabel('Gruppenname').fill('Offline App Shell')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
-  await expect(page.locator('.group-view-heading > .eyebrow')).toHaveText('Offline App Shell')
+  await expect(page.locator('.group-view-heading__group-name')).toHaveText('Offline App Shell')
   await expect.poll(() => pendingMutationCount(page)).toBe(0)
   await page.getByRole('link', { name: '← Gruppen', exact: true }).click()
   await expect(page.getByRole('link', { name: /Offline App Shell/ })).toBeVisible()
@@ -86,7 +86,7 @@ test('a controlled app relaunches offline from presentation caches without cachi
   await page.getByLabel('Gruppenname').fill('Offline Mutation')
   await page.getByRole('button', { name: 'Gruppe erstellen' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Ausgaben' })).toBeVisible()
-  await expect(page.locator('.group-view-heading > .eyebrow')).toHaveText('Offline Mutation')
+  await expect(page.locator('.group-view-heading__group-name')).toHaveText('Offline Mutation')
   await expect.poll(() => pendingMutationCount(page)).toBe(1)
 
   let reconnectCreateRequests = 0

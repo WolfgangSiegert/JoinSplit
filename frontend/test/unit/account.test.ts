@@ -15,10 +15,10 @@ describe('Account client boundary', () => {
   test('registers with a cookie session and CSRF without exposing an Account token', async () => {
     const fetcher = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { csrfToken: 'csrf-token' } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'account-id', name: 'Ada', email: 'owner@example.test', groupAreaOrder: ['expenses', 'settlement', 'people'], languagePreference: 'en' } }), { status: 201 })) as typeof fetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'account-id', name: 'Ada', email: 'owner@example.test', groupAreaOrder: ['expenses', 'settlement', 'people'], defaultGroupArea: 'settlement', languagePreference: 'en' } }), { status: 201 })) as typeof fetch
 
-    await expect(registerAccount('https://example.test/', 'Ada', 'owner@example.test', 'correct horse battery staple', ['expenses', 'settlement', 'people'], 'en', fetcher))
-      .resolves.toEqual({ id: 'account-id', name: 'Ada', email: 'owner@example.test', groupAreaOrder: ['expenses', 'settlement', 'people'], languagePreference: 'en' })
+    await expect(registerAccount('https://example.test/', 'Ada', 'owner@example.test', 'correct horse battery staple', ['expenses', 'settlement', 'people'], 'settlement', 'en', fetcher))
+      .resolves.toEqual({ id: 'account-id', name: 'Ada', email: 'owner@example.test', groupAreaOrder: ['expenses', 'settlement', 'people'], defaultGroupArea: 'settlement', languagePreference: 'en' })
 
     expect(fetcher).toHaveBeenNthCalledWith(1, 'https://example.test/api/account/csrf', expect.objectContaining({ credentials: 'include' }))
     const registration = vi.mocked(fetcher).mock.calls[1]
@@ -26,7 +26,7 @@ describe('Account client boundary', () => {
     expect(registration?.[1]).toMatchObject({ credentials: 'include', method: 'POST' })
     expect(registration?.[1]?.headers).toMatchObject({ 'X-CSRF-TOKEN': 'csrf-token' })
     expect(JSON.parse(String(registration?.[1]?.body))).toMatchObject({
-      name: 'Ada', groupAreaOrder: ['expenses', 'settlement', 'people'], languagePreference: 'en',
+      name: 'Ada', groupAreaOrder: ['expenses', 'settlement', 'people'], defaultGroupArea: 'settlement', languagePreference: 'en',
     })
     expect(String(registration?.[1]?.body)).not.toContain('token')
   })

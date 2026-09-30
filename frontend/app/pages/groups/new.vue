@@ -4,6 +4,7 @@ import type { CreateGroupErrors } from '~/domain/create-group'
 const settingsStore = useSettingsStore()
 const accountStore = useAccountStore()
 const { createGroup } = useCreateGroup()
+const { groupStartPath } = useGroupStartPath()
 const groupName = ref('')
 const addParticipant = ref(settingsStore.addSelfAsParticipantByDefault)
 const participantName = ref(settingsStore.defaultParticipantName || accountStore.workspace?.name || '')
@@ -51,7 +52,7 @@ async function submit(): Promise<void> {
     return
   }
 
-  await navigateTo(`/groups/${result.groupId}?created=1`)
+  await navigateTo({ path: groupStartPath(result.groupId), query: { created: '1' } })
 }
 </script>
 
