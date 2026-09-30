@@ -133,7 +133,7 @@ describe('Statement Snapshot', () => {
     }))
     expect(snapshot.text).toContain('JoinSplit – dein Stand für „Alt Gruppe“ (archiviert)')
     expect(snapshot.text).toContain('Hallo Alex (Teilnehmer 2),')
-    expect(snapshot.text).toContain('Person ist derzeit inaktiv')
+    expect(snapshot.text).toContain('Teilnehmer ist derzeit inaktiv')
     expect(snapshot.text).toContain('Alex (Teilnehmer 2) → Alex (Teilnehmer 1)')
   })
 

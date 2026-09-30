@@ -82,7 +82,7 @@ async function send(mutation: ParticipantMutation, options: Options): Promise<Pa
   if (response.status === 410) return failed('expired', 'Die Server-Aufbewahrung ist beendet. Die Daten bleiben nur lokal verfügbar.', false)
   if (response.status === 429) return failed('rate-limited', 'Zu viele Anfragen. Die Synchronisierung wird später erneut versucht.', true)
   if (response.status === 401 || response.status === 403 || response.status === 404) {
-    return { outcome: 'failed', error: accountMutationAuthorizationError(response, context.accountMode, 'Die Personenänderung')! }
+    return { outcome: 'failed', error: accountMutationAuthorizationError(response, context.accountMode, 'Die Teilnehmeränderung')! }
   }
   if (response.status === 409) return failed('conflict', 'Die Änderung steht im Konflikt mit dem Serverstand. Lokal wurde nichts überschrieben.', false)
   if (response.status === 422) return failed('validation', 'Der Server hat die lokale Änderung abgelehnt.', false)

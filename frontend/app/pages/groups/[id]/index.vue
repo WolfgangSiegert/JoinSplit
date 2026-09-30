@@ -234,7 +234,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateExpenseScrollSt
           <h2 id="group-lifecycle-dialog-title" class="text-xl font-semibold">{{ requestedAction === 'archive' ? 'Gruppe archivieren' : 'Gruppe endgültig löschen' }}</h2>
           <div id="group-lifecycle-dialog-description" class="mt-3 space-y-2">
             <p v-if="requestedAction === 'archive'">„{{ group.name }}“ wird schreibgeschützt, bleibt aber vollständig lesbar.</p>
-            <template v-else><p>„{{ group.name }}“ und {{ participants.length }} {{ participants.length === 1 ? 'Person' : 'Personen' }} endgültig löschen?</p><p>Diese Aktion kann nicht rückgängig gemacht werden.</p></template>
+            <template v-else><p>„{{ group.name }}“ und {{ participants.length }} Teilnehmer endgültig löschen?</p><p>Diese Aktion kann nicht rückgängig gemacht werden.</p></template>
             <p v-if="requestedAction === 'archive' && hasOpenBalances" class="rounded-lg bg-amber-50 p-3 text-amber-950">Es bestehen offene Salden. Archivieren gleicht sie nicht aus.</p>
             <p v-if="requestedAction === 'archive' && pendingCount" class="rounded-lg bg-amber-50 p-3 text-amber-950">{{ pendingCount }} ausstehende {{ pendingCount === 1 ? 'Änderung wird' : 'Änderungen werden' }} zuerst synchronisiert; die Archivierung folgt danach.</p>
           </div>

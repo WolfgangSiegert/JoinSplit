@@ -77,7 +77,7 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
           class="app-beta-badge app-beta-badge--link"
           :aria-label="t('header.beta')"
           :title="t('header.beta')"
-        ><AppIcon name="alert-circle" /><span>Beta</span></NuxtLink>
+        ><AppIcon name="alert-circle" /><span class="app-beta-badge__copy"><strong>Beta</strong><span>Showcase</span></span></NuxtLink>
         <button
           type="button"
           class="mobile-app-header__action"
@@ -99,7 +99,7 @@ onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemCo
           class="app-beta-badge app-beta-badge--link"
           :aria-label="t('header.beta')"
           :title="t('header.beta')"
-        ><AppIcon name="alert-circle" /><span>Beta</span></NuxtLink>
+        ><AppIcon name="alert-circle" /><span class="app-beta-badge__copy"><strong>Beta</strong><span>Showcase</span></span></NuxtLink>
       </div>
       <nav class="app-header__utilities" :aria-label="t('header.quick')">
         <button

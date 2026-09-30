@@ -29,9 +29,9 @@ function paidAmount(payerParticipantId: string, amountMinor: number): bigint {
 }
 
 function balanceText(amountMinor: bigint): string {
-  if (amountMinor > 0n) return 'Diese Person soll Geld erhalten.'
-  if (amountMinor < 0n) return 'Diese Person soll Geld zahlen.'
-  return 'Diese Person ist ausgeglichen.'
+  if (amountMinor > 0n) return 'Dieser Teilnehmer soll Geld erhalten.'
+  if (amountMinor < 0n) return 'Dieser Teilnehmer soll Geld zahlen.'
+  return 'Dieser Teilnehmer ist ausgeglichen.'
 }
 
 function settlementContribution(senderParticipantId: string, amountMinor: bigint): bigint {

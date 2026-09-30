@@ -82,10 +82,10 @@ export function validateExpenseDraft(draft: ExpenseDraft, participants: readonly
   const existingIds = new Set(existing?.shares.map(share => share.participantId) ?? [])
   const existingPayer = existing?.payerParticipantId
   const payer = byId.get(draft.payerParticipantId)
-  if (!payer || (payer.status !== 'active' && payer.id !== existingPayer)) errors.payerParticipantId = 'Zahlende Person auswählen.'
+  if (!payer || (payer.status !== 'active' && payer.id !== existingPayer)) errors.payerParticipantId = 'Zahlenden Teilnehmer auswählen.'
   const selected = [...new Set(draft.participantIds)]
-  if (!selected.length) errors.participantIds = 'Mindestens eine Person für die Aufteilung auswählen.'
-  else if (selected.some(id => { const participant = byId.get(id); return !participant || (participant.status !== 'active' && !existingIds.has(id)) })) errors.participantIds = 'Die Auswahl enthält eine nicht verfügbare Person.'
+  if (!selected.length) errors.participantIds = 'Mindestens einen Teilnehmer für die Aufteilung auswählen.'
+  else if (selected.some(id => { const participant = byId.get(id); return !participant || (participant.status !== 'active' && !existingIds.has(id)) })) errors.participantIds = 'Die Auswahl enthält einen nicht verfügbaren Teilnehmer.'
   return { errors, normalizedDescription, amountMinor }
 }
 

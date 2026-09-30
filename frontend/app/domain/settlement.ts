@@ -140,8 +140,8 @@ export function validateSettlementDraft(
   const byId = new Map(participants.map(participant => [participant.id, participant]))
   const sender = byId.get(draft.senderParticipantId)
   const receiver = byId.get(draft.receiverParticipantId)
-  if (!sender) errors.senderParticipantId = 'Zahlende Person auswählen.'
-  if (!receiver) errors.receiverParticipantId = 'Empfangende Person auswählen.'
+  if (!sender) errors.senderParticipantId = 'Zahlenden Teilnehmer auswählen.'
+  if (!receiver) errors.receiverParticipantId = 'Empfangenden Teilnehmer auswählen.'
   if (sender && receiver && sender.id === receiver.id) errors.receiverParticipantId = 'Sender und Empfänger müssen verschieden sein.'
   const amountMinor = parseSettlementAmountMinor(draft.amount)
   if (amountMinor === null) errors.amount = 'Betrag als positive Zahl mit höchstens zwei Nachkommastellen eingeben.'
@@ -152,7 +152,7 @@ export function validateSettlementDraft(
   if (assessment?.decision === 'reject') {
     errors.balance = assessment.rejectionReason === 'financial_state_overflow'
       ? 'Die Zahlung würde den unterstützten Zahlenbereich überschreiten.'
-      : 'Mit inaktiven Personen darf eine Zahlung nur einen offenen Saldo in korrekter Richtung reduzieren.'
+      : 'Mit inaktiven Teilnehmern darf eine Zahlung nur einen offenen Saldo in korrekter Richtung reduzieren.'
   }
   return { errors, amountMinor, assessment }
 }

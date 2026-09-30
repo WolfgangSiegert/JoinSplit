@@ -71,7 +71,7 @@ export function generateStatementSnapshot(input: StatementSnapshotInput): Readon
     'hier ist dein aktueller Stand in der Gruppe:',
     participantOutcome(balance.balanceAmountMinor),
     '',
-    `Stand vom ${formatUtcInstant(input.generatedAt)}${participant.status === 'inactive' ? ' · Person ist derzeit inaktiv' : ''}`,
+    `Stand vom ${formatUtcInstant(input.generatedAt)}${participant.status === 'inactive' ? ' · Teilnehmer ist derzeit inaktiv' : ''}`,
   ]
 
   if (containsUnsyncedChanges) {

@@ -124,14 +124,14 @@ async function shareSnapshot(): Promise<void> {
       <section v-if="!snapshot" class="card mt-6 p-5" aria-labelledby="statement-create-title">
         <h2 id="statement-create-title" ref="createTitle" tabindex="-1" class="text-xl font-semibold">Vorschau erzeugen</h2>
         <template v-if="participants.length">
-          <label for="statement-participant" class="mt-4 block font-medium">Person</label>
+          <label for="statement-participant" class="mt-4 block font-medium">Teilnehmer</label>
           <select id="statement-participant" v-model="selectedParticipantId" class="field-input mt-2">
-            <option value="" disabled>Person auswählen</option>
+            <option value="" disabled>Teilnehmer auswählen</option>
             <option v-for="participant in participants" :key="participant.id" :value="participant.id">
               {{ optionLabel(participant.id) }}
             </option>
           </select>
-          <p class="mt-2 text-sm text-gray-600">Auch eine derzeit inaktive Person kann eine Übersicht erhalten.</p>
+          <p class="mt-2 text-sm text-gray-600">Auch ein derzeit inaktiver Teilnehmer kann eine Übersicht erhalten.</p>
           <button
             type="button"
             class="primary-button mt-5 w-full"

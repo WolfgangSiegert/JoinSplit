@@ -254,14 +254,14 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 
 .app-beta-badge {
   display: inline-flex;
-  min-height: 1.35rem;
+  min-height: 1.8rem;
   align-items: center;
   gap: 0.22rem;
   border: 1px solid color-mix(in srgb, var(--coral) 48%, var(--line));
   border-radius: 999px;
   background: color-mix(in srgb, var(--coral) 10%, var(--surface-strong));
   color: var(--coral-dark);
-  padding: 0.1rem 0.42rem;
+  padding: 0.16rem 0.48rem;
   font-size: 0.65rem;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -270,6 +270,18 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 }
 
 .app-beta-badge .app-icon { width: 0.78rem; height: 0.78rem; stroke-width: 2.3; }
+.app-beta-badge__copy {
+  display: grid;
+  gap: 0.05rem;
+  line-height: 1;
+  text-align: center;
+}
+.app-beta-badge__copy strong { font: inherit; }
+.app-beta-badge__copy > span {
+  font-size: 0.48rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
 .app-beta-badge--link { transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
 .app-beta-badge--link:hover,
 .app-beta-badge--link:focus-visible {
@@ -668,12 +680,17 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .landing-graphic__amount-row { display: grid; gap: 0.2rem; margin-top: 0.6rem; }
 .landing-graphic__amount-row span { color: var(--ink-muted); font-size: 0.82rem; }
 .landing-graphic__amount-row strong { font-size: 1.65rem; font-variant-numeric: tabular-nums; }
+.landing-graphic__payer { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 0.65rem; color: var(--ink-muted); font-size: 0.76rem; font-weight: 700; }
+.landing-graphic__payer i { display: inline-grid; width: 1.45rem; height: 1.45rem; place-items: center; border-radius: 999px; background: #cfe6f5; color: var(--ink); font-style: normal; font-weight: 850; }
 
 .landing-graphic__split { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
-.landing-graphic__split-item { display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 999px; background: var(--sand-100); padding: 0.2rem 0.5rem 0.2rem 0.2rem; color: var(--ink); font-size: 0.72rem; font-weight: 700; }
+.landing-graphic__split-item { display: inline-flex; align-items: center; gap: 0.24rem; border: 1px solid transparent; border-radius: 999px; padding: 0.2rem 0.45rem 0.2rem 0.2rem; font-size: 0.72rem; font-weight: 750; }
 .landing-graphic__split-item i { display: inline-grid; width: 1.45rem; height: 1.45rem; place-items: center; border-radius: 999px; background: #cfe6f5; font-style: normal; font-weight: 850; }
 .landing-graphic__split-item:nth-child(2) i { background: #f2cf78; }
 .landing-graphic__split-item:nth-child(3) i { background: #e5a79c; }
+.landing-graphic__split-item--positive { border-color: color-mix(in srgb, var(--positive) 26%, transparent); background: color-mix(in srgb, var(--positive) 10%, var(--surface-strong)); color: var(--positive); }
+.landing-graphic__split-item--negative { border-color: color-mix(in srgb, var(--danger) 24%, transparent); background: color-mix(in srgb, var(--danger) 9%, var(--surface-strong)); color: var(--danger); }
+.landing-graphic__split-item b { font-size: 0.78rem; line-height: 1; }
 .landing-graphic__split-item strong { font-variant-numeric: tabular-nums; }
 
 .landing-graphic__next {

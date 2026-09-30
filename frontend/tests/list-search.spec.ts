@@ -145,7 +145,7 @@ test('group and expense lists can be filtered from compact search controls', asy
   await expect(page.getByLabel('Details zu Beatrice')).toBeVisible()
   await expect(page.getByLabel('Details zu Alice')).toHaveCount(0)
   await participantSearch.fill('Keine solche Person')
-  await expect(page.getByText('Keine Person passt zu „Keine solche Person“.')).toBeVisible()
+  await expect(page.getByText('Kein Teilnehmer passt zu „Keine solche Person“.')).toBeVisible()
   await page.getByRole('button', { name: 'Teilnehmer durchsuchen schließen' }).click()
   await expect(page.getByLabel('Details zu Alice')).toBeVisible()
 })

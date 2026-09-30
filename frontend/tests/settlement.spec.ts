@@ -200,7 +200,7 @@ test('inactive Participants cannot exceed their open balance and validation focu
   await page.getByLabel('Betrag in Euro').fill('11,00')
   await page.getByRole('button', { name: 'Zahlung speichern' }).click()
 
-  await expect(page.getByRole('alert')).toContainText('Mit inaktiven Personen darf eine Zahlung nur einen offenen Saldo')
+  await expect(page.getByRole('alert')).toContainText('Mit inaktiven Teilnehmern darf eine Zahlung nur einen offenen Saldo')
   await expect(page.getByLabel('Betrag in Euro')).toBeFocused()
   await expect(page.getByRole('button', { name: 'Trotzdem speichern' })).toHaveCount(0)
 })

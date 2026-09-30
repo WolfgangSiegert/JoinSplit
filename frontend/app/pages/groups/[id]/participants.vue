@@ -341,7 +341,7 @@ async function cancelRename(id: string): Promise<void> {
         <div class="list-section-heading">
           <div>
             <h2 id="participant-list-title" class="text-2xl font-bold">{{ t('group.people.overview') }}</h2>
-            <p class="mt-1 text-sm text-ink-700">{{ participants.length }} {{ participants.length === 1 ? t('common.person') : t('common.people') }}</p>
+            <p class="mt-1 text-sm text-ink-700">{{ participants.length }} {{ participants.length === 1 ? t('group.meta.person') : t('group.meta.people') }}</p>
           </div>
           <ListSearch v-model="participantSearch" :label="t('group.people.search')" />
         </div>

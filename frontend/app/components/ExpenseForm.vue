@@ -82,7 +82,7 @@ async function addParticipant(duplicateConfirmed = false) {
     if (!result.ok) { addError.value = result.errors.name ?? ''; restoreAddFocus = true; return }
     draft.participantIds.push(result.value.participant.id); addName.value = ''; status.value = `„${result.value.participant.name}“ wurde hinzugefügt und für die Aufteilung ausgewählt.`
     restoreAddFocus = true
-  } catch { status.value = 'Die Person konnte nicht lokal gespeichert werden.'; restoreAddFocus = true }
+  } catch { status.value = 'Der Teilnehmer konnte nicht lokal gespeichert werden.'; restoreAddFocus = true }
   finally {
     addingParticipant.value = false
     if (restoreAddFocus) { await nextTick(); addInput.value?.focus() }
@@ -95,7 +95,7 @@ async function addParticipant(duplicateConfirmed = false) {
     <div><label for="expense-description" class="font-semibold">Beschreibung</label><input id="expense-description" ref="descriptionInput" v-model="draft.description" class="field-input mt-2" :aria-invalid="Boolean(errors.description)" :aria-describedby="errors.description ? 'description-error' : undefined"><p v-if="errors.description" id="description-error" class="error-text mt-2">{{ errors.description }}</p></div>
     <div><label for="expense-amount" class="font-semibold">Betrag in Euro</label><input id="expense-amount" ref="amountInput" v-model="draft.amount" inputmode="decimal" class="field-input mt-2" :aria-invalid="Boolean(errors.amount)" :aria-describedby="errors.amount ? 'amount-error amount-help' : 'amount-help'"><p id="amount-help" class="mt-2 text-sm text-gray-600">Zum Beispiel 10,50</p><p v-if="errors.amount" id="amount-error" class="error-text mt-2">{{ errors.amount }}</p></div>
     <div><label for="expense-date" class="font-semibold">Datum</label><input id="expense-date" ref="dateInput" v-model="draft.incurredOn" type="date" class="field-input mt-2" :aria-invalid="Boolean(errors.incurredOn)" :aria-describedby="errors.incurredOn ? 'date-error' : undefined"><p v-if="errors.incurredOn" id="date-error" class="error-text mt-2">{{ errors.incurredOn }}</p></div>
-    <div><label for="expense-payer" class="font-semibold">Bezahlt von</label><select id="expense-payer" ref="payerSelect" v-model="draft.payerParticipantId" class="field-input mt-2" :aria-invalid="Boolean(errors.payerParticipantId)" :aria-describedby="errors.payerParticipantId ? 'payer-error' : undefined"><option value="" disabled>Person auswählen</option><option v-for="participant in participants" :key="participant.id" :value="participant.id" :disabled="participant.status === 'inactive' && participant.id !== expense?.payerParticipantId">{{ participant.name }}{{ participant.status === 'inactive' ? ' (inaktiv)' : '' }}</option></select><p v-if="errors.payerParticipantId" id="payer-error" class="error-text mt-2">{{ errors.payerParticipantId }}</p></div>
+    <div><label for="expense-payer" class="font-semibold">Bezahlt von</label><select id="expense-payer" ref="payerSelect" v-model="draft.payerParticipantId" class="field-input mt-2" :aria-invalid="Boolean(errors.payerParticipantId)" :aria-describedby="errors.payerParticipantId ? 'payer-error' : undefined"><option value="" disabled>Teilnehmer auswählen</option><option v-for="participant in participants" :key="participant.id" :value="participant.id" :disabled="participant.status === 'inactive' && participant.id !== expense?.payerParticipantId">{{ participant.name }}{{ participant.status === 'inactive' ? ' (inaktiv)' : '' }}</option></select><p v-if="errors.payerParticipantId" id="payer-error" class="error-text mt-2">{{ errors.payerParticipantId }}</p></div>
     <fieldset ref="sharesFieldset" class="min-w-0" :aria-describedby="errors.participantIds ? 'shares-help shares-error' : 'shares-help'" :aria-invalid="Boolean(errors.participantIds)">
       <legend class="font-semibold">Gleichmäßig aufteilen</legend>
       <p id="shares-help" class="mt-1 text-sm text-gray-600">Die Reihenfolge der Gruppe bestimmt, wer Rest-Cents erhält.</p>
@@ -103,7 +103,7 @@ async function addParticipant(duplicateConfirmed = false) {
       <template v-if="useCompactParticipantPicker">
         <div class="mt-3">
           <p class="text-sm font-medium">Ausgewählt ({{ selectedParticipants.length }})</p>
-          <div v-if="selectedParticipants.length" class="mt-2 flex max-h-36 min-w-0 flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-200 p-2" aria-label="Ausgewählte Personen">
+          <div v-if="selectedParticipants.length" class="mt-2 flex max-h-36 min-w-0 flex-wrap gap-2 overflow-y-auto rounded-xl border border-gray-200 p-2" aria-label="Ausgewählte Teilnehmer">
             <span v-for="participant in selectedParticipants" :key="participant.id" class="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-gray-100 py-1 pl-3 pr-1 text-sm text-brand-900">
               <span class="min-w-0 truncate">{{ participant.name }}{{ participant.status === 'inactive' ? ' (inaktiv)' : '' }}</span>
               <button type="button" class="inline-flex size-8 shrink-0 items-center justify-center rounded-full" :aria-label="`${participant.name} aus Aufteilung entfernen`" @click="removeParticipantFromSplit(participant.id)">
@@ -111,17 +111,17 @@ async function addParticipant(duplicateConfirmed = false) {
               </button>
             </span>
           </div>
-          <p v-else class="mt-2 rounded-xl border border-dashed border-gray-300 p-3 text-sm text-gray-600">Noch keine Person ausgewählt.</p>
+          <p v-else class="mt-2 rounded-xl border border-dashed border-gray-300 p-3 text-sm text-gray-600">Noch kein Teilnehmer ausgewählt.</p>
         </div>
 
         <details class="relative mt-3">
           <summary class="secondary-button w-full cursor-pointer select-none justify-between">
-            <span>Personen auswählen</span>
+            <span>Teilnehmer auswählen</span>
             <span class="text-sm font-normal">{{ selectedParticipants.length }} von {{ eligibleParticipantIds.length }}</span>
           </summary>
           <div class="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
-            <label for="expense-participant-search" class="sr-only">Personen durchsuchen</label>
-            <input id="expense-participant-search" v-model="participantSearch" type="search" class="field-input" placeholder="Person suchen …" autocomplete="off">
+            <label for="expense-participant-search" class="sr-only">Teilnehmer durchsuchen</label>
+            <input id="expense-participant-search" v-model="participantSearch" type="search" class="field-input" placeholder="Teilnehmer suchen …" autocomplete="off">
             <div class="mt-2 flex gap-2">
               <button type="button" class="secondary-button min-h-10 flex-1 px-3 py-2 text-sm" @click="selectAllParticipants">Alle auswählen</button>
               <button type="button" class="secondary-button min-h-10 flex-1 px-3 py-2 text-sm" @click="clearParticipantSelection">Auswahl leeren</button>
@@ -131,7 +131,7 @@ async function addParticipant(duplicateConfirmed = false) {
                 <input v-model="draft.participantIds" type="checkbox" :value="participant.id" :disabled="participant.status === 'inactive' && !expense?.shares.some(share => share.participantId === participant.id)">
                 <span class="min-w-0 break-words">{{ participant.name }}{{ participant.status === 'inactive' ? ' (inaktiv)' : '' }}</span>
               </label>
-              <p v-if="!filteredParticipants.length" class="p-3 text-sm text-gray-600">Keine passende Person gefunden.</p>
+              <p v-if="!filteredParticipants.length" class="p-3 text-sm text-gray-600">Kein passender Teilnehmer gefunden.</p>
             </div>
           </div>
         </details>
@@ -145,13 +145,13 @@ async function addParticipant(duplicateConfirmed = false) {
       </div>
       <p v-if="errors.participantIds" id="shares-error" role="alert" class="error-text mt-2">{{ errors.participantIds }}</p>
     </fieldset>
-    <section class="card min-w-0 p-4" aria-labelledby="split-preview"><h2 id="split-preview" class="text-lg font-semibold">Vorschau der Aufteilung</h2><p v-if="!preview.length" class="mt-2 text-gray-600">Betrag und mindestens eine Person auswählen.</p><ul v-else class="mt-3 space-y-2"><li v-for="share in preview" :key="share.participantId" class="flex min-w-0 flex-wrap justify-between gap-4"><span class="min-w-0 break-words">{{ names.get(share.participantId) }}</span><strong>{{ formatAmountMinor(share.amountMinor) }}</strong></li></ul></section>
+    <section class="card min-w-0 p-4" aria-labelledby="split-preview"><h2 id="split-preview" class="text-lg font-semibold">Vorschau der Aufteilung</h2><p v-if="!preview.length" class="mt-2 text-gray-600">Betrag und mindestens einen Teilnehmer auswählen.</p><ul v-else class="mt-3 space-y-2"><li v-for="share in preview" :key="share.participantId" class="flex min-w-0 flex-wrap justify-between gap-4"><span class="min-w-0 break-words">{{ names.get(share.participantId) }}</span><strong>{{ formatAmountMinor(share.amountMinor) }}</strong></li></ul></section>
     <details class="card min-w-0 p-4" :aria-busy="addingParticipant">
       <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold">
-        <span>Weitere Person hinzufügen</span><AppIcon name="chevron-down" />
+        <span>Weiteren Teilnehmer hinzufügen</span><AppIcon name="chevron-down" />
       </summary>
       <div class="mt-3 flex flex-col gap-2 sm:flex-row">
-        <label for="draft-participant" class="sr-only">Name der neuen Person</label>
+        <label for="draft-participant" class="sr-only">Name des neuen Teilnehmers</label>
         <input id="draft-participant" ref="addInput" v-model="addName" class="field-input" :disabled="addingParticipant || submitting" :aria-invalid="Boolean(addError)" :aria-describedby="addError ? 'draft-participant-error' : undefined">
         <button type="button" class="secondary-button shrink-0" :disabled="addingParticipant || submitting" @click="addParticipant()">{{ addingParticipant ? 'Wird hinzugefügt …' : 'Hinzufügen' }}</button>
       </div>

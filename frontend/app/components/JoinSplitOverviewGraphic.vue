@@ -22,12 +22,13 @@
         <div class="landing-graphic__amount-row">
           <span>Unterkunft</span><strong>120,01 €</strong>
         </div>
-        <div class="landing-graphic__split" aria-label="Aufgeteilt auf A mit 40,01 Euro, B mit 40 Euro und C mit 40 Euro">
-          <span class="landing-graphic__split-item"><i aria-hidden="true">A</i><strong>40,01 €</strong></span>
-          <span class="landing-graphic__split-item"><i aria-hidden="true">B</i><strong>40,00 €</strong></span>
-          <span class="landing-graphic__split-item"><i aria-hidden="true">C</i><strong>40,00 €</strong></span>
+        <p class="landing-graphic__payer"><i aria-hidden="true">A</i><span>Bezahlt von Ava</span></p>
+        <div class="landing-graphic__split" aria-label="Salden nach der Aufteilung: Ava erhält 80 Euro, Ben zahlt 40 Euro und Chris zahlt 40 Euro">
+          <span class="landing-graphic__split-item landing-graphic__split-item--positive"><i aria-hidden="true">A</i><b aria-hidden="true">↑</b><strong>+80,00 €</strong></span>
+          <span class="landing-graphic__split-item landing-graphic__split-item--negative"><i aria-hidden="true">B</i><b aria-hidden="true">↓</b><strong>−40,00 €</strong></span>
+          <span class="landing-graphic__split-item landing-graphic__split-item--negative"><i aria-hidden="true">C</i><b aria-hidden="true">↓</b><strong>−40,00 €</strong></span>
         </div>
-        <p class="landing-graphic__caption">Rest-Cents werden fair verteilt</p>
+        <p class="landing-graphic__caption">Guthaben und Schulden auf einen Blick</p>
       </li>
 
       <li class="landing-graphic__card landing-graphic__card--balance">
@@ -36,7 +37,7 @@
         <div class="landing-graphic__transfer">
           <span class="landing-graphic__person"><i aria-hidden="true">B</i>Ben</span>
           <span class="landing-graphic__arrow" aria-hidden="true">→</span>
-          <strong>4,00 €</strong>
+          <strong>40,00 €</strong>
           <span class="landing-graphic__arrow" aria-hidden="true">→</span>
           <span class="landing-graphic__person"><i aria-hidden="true">A</i>Ava</span>
         </div>

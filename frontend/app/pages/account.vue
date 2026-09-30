@@ -520,7 +520,7 @@ watch(() => accountStore.sessionState, state => {
               <div class="rounded-lg border border-gray-200 p-3">
                 <strong>Auf diesem Gerät</strong>
                 <p class="mt-1 text-sm text-gray-600">Name: {{ groupsStore.findStoredGroup(groupId)?.name }}</p>
-                <p class="mt-1 text-sm text-gray-600">Personen: {{ groupsStore.participantsForGroup(groupId).map(item => item.name).join(', ') || 'keine' }}</p>
+                <p class="mt-1 text-sm text-gray-600">Teilnehmer: {{ groupsStore.participantsForGroup(groupId).map(item => item.name).join(', ') || 'keine' }}</p>
                 <details v-if="groupsStore.expensesForGroup(groupId).length" class="mt-2 text-sm">
                   <summary>{{ groupsStore.expensesForGroup(groupId).length }} Ausgaben anzeigen</summary>
                   <ul class="mt-2 space-y-1"><li v-for="expense in groupsStore.expensesForGroup(groupId)" :key="expense.id">{{ expense.description }} · {{ formatMinor(expense.amountMinor) }}</li></ul>
@@ -531,7 +531,7 @@ watch(() => accountStore.sessionState, state => {
                 <strong>Auf dem Server</strong>
                 <template v-if="remoteConflict(groupId)">
                   <p class="mt-1 text-sm text-gray-600">Name: {{ remoteConflict(groupId)!.group.name }} · Revision {{ remoteConflict(groupId)!.revision }}</p>
-                  <p class="mt-1 text-sm text-gray-600">Personen: {{ remoteConflict(groupId)!.participants.map(item => item.name).join(', ') || 'keine' }}</p>
+                  <p class="mt-1 text-sm text-gray-600">Teilnehmer: {{ remoteConflict(groupId)!.participants.map(item => item.name).join(', ') || 'keine' }}</p>
                   <details v-if="remoteConflict(groupId)!.expenses.length" class="mt-2 text-sm">
                     <summary>{{ remoteConflict(groupId)!.expenses.length }} Ausgaben anzeigen</summary>
                     <ul class="mt-2 space-y-1"><li v-for="expense in remoteConflict(groupId)!.expenses" :key="expense.id">{{ expense.description }} · {{ formatMinor(expense.amountMinor) }}</li></ul>
