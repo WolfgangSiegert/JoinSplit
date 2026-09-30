@@ -134,9 +134,21 @@ test('the ready Group List is accessible', async ({ page }) => {
   await expect(betaLink).toHaveAttribute('href', '/demo')
   await expect(page.getByText('Mehr zusammen erleben. Weniger rechnen.')).toBeVisible()
   await expect(page.getByRole('figure', { name: 'So funktioniert JoinSplit' })).toBeVisible()
+  await expect(page.getByText('120,01 €', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Aufgeteilt auf A mit 40,01 Euro, B mit 40 Euro und C mit 40 Euro')).toContainText('A40,01 €B40,00 €C40,00 €')
   await expect(page.getByRole('heading', { name: 'Von der ersten Ausgabe zum klaren Ausgleich' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Neue Gruppe starten' })).toContainText('Erste Gruppe starten')
   await expect(page.getByRole('link', { name: 'So funktioniert’s' })).toHaveAttribute('href', '#so-funktionierts')
+  await expect(page.getByRole('link', { name: 'Weiter zu „In drei Schritten“' })).toHaveAttribute('href', '#in-drei-schritten')
+
+  await page.getByRole('link', { name: 'So funktioniert’s' }).click()
+  await expect.poll(() => page.locator('#so-funktionierts').evaluate((element) => {
+    const box = element.getBoundingClientRect()
+    return Math.abs(box.top + box.height / 2 - window.innerHeight / 2)
+  })).toBeLessThanOrEqual(2)
+
+  await page.getByRole('link', { name: 'Weiter zu „In drei Schritten“' }).click()
+  await expect(page.locator('#in-drei-schritten')).toBeInViewport()
   await expectNoAxeViolations(page)
 })
 

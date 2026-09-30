@@ -20,10 +20,12 @@
         <span class="landing-graphic__number" aria-hidden="true">2</span>
         <p class="landing-graphic__eyebrow">Ausgabe</p>
         <div class="landing-graphic__amount-row">
-          <span>Unterkunft</span><strong>12,01 €</strong>
+          <span>Unterkunft</span><strong>120,01 €</strong>
         </div>
-        <div class="landing-graphic__split" aria-label="Aufgeteilt in 4,01 Euro, 4 Euro und 4 Euro">
-          <span>4,01 €</span><span>4,00 €</span><span>4,00 €</span>
+        <div class="landing-graphic__split" aria-label="Aufgeteilt auf A mit 40,01 Euro, B mit 40 Euro und C mit 40 Euro">
+          <span class="landing-graphic__split-item"><i aria-hidden="true">A</i><strong>40,01 €</strong></span>
+          <span class="landing-graphic__split-item"><i aria-hidden="true">B</i><strong>40,00 €</strong></span>
+          <span class="landing-graphic__split-item"><i aria-hidden="true">C</i><strong>40,00 €</strong></span>
         </div>
         <p class="landing-graphic__caption">Rest-Cents werden fair verteilt</p>
       </li>
@@ -41,5 +43,13 @@
         <p class="landing-graphic__caption">Ein klarer Vorschlag statt Kopfrechnen</p>
       </li>
     </ol>
+
+    <a href="#in-drei-schritten" class="landing-graphic__next" :aria-label="t('home.graphic.next')">
+      <AppIcon name="chevron-down" />
+    </a>
   </figure>
 </template>
+
+<script setup lang="ts">
+const { t } = useAppI18n()
+</script>

@@ -11,6 +11,17 @@ const pendingDeletions = computed(() => groupsStore.pendingGroupDeletions.map(mu
   group: groupsStore.findStoredGroup(mutation.groupId),
 })).filter(item => item.group))
 const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroups.value.length && !pendingDeletions.value.length)
+
+function scrollToOverview(event: MouseEvent): void {
+  const overview = document.getElementById('so-funktionierts')
+  if (!overview) return
+
+  event.preventDefault()
+  overview.scrollIntoView({
+    block: 'center',
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+  })
+}
 </script>
 
 <template>
@@ -22,14 +33,14 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
           <h1 class="landing-hero__title">{{ t('home.title') }}</h1>
           <p class="landing-hero__lead">{{ t('home.lead') }}</p>
           <p class="landing-hero__copy">{{ t('home.copy') }}</p>
-          <a href="#so-funktionierts" class="landing-hero__guide-link">{{ t('home.how') }}<AppIcon name="chevron-down" /></a>
+          <a href="#so-funktionierts" class="landing-hero__guide-link" @click="scrollToOverview">{{ t('home.how') }}<AppIcon name="chevron-down" /></a>
           <div class="landing-hero__actions">
             <NuxtLink v-if="isFreshStart" to="/groups/new" class="primary-button" :aria-label="t('home.newGroup')"><AppIcon name="plus" />{{ t('home.firstGroup') }}</NuxtLink>
             <NuxtLink v-else to="/groups" class="primary-button"><AppIcon name="users" />{{ t('home.myGroups') }}</NuxtLink>
             <NuxtLink to="/people#person-form" class="secondary-button"><AppIcon name="user" />{{ t('home.addPerson') }}</NuxtLink>
           </div>
         </div>
-        <JoinSplitOverviewGraphic />
+        <JoinSplitOverviewGraphic id="so-funktionierts" />
       </header>
 
       <nav class="landing-workspaces" :aria-label="t('home.workspaces')">
@@ -105,7 +116,7 @@ const isFreshStart = computed(() => !activeGroups.value.length && !archivedGroup
         <NuxtLink to="/groups/new" class="primary-button mt-7 w-full"><AppIcon name="plus" />{{ isFreshStart ? t('home.firstGroup') : t('home.newGroup') }}</NuxtLink>
       </section>
 
-      <section id="so-funktionierts" class="landing-guide mt-8" aria-labelledby="landing-guide-title">
+      <section id="in-drei-schritten" class="landing-guide mt-8" aria-labelledby="landing-guide-title">
         <p class="eyebrow">{{ t('home.guide.eyebrow') }}</p>
         <h2 id="landing-guide-title" class="mt-2 text-2xl font-bold">{{ t('home.guide.title') }}</h2>
         <ol class="landing-guide__list">

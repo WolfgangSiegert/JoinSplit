@@ -602,6 +602,7 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
     var(--surface);
   padding: 1rem;
   box-shadow: 0 18px 50px rgb(16 42 86 / 0.08);
+  scroll-margin-block: 1rem;
 }
 
 .landing-graphic__steps {
@@ -668,8 +669,28 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .landing-graphic__amount-row span { color: var(--ink-muted); font-size: 0.82rem; }
 .landing-graphic__amount-row strong { font-size: 1.65rem; font-variant-numeric: tabular-nums; }
 
-.landing-graphic__split { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.65rem; }
-.landing-graphic__split span { border-radius: 999px; background: var(--sand-100); padding: 0.3rem 0.5rem; color: var(--ink); font-size: 0.72rem; font-weight: 700; }
+.landing-graphic__split { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+.landing-graphic__split-item { display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 999px; background: var(--sand-100); padding: 0.2rem 0.5rem 0.2rem 0.2rem; color: var(--ink); font-size: 0.72rem; font-weight: 700; }
+.landing-graphic__split-item i { display: inline-grid; width: 1.45rem; height: 1.45rem; place-items: center; border-radius: 999px; background: #cfe6f5; font-style: normal; font-weight: 850; }
+.landing-graphic__split-item:nth-child(2) i { background: #f2cf78; }
+.landing-graphic__split-item:nth-child(3) i { background: #e5a79c; }
+.landing-graphic__split-item strong { font-variant-numeric: tabular-nums; }
+
+.landing-graphic__next {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  margin: 0.85rem auto 0;
+  background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+  color: var(--ink-muted);
+  box-shadow: 0 8px 20px rgb(16 42 86 / 0.08);
+}
+.landing-graphic__next:hover { border-color: var(--coral); color: var(--coral-dark); }
+.landing-graphic__next:focus-visible { outline: 3px solid #2a66b7; outline-offset: 3px; }
+.landing-graphic__next .app-icon { width: 1.15rem; height: 1.15rem; }
 
 .landing-graphic__transfer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.35rem; margin-top: 1rem; }
 .landing-graphic__person { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.78rem; font-weight: 750; }
@@ -1601,6 +1622,7 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 
 .appearance-option {
   display: flex;
+  min-width: 0;
   min-height: 48px;
   cursor: pointer;
   align-items: center;
@@ -1612,6 +1634,15 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   padding: 0.7rem;
   color: var(--ink);
   font-weight: 700;
+}
+
+.appearance-option > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.language-options {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
 }
 
 .appearance-option:has(input:checked) {

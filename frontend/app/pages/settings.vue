@@ -290,7 +290,7 @@ async function confirmReset(): Promise<void> {
         <h2 id="language-settings" class="text-lg font-semibold">{{ t('settings.language.title') }}</h2>
         <fieldset class="mt-4">
           <legend class="sr-only">{{ t('settings.language.legend') }}</legend>
-          <div class="appearance-options grid grid-cols-3 gap-2">
+          <div class="appearance-options language-options grid gap-2">
             <label v-for="option in [
               { value: 'system', label: t('settings.language.system') },
               { value: 'de', label: t('settings.language.german') },
