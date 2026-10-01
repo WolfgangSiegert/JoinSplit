@@ -123,7 +123,7 @@ Do not put credentials in this public runtime setting.
 ## Local browser state
 
 The client persists its local-first state in IndexedDB database `joinsplit`,
-currently at schema version 4. Rehydration completes before domain UI is shown.
+currently at schema version 10. Rehydration completes before domain UI is shown.
 Connectivity, active synchronization, form drafts and transient error/focus
 state are not persisted.
 

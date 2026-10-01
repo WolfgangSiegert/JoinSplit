@@ -1,0 +1,71 @@
+name: Release notes
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SemVer without the v prefix, for example 0.2.0-beta.1
+        required: true
+        type: string
+      target_ref:
+        description: Commit or branch to preview; normally main
+        required: true
+        default: main
+        type: string
+      previous_tag:
+        description: Optional starting tag; defaults to the nearest preceding tag
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate changelog artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      MANUAL_VERSION: ${{ inputs.version }}
+      MANUAL_TARGET_REF: ${{ inputs.target_ref }}
+      MANUAL_PREVIOUS_TAG: ${{ inputs.previous_tag }}
+    steps:
+      - name: Check out release history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'push' && github.ref || inputs.target_ref }}
+
+      - name: Generate release notes
+        id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            target="$GITHUB_REF_NAME"
+            previous_tag=""
+          else
+            version="$MANUAL_VERSION"
+            target="HEAD"
+            previous_tag="$MANUAL_PREVIOUS_TAG"
+          fi
+
+          bash .github/scripts/generate-release-notes.sh \
+            "$version" \
+            "$target" \
+            "$previous_tag" > release-notes.md
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes-v${{ steps.notes.outputs.version }}
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 30

@@ -52,13 +52,17 @@ Name:
 joinsplit
 
 Aktuelle implementierte Schema-Version:
-5
+10
 
 Object stores:
 
 - accessIdentity
+- accountWorkspace
+- accountAdoption
 - groups
 - participants
+- people
+- pendingPersonMutations
 - pendingMutations
 - settings
 - expenses
@@ -106,10 +110,11 @@ Persistieren.
 
 Persistieren.
 
-Ab Schema v2 verwendet die Queue eine explizite diskriminierte Union. Schema v4
-umfasst CreateGroup, AddParticipant, RenameParticipant,
-DeactivateParticipant, DeleteParticipant, CreateExpense, UpdateExpense und
-DeleteExpense sowie CreateSettlement, UpdateSettlement und DeleteSettlement.
+Ab Schema v2 verwendet die Queue eine explizite diskriminierte Union. Die
+aktuelle Group-Queue umfasst CreateGroup, Participant- und
+Group-Lifecycle-Mutationen, Create/Update/DeleteExpense sowie
+Create/Update/DeleteSettlement. Schema v10 ergänzt eine getrennte
+`pendingPersonMutations`-Queue für Account-Personen.
 Jeder Eintrag besitzt eine unabhängige lokale UUID und eine
 ganzzahlige `createdOrder`. Neue Werte werden als Maximum der vorhandenen Werte
 plus eins vergeben; Lücken bleiben zulässig. Die Synchronisation verarbeitet
@@ -136,9 +141,12 @@ Insbesondere gehört der globale Default für:
 zum dauerhaften Benutzerzustand.
 
 Schema v4 ergänzt
-`settlementProposalStrategy: 'deterministic' | 'minimum-transfer'` fest. Der
-Initialwert ist `deterministic`. Die Einstellung ist gerätelokal und erzeugt
-weder einen API-Aufruf noch eine Pending Mutation.
+`settlementProposalStrategy: 'deterministic' | 'minimum-transfer'`. Der
+Initialwert ist `deterministic`. Weitere gerätelokale Einstellungen umfassen
+Darstellung, Sprache, Gruppenreihenfolge und Ausgleichszahlungen. Accountfähige
+Einstellungen werden bei aktiver Sitzung zusätzlich über den dafür vorgesehenen
+Accountvertrag synchronisiert; reine lokale Änderungen erzeugen keine
+Group-Pending-Mutation.
 
 ## Non-persisted state
 
@@ -201,16 +209,20 @@ Beim Clientstart:
 
 1. IndexedDB öffnen
 2. Schema erstellen bzw. upgraden
-3. Access Identity laden
+3. Access Identity und optionalen Account-Workspace laden
 4. Groups laden
-5. Participants laden
-6. Pending Mutations laden
+5. Participants und Account-Personen laden
+6. Group- und Person-Pending-Mutations laden
 7. Expenses und Expense Shares laden und zusammenführen
 8. Settlements laden
 9. Settings laden
 10. Pinia hydratisieren
 11. App-Lifecycle auf `ready` setzen
 12. vorhandene Pending Mutations über die bestehende Sync-Logik fortsetzen
+
+Ein laufender, wiederaufnehmbarer Account-Import wird separat im Store
+`accountAdoption` persistiert. Details zur Übernahme und Konfliktbehandlung
+stehen in [`account-data-adoption.md`](account-data-adoption.md).
 
 App-Lifecycle-State:
 
@@ -283,7 +295,14 @@ erhalten. v3 → v4 legt `settlements` mit Schlüssel `id` an und ergänzt eine
 vorhandene Settings-Row um die fehlende Standardstrategie `deterministic`, ohne
 andere Einstellungen zu überschreiben. Ein direkter Start von v1 durchläuft
 alle Schritte in derselben IndexedDB-Upgrade-Transaktion; eine neue Datenbank
-wird unmittelbar als v4 angelegt.
+wird unmittelbar mit der aktuellen Version angelegt.
+
+v5 ergänzt den Synchronisationsstatus der Access Identity. v6 und v7 ergänzen
+die Singleton-Stores `accountWorkspace` und `accountAdoption`. v8 ergänzt
+`people`, v9 ergänzt fehlende `personRevisions` in bestehenden
+Account-Workspaces, und v10 ergänzt `pendingPersonMutations`. Jeder Schritt ist
+additiv beziehungsweise ergänzt nur fehlende Defaultwerte; bestehende
+Group-, Participant- und Finanzdaten bleiben erhalten.
 
 ## Sync after rehydration
 

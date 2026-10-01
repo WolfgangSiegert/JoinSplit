@@ -2,15 +2,21 @@
 
 JoinSplit is a mobile-first, local-first web application for small groups that
 need to record shared expenses, split them evenly, understand balances, and
-derive settlement payments without creating user accounts.
+derive settlement payments. It works locally without an Account; an optional
+Account adds recovery and multi-device synchronization.
 
 > **Release status:** M6 public beta showcase with optional Account access and
-> a bounded PWA app shell. Production installation, offline-relaunch and
+> a bounded PWA app shell, plus in-progress M7 native development packaging.
+> Production installation, offline-relaunch and
 > explicit-update checks passed for the documented Chrome desktop and Android
 > test matrix. The live canonical demo is
 > [joinsplit.tiny-bits.org](https://joinsplit.tiny-bits.org). The visible Beta
 > label marks the intentionally reduced showcase acceptance and must not be
 > interpreted as a Production-Readiness claim.
+
+Versions follow Semantic Versioning, and GitHub Releases provide the generated
+changelog. See the [changelog](CHANGELOG.md) and the
+[release procedure](docs/engineering/releases.md).
 
 The public release is a portfolio demo for fictional, non-sensitive test data,
 not a production financial service or durable record-keeping system. Read the
@@ -106,8 +112,8 @@ device matrix remains explicitly deferred until a Production-Readiness review.
 ## Honest limitations
 
 - One owner per Group and no collaboration or Participant login.
-- Accounts are optional; password recovery and email verification are not yet
-  available.
+- Accounts are optional. Email verification is not available; password
+  recovery works only in environments with deliverable mail configured.
 - Multi-device Account hydration detects conflicts but does not merge them
   automatically.
 - The PWA app-shell cache is intentionally limited to previously loaded
@@ -116,8 +122,10 @@ device matrix remains explicitly deferred until a Production-Readiness review.
 - Neither anonymous nor Account server data has a backup or recovery SLA.
 - The public demo is limited to fictional, non-sensitive test data.
 - Automatic server retention replaces a manual server-erasure workflow in M4.
-- No payment execution, banking integration, additional split methods,
-  collaboration, invitations, or native packaging.
+- Native packaging remains development-only: Android runtime evidence is
+  partial and iOS build/runtime verification is still outstanding. There is no
+  store publication, payment execution, banking integration, additional split
+  method, collaboration, or invitation flow.
 
 The precise 30-day access, cleanup, backup, local-reset, and recovery boundaries
 are documented in the [public portfolio demo contract](docs/product/portfolio-demo.md).
@@ -150,6 +158,21 @@ composer test
 
 Playwright expects a completed frontend build, its Chromium browser install,
 and the isolated PostgreSQL test setup described in the development guide.
+
+## Developer documentation
+
+- [Local development](docs/engineering/local-development.md) covers runtimes,
+  database isolation, setup and verification.
+- [Frontend development](frontend/README.md) summarizes client commands,
+  structure, state boundaries and native targets.
+- [API documentation](docs/api/README.md) explains both authentication models
+  and links the OpenAPI description that can be imported into Postman.
+- [Architecture](docs/architecture/domain-model.md) describes the domain and
+  links its focused contracts.
+- [Production operations](docs/engineering/production-operations.md) records
+  deployment, retention and operational boundaries.
+- [AI-assisted workflow](docs/ai/workflow.md) defines the human/agent delivery
+  boundary.
 
 ## AI-assisted development
 

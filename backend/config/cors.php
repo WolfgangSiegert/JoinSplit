@@ -17,7 +17,7 @@ return [
         'X-Person-Revision',
         'X-Mutation-ID',
     ],
-    'exposed_headers' => ['X-Group-Revision', 'X-Person-Revision'],
+    'exposed_headers' => ['X-Group-Revision', 'X-Person-Revision', 'X-Request-ID'],
     'max_age' => 0,
     'supports_credentials' => true,
 ];

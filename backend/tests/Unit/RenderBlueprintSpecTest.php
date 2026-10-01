@@ -45,5 +45,6 @@ it('keeps Laravel routes out of the internal Nuxt proxy', function () {
         ->and($virtualHost)->toContain('<VirtualHost *:10000>')
         ->and($virtualHost)->toContain('DocumentRoot /var/www/html/public')
         ->and($virtualHost)->toContain('CustomLog /proc/self/fd/1 joinsplit_privacy')
+        ->and($apacheConfiguration)->toContain('request_id=%{X-Request-ID}o')
         ->and($virtualHost)->not->toContain('combined');
 });

@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\ProductionConfiguration;
+use Illuminate\Support\Facades\Log;
 
 function configureValidProduction(string $certificate): void
 {
@@ -95,7 +96,12 @@ it('rejects debug, noncanonical origins, non-Neon database hosts, weak TLS and f
 });
 
 it('returns generic readiness failure when production configuration is unsafe', function () {
-    config(['app.env' => 'production']);
+    config([
+        'app.env' => 'production',
+        'logging.default' => 'null',
+    ]);
+    Log::setDefaultDriver('null');
+    Log::forgetChannel('null');
 
     $this->get('/ready')
         ->assertServiceUnavailable()

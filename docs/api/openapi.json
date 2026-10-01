@@ -1,0 +1,3275 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "JoinSplit Application API",
+    "version": "0.1.0-beta",
+    "description": "Contract for the Laravel application API used by the local-first JoinSplit\nclient. Anonymous mutations use a client-held Access Identity credential;\nAccount operations use a server-side session, CSRF protection and explicit\noptimistic revisions. See `docs/api/README.md` before using this description.\n"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Local Laravel development server"
+    },
+    {
+      "url": "https://joinsplit.tiny-bits.org",
+      "description": "Public beta showcase; fictional, non-sensitive test data only"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Operations"
+    },
+    {
+      "name": "Anonymous access"
+    },
+    {
+      "name": "Anonymous workspace"
+    },
+    {
+      "name": "Account session"
+    },
+    {
+      "name": "Account adoption"
+    },
+    {
+      "name": "Account workspace"
+    },
+    {
+      "name": "Account people"
+    }
+  ],
+  "paths": {
+    "/up": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "liveness",
+        "summary": "Check whether the application process is running",
+        "responses": {
+          "200": {
+            "description": "Application is running."
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "operationId": "readiness",
+        "summary": "Check application and database readiness",
+        "responses": {
+          "200": {
+            "description": "Application dependencies are ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "At least one required dependency is unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/access-identities": {
+      "post": {
+        "tags": [
+          "Anonymous access"
+        ],
+        "operationId": "registerAccessIdentity",
+        "summary": "Register or verify a client-held Access Identity",
+        "description": "Both security schemes are required. The bearer value must be 32 random bytes encoded as 64 lowercase hexadecimal characters.",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccessIdentityResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/AccessIdentityResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/groups": {
+      "post": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "createAnonymousGroup",
+        "summary": "Create an anonymous Group",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateGroup"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GroupResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/GroupResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/groups/{group}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "updateAnonymousGroupLifecycle",
+        "summary": "Archive or reactivate an anonymous Group",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GroupLifecycle"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/GroupLifecycleResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "deleteAnonymousGroup",
+        "summary": "Delete an eligible anonymous Group",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Group deleted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/groups/{group}/participants": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "createAnonymousParticipant",
+        "summary": "Add a Participant to an anonymous Group",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateParticipant"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParticipantResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/ParticipantResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/groups/{group}/participants/{participant}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/ParticipantId"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "updateAnonymousParticipant",
+        "summary": "Rename, activate, deactivate, or associate one Participant",
+        "description": "Exactly one of `name`, `active`, or `personId` must be sent.",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/UpdateParticipant"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ParticipantResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "deleteAnonymousParticipant",
+        "summary": "Delete an eligible Participant",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Participant deleted."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/groups/{group}/expenses": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "createAnonymousExpense",
+        "summary": "Create an equal-split Expense",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateExpense"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ExpenseResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/ExpenseResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/groups/{group}/expenses/{expense}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/ExpenseId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "updateAnonymousExpense",
+        "summary": "Replace an Expense",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/UpdateExpense"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ExpenseResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "deleteAnonymousExpense",
+        "summary": "Delete an Expense",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Expense deleted."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/groups/{group}/settlements": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "createAnonymousSettlement",
+        "summary": "Record a Settlement",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateSettlement"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SettlementResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/SettlementResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/groups/{group}/settlements/{settlement}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/SettlementId"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "updateAnonymousSettlement",
+        "summary": "Replace a Settlement",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/UpdateSettlement"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SettlementResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Anonymous workspace"
+        ],
+        "operationId": "deleteAnonymousSettlement",
+        "summary": "Delete a Settlement",
+        "security": [
+          {
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Settlement deleted."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/account/csrf": {
+      "get": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "getAccountCsrfToken",
+        "summary": "Start a session and obtain its CSRF token",
+        "responses": {
+          "200": {
+            "description": "CSRF token for subsequent state-changing Account requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "csrfToken"
+                      ],
+                      "properties": {
+                        "csrfToken": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/register": {
+      "post": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "registerAccount",
+        "summary": "Register and sign in an Account",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RegisterAccount"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/AccountResponse"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/account/login": {
+      "post": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "loginAccount",
+        "summary": "Create an Account session",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/LoginAccount"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account": {
+      "get": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "getCurrentAccount",
+        "summary": "Read the signed-in Account",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "deleteAccount",
+        "summary": "Permanently delete the signed-in Account and its server data",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordConfirmation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Account deleted and session invalidated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/logout": {
+      "post": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "logoutAccount",
+        "summary": "Invalidate the current Account session",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session invalidated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/account/password": {
+      "put": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "changeAccountPassword",
+        "summary": "Change the signed-in Account password",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePassword"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password changed; other Account sessions invalidated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/password/forgot": {
+      "post": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "requestPasswordReset",
+        "summary": "Request a password recovery email",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Generic response regardless of Account existence."
+          },
+          "503": {
+            "description": "Password recovery is not configured in this environment."
+          }
+        }
+      }
+    },
+    "/api/account/password/reset": {
+      "post": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "resetAccountPassword",
+        "summary": "Complete a password reset",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPassword"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset completed."
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/preferences": {
+      "put": {
+        "tags": [
+          "Account session"
+        ],
+        "operationId": "updateAccountPreferences",
+        "summary": "Update one or more Account preferences",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountPreferencesPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated preferences.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AccountPreferences"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/access-identities/link": {
+      "post": {
+        "tags": [
+          "Account adoption"
+        ],
+        "operationId": "linkAnonymousAccessIdentity",
+        "summary": "Link an existing anonymous Access Identity to the Account",
+        "description": "Requires the Account session and the anonymous identity's current credential. A linked credential is permanently disabled.",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ],
+            "accessIdentityHeader": [
+
+            ],
+            "bearerCredential": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccessIdentityResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/access-identities": {
+      "post": {
+        "tags": [
+          "Account adoption"
+        ],
+        "operationId": "createAccountAccessIdentity",
+        "summary": "Create or verify an Account-owned Access Identity ID",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "identityId"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "identityId": {
+                    "$ref": "#/components/schemas/Uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccessIdentityResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/AccessIdentityResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/workspace": {
+      "get": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "getAccountWorkspace",
+        "summary": "Read the complete Account workspace snapshot",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorkspaceResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/account/adoptions/{adoption}/groups/{group}/import": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AdoptionId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Account adoption"
+        ],
+        "operationId": "importAccountGroup",
+        "summary": "Import one local Group snapshot into an Account",
+        "description": "The route and snapshot Group IDs must match. Relationships and financial-history markers are validated as one graph.",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupImport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Group imported."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/adoptions/{adoption}/people/import": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AdoptionId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Account adoption"
+        ],
+        "operationId": "importAccountPeople",
+        "summary": "Import local People and their Participant associations",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeopleImport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "People imported."
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups": {
+      "post": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "createAccountGroup",
+        "summary": "Create a Group in the Account workspace",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          },
+          {
+            "$ref": "#/components/parameters/MutationId"
+          },
+          {
+            "$ref": "#/components/parameters/GroupRevision"
+          },
+          {
+            "$ref": "#/components/parameters/AccountAccessIdentityId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateGroup"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountGroupResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/AccountGroupResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationFailed"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups/{group}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupRevision"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "updateAccountGroupLifecycle",
+        "summary": "Archive or reactivate an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GroupLifecycle"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountGroupLifecycleResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "deleteAccountGroup",
+        "summary": "Delete an eligible Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Group deleted; next revision is in `X-Group-Revision`.",
+            "headers": {
+              "X-Group-Revision": {
+                "$ref": "#/components/headers/GroupRevision"
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups/{group}/participants": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupRevision"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "createAccountParticipant",
+        "summary": "Add a Participant to an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateParticipant"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountParticipantResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/AccountParticipantResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups/{group}/participants/{participant}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/ParticipantId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupRevision"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "updateAccountParticipant",
+        "summary": "Rename, activate, deactivate, or associate one Participant",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/UpdateParticipant"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountParticipantResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "deleteAccountParticipant",
+        "summary": "Delete an eligible Participant",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Participant deleted; next revision is in `X-Group-Revision`.",
+            "headers": {
+              "X-Group-Revision": {
+                "$ref": "#/components/headers/GroupRevision"
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups/{group}/expenses": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupRevision"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "createAccountExpense",
+        "summary": "Create an equal-split Expense in an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateExpense"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountExpenseResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/AccountExpenseResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups/{group}/expenses/{expense}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/ExpenseId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupRevision"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "updateAccountExpense",
+        "summary": "Replace an Expense in an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/UpdateExpense"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountExpenseResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "deleteAccountExpense",
+        "summary": "Delete an Expense from an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Expense deleted; next revision is in `X-Group-Revision`.",
+            "headers": {
+              "X-Group-Revision": {
+                "$ref": "#/components/headers/GroupRevision"
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups/{group}/settlements": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupRevision"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "createAccountSettlement",
+        "summary": "Record a Settlement in an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/CreateSettlement"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountSettlementResponse"
+          },
+          "201": {
+            "$ref": "#/components/responses/AccountSettlementResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/groups/{group}/settlements/{settlement}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/GroupId"
+        },
+        {
+          "$ref": "#/components/parameters/SettlementId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/GroupRevision"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "updateAccountSettlement",
+        "summary": "Replace a Settlement in an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/UpdateSettlement"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AccountSettlementResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Account workspace"
+        ],
+        "operationId": "deleteAccountSettlement",
+        "summary": "Delete a Settlement from an Account Group",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Settlement deleted; next revision is in `X-Group-Revision`.",
+            "headers": {
+              "X-Group-Revision": {
+                "$ref": "#/components/headers/GroupRevision"
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/people": {
+      "post": {
+        "tags": [
+          "Account people"
+        ],
+        "operationId": "createAccountPerson",
+        "summary": "Create an Account Person",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          },
+          {
+            "$ref": "#/components/parameters/MutationId"
+          },
+          {
+            "$ref": "#/components/parameters/PersonRevision"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/SavePerson"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/PersonResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/account/workspace/people/{person}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/PersonId"
+        },
+        {
+          "$ref": "#/components/parameters/CsrfToken"
+        },
+        {
+          "$ref": "#/components/parameters/MutationId"
+        },
+        {
+          "$ref": "#/components/parameters/PersonRevision"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Account people"
+        ],
+        "operationId": "updateAccountPerson",
+        "summary": "Replace an Account Person",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/SavePerson"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PersonResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Account people"
+        ],
+        "operationId": "deleteAccountPerson",
+        "summary": "Delete an unreferenced Account Person",
+        "security": [
+          {
+            "cookieAuth": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Person deleted; next revision is in `X-Person-Revision`.",
+            "headers": {
+              "X-Person-Revision": {
+                "$ref": "#/components/headers/PersonRevision"
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerCredential": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "64 lowercase hexadecimal characters",
+        "description": "Anonymous Access Identity credential generated and retained by the client."
+      },
+      "accessIdentityHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Access-Identity-ID",
+        "description": "UUID v4 of the Access Identity."
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "joinsplit_session",
+        "description": "HttpOnly Laravel Account session cookie."
+      }
+    },
+    "parameters": {
+      "CsrfToken": {
+        "name": "X-CSRF-TOKEN",
+        "in": "header",
+        "required": true,
+        "description": "Token returned by `GET /api/account/csrf` for the same session.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "MutationId": {
+        "name": "X-Mutation-ID",
+        "in": "header",
+        "required": true,
+        "description": "Fresh UUID v4 for this logical mutation; reuse only for an exact retry.",
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "GroupRevision": {
+        "name": "X-Group-Revision",
+        "in": "header",
+        "required": true,
+        "description": "Current non-negative Group revision; use `0` when creating a Group.",
+        "schema": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "example": "0"
+        }
+      },
+      "PersonRevision": {
+        "name": "X-Person-Revision",
+        "in": "header",
+        "required": true,
+        "description": "Current non-negative Person revision; use `0` when creating a Person.",
+        "schema": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$",
+          "example": "0"
+        }
+      },
+      "AccountAccessIdentityId": {
+        "name": "X-Access-Identity-ID",
+        "in": "header",
+        "required": true,
+        "description": "Account-linked Access Identity that will own the new Group.",
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "GroupId": {
+        "name": "group",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "ParticipantId": {
+        "name": "participant",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "ExpenseId": {
+        "name": "expense",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "SettlementId": {
+        "name": "settlement",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "PersonId": {
+        "name": "person",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      },
+      "AdoptionId": {
+        "name": "adoption",
+        "in": "path",
+        "required": true,
+        "description": "UUID v4 identifying one resumable adoption process.",
+        "schema": {
+          "$ref": "#/components/schemas/Uuid"
+        }
+      }
+    },
+    "headers": {
+      "GroupRevision": {
+        "description": "Resulting Group revision after the successful mutation.",
+        "schema": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$"
+        }
+      },
+      "PersonRevision": {
+        "description": "Resulting Person revision after the successful mutation.",
+        "schema": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$"
+        }
+      }
+    },
+    "requestBodies": {
+      "CreateGroup": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateGroup"
+            }
+          }
+        }
+      },
+      "GroupLifecycle": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "archived"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateParticipant": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateParticipant"
+            }
+          }
+        }
+      },
+      "UpdateParticipant": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UpdateParticipant"
+            }
+          }
+        }
+      },
+      "CreateExpense": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateExpense"
+            }
+          }
+        }
+      },
+      "UpdateExpense": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ExpenseInput"
+            }
+          }
+        }
+      },
+      "CreateSettlement": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateSettlement"
+            }
+          }
+        }
+      },
+      "UpdateSettlement": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SettlementInput"
+            }
+          }
+        }
+      },
+      "RegisterAccount": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RegisterAccount"
+            }
+          }
+        }
+      },
+      "LoginAccount": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/LoginAccount"
+            }
+          }
+        }
+      },
+      "SavePerson": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "person"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "person": {
+                  "$ref": "#/components/schemas/PersonInput"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "AccessIdentityResponse": {
+        "description": "Access Identity registered or verified.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "properties": {
+                    "id": {
+                      "$ref": "#/components/schemas/Uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "GroupResponse": {
+        "description": "Group mutation result.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/CreatedGroup"
+                }
+              }
+            }
+          }
+        }
+      },
+      "GroupLifecycleResponse": {
+        "description": "Updated Group lifecycle.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/GroupLifecycle"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ParticipantResponse": {
+        "description": "Participant mutation result.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Participant"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ExpenseResponse": {
+        "description": "Expense mutation result.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Expense"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SettlementResponse": {
+        "description": "Settlement mutation result.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Settlement"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AccountResponse": {
+        "description": "Account session data.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          }
+        }
+      },
+      "WorkspaceResponse": {
+        "description": "Complete Account workspace snapshot.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          }
+        }
+      },
+      "PersonResponse": {
+        "description": "Account Person mutation result.",
+        "headers": {
+          "X-Person-Revision": {
+            "$ref": "#/components/headers/PersonRevision"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "person"
+                  ],
+                  "properties": {
+                    "person": {
+                      "$ref": "#/components/schemas/Person"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AccountGroupResponse": {
+        "description": "Account Group mutation result.",
+        "headers": {
+          "X-Group-Revision": {
+            "$ref": "#/components/headers/GroupRevision"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/CreatedGroup"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AccountGroupLifecycleResponse": {
+        "description": "Account Group lifecycle result.",
+        "headers": {
+          "X-Group-Revision": {
+            "$ref": "#/components/headers/GroupRevision"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/GroupLifecycle"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AccountParticipantResponse": {
+        "description": "Account Participant mutation result.",
+        "headers": {
+          "X-Group-Revision": {
+            "$ref": "#/components/headers/GroupRevision"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Participant"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AccountExpenseResponse": {
+        "description": "Account Expense mutation result.",
+        "headers": {
+          "X-Group-Revision": {
+            "$ref": "#/components/headers/GroupRevision"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Expense"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AccountSettlementResponse": {
+        "description": "Account Settlement mutation result.",
+        "headers": {
+          "X-Group-Revision": {
+            "$ref": "#/components/headers/GroupRevision"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Settlement"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthenticated": {
+        "description": "Authentication failed or no valid session exists.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Requested resource was not found in the authorized scope.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Revision, replay, uniqueness, relationship or lifecycle conflict.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "Request validation failed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Request rate limit exceeded.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Uuid": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "example": "10000000-0000-4000-8000-000000000001"
+      },
+      "Date": {
+        "type": "string",
+        "format": "date",
+        "example": "2026-09-30"
+      },
+      "Readiness": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "unavailable"
+            ]
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "serverRevision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ValidationError": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "errors": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AccountPreferences": {
+        "type": "object",
+        "required": [
+          "groupAreaOrder",
+          "defaultGroupArea",
+          "languagePreference"
+        ],
+        "properties": {
+          "groupAreaOrder": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "people",
+                "expenses",
+                "settlement"
+              ]
+            }
+          },
+          "defaultGroupArea": {
+            "type": "string",
+            "enum": [
+              "people",
+              "expenses",
+              "settlement"
+            ]
+          },
+          "languagePreference": {
+            "type": "string",
+            "enum": [
+              "system",
+              "de",
+              "en"
+            ]
+          }
+        }
+      },
+      "AccountPreferencesPatch": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "groupAreaOrder": {
+            "$ref": "#/components/schemas/AccountPreferences/properties/groupAreaOrder"
+          },
+          "defaultGroupArea": {
+            "$ref": "#/components/schemas/AccountPreferences/properties/defaultGroupArea"
+          },
+          "languagePreference": {
+            "$ref": "#/components/schemas/AccountPreferences/properties/languagePreference"
+          }
+        }
+      },
+      "Account": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "email"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true,
+                "maxLength": 100
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              }
+            }
+          },
+          {
+            "$ref": "#/components/schemas/AccountPreferences"
+          }
+        ]
+      },
+      "RegisterAccount": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password",
+          "password_confirmation",
+          "dataAdoptionConfirmed"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 12,
+            "maxLength": 128
+          },
+          "password_confirmation": {
+            "type": "string",
+            "format": "password"
+          },
+          "dataAdoptionConfirmed": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "groupAreaOrder": {
+            "$ref": "#/components/schemas/AccountPreferences/properties/groupAreaOrder"
+          },
+          "defaultGroupArea": {
+            "$ref": "#/components/schemas/AccountPreferences/properties/defaultGroupArea"
+          },
+          "languagePreference": {
+            "$ref": "#/components/schemas/AccountPreferences/properties/languagePreference"
+          }
+        }
+      },
+      "LoginAccount": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "maxLength": 128
+          }
+        }
+      },
+      "PasswordConfirmation": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "type": "string",
+            "format": "password",
+            "maxLength": 128
+          }
+        }
+      },
+      "ChangePassword": {
+        "type": "object",
+        "required": [
+          "currentPassword",
+          "password",
+          "password_confirmation"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "format": "password",
+            "maxLength": 128
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 12,
+            "maxLength": 128
+          },
+          "password_confirmation": {
+            "type": "string",
+            "format": "password"
+          }
+        }
+      },
+      "ResetPassword": {
+        "type": "object",
+        "required": [
+          "token",
+          "email",
+          "password",
+          "password_confirmation"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 12,
+            "maxLength": 128
+          },
+          "password_confirmation": {
+            "type": "string",
+            "format": "password"
+          }
+        }
+      },
+      "InitialParticipant": {
+        "type": "object",
+        "required": [
+          "participantId",
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "participantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "CreateGroup": {
+        "type": "object",
+        "required": [
+          "groupId",
+          "name",
+          "currency",
+          "actorId",
+          "initialParticipant"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "groupId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "EUR"
+            ]
+          },
+          "actorId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            ],
+            "description": "Access Identity performing the creation; it must match the authenticated or Account-linked identity."
+          },
+          "initialParticipant": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InitialParticipant"
+              }
+            ]
+          }
+        }
+      },
+      "Group": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "currency",
+          "status",
+          "ownerAccessIdentityId"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "EUR"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived",
+              "inactive"
+            ]
+          },
+          "ownerAccessIdentityId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "hasFinancialHistory": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreatedGroup": {
+        "type": "object",
+        "required": [
+          "group",
+          "initialParticipant"
+        ],
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/Group"
+          },
+          "initialParticipant": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParticipantSnapshot"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "GroupLifecycle": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "hasFinancialHistory"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "hasFinancialHistory": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateParticipant": {
+        "type": "object",
+        "required": [
+          "participantId",
+          "name",
+          "order"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "participantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "personId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "UpdateParticipant": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "personId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "Participant": {
+        "type": "object",
+        "required": [
+          "id",
+          "groupId",
+          "name",
+          "active",
+          "order"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "groupId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "personId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ParticipantSnapshot": {
+        "type": "object",
+        "required": [
+          "id",
+          "groupId",
+          "name",
+          "status",
+          "order"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "groupId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "personId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ExpenseInput": {
+        "type": "object",
+        "required": [
+          "description",
+          "amountMinor",
+          "incurredOn",
+          "payerParticipantId",
+          "participantIds"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "amountMinor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "incurredOn": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "payerParticipantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "participantIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Uuid"
+            }
+          }
+        }
+      },
+      "CreateExpense": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ExpenseInput"
+          },
+          {
+            "type": "object",
+            "required": [
+              "expenseId"
+            ],
+            "properties": {
+              "expenseId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            }
+          }
+        ]
+      },
+      "ExpenseShare": {
+        "type": "object",
+        "required": [
+          "participantId",
+          "amountMinor"
+        ],
+        "properties": {
+          "participantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Expense": {
+        "type": "object",
+        "required": [
+          "id",
+          "groupId",
+          "description",
+          "amountMinor",
+          "incurredOn",
+          "payerParticipantId",
+          "creatorAccessIdentityId",
+          "splitMethod",
+          "shares"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "groupId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "description": {
+            "type": "string"
+          },
+          "amountMinor": {
+            "type": "integer"
+          },
+          "incurredOn": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "payerParticipantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "creatorAccessIdentityId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "splitMethod": {
+            "type": "string",
+            "enum": [
+              "equal"
+            ]
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpenseShare"
+            }
+          }
+        }
+      },
+      "SettlementInput": {
+        "type": "object",
+        "required": [
+          "senderParticipantId",
+          "receiverParticipantId",
+          "amountMinor",
+          "occurredOn"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "senderParticipantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "receiverParticipantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "amountMinor": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "example": "12001"
+          },
+          "occurredOn": {
+            "$ref": "#/components/schemas/Date"
+          }
+        }
+      },
+      "CreateSettlement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SettlementInput"
+          },
+          {
+            "type": "object",
+            "required": [
+              "settlementId"
+            ],
+            "properties": {
+              "settlementId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            }
+          }
+        ]
+      },
+      "Settlement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SettlementInput"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "groupId",
+              "creatorAccessIdentityId"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "groupId": {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              "creatorAccessIdentityId": {
+                "$ref": "#/components/schemas/Uuid"
+              }
+            }
+          }
+        ]
+      },
+      "PersonInput": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          }
+        }
+      },
+      "Person": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PersonInput"
+          },
+          {
+            "type": "object",
+            "required": [
+              "revision"
+            ],
+            "properties": {
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        ]
+      },
+      "GroupSnapshot": {
+        "type": "object",
+        "required": [
+          "revision",
+          "group",
+          "participants",
+          "expenses",
+          "settlements"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "group": {
+            "$ref": "#/components/schemas/Group"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParticipantSnapshot"
+            }
+          },
+          "expenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Expense"
+            }
+          },
+          "settlements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Settlement"
+            }
+          }
+        }
+      },
+      "Workspace": {
+        "type": "object",
+        "required": [
+          "account",
+          "people",
+          "groups"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/Account"
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupSnapshot"
+            }
+          }
+        }
+      },
+      "GroupImport": {
+        "type": "object",
+        "required": [
+          "importId",
+          "snapshot"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "importId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ImportedGroupSnapshot"
+          }
+        }
+      },
+      "ImportedGroup": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "currency",
+          "ownerAccessIdentityId",
+          "status",
+          "hasFinancialHistory"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "EUR"
+            ]
+          },
+          "ownerAccessIdentityId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "hasFinancialHistory": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ImportedGroupSnapshot": {
+        "type": "object",
+        "required": [
+          "group",
+          "participants",
+          "expenses",
+          "settlements"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/ImportedGroup"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParticipantSnapshot"
+            }
+          },
+          "expenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Expense"
+            }
+          },
+          "settlements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Settlement"
+            }
+          }
+        }
+      },
+      "PersonAssociation": {
+        "type": "object",
+        "required": [
+          "participantId",
+          "personId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "participantId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "personId": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        }
+      },
+      "PeopleImport": {
+        "type": "object",
+        "required": [
+          "importId",
+          "people",
+          "associations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "importId": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonInput"
+            }
+          },
+          "associations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonAssociation"
+            }
+          }
+        }
+      }
+    }
+  }
+}

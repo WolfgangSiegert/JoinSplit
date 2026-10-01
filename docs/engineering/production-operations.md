@@ -303,6 +303,9 @@ Operational logs may contain timestamps, severity, component, deployment
 identifier, route template, response status, duration, generated correlation
 identifier and aggregate cleanup or backup counts. Unexpected persistence
 errors retain useful internal causality while client responses remain generic.
+The concrete request-ID flow, privacy-preserving Apache traffic format,
+sanitized Laravel exception events and current Nuxt correlation limit are
+defined in [`observability.md`](observability.md).
 
 The zero-cost showcase uses a deliberately bounded mix of automatic provider
 checks and dated manual operational reviews.

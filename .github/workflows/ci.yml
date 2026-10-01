@@ -43,6 +43,33 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Validate release-note tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bash -n .github/scripts/generate-release-notes.sh
+          bash .github/scripts/generate-release-notes.sh \
+            0.2.0-beta.1 \
+            HEAD > "$RUNNER_TEMP/release-notes.md"
+
+          grep -Fq '# JoinSplit v0.2.0-beta.1' "$RUNNER_TEMP/release-notes.md"
+          grep -Fq '_Generated from `' "$RUNNER_TEMP/release-notes.md"
+
+          if bash .github/scripts/generate-release-notes.sh \
+            01.2.3 \
+            HEAD >/dev/null 2>&1; then
+            echo "Invalid SemVer was accepted." >&2
+            exit 1
+          fi
+
+          if bash .github/scripts/generate-release-notes.sh \
+            1.2.3-01 \
+            HEAD >/dev/null 2>&1; then
+            echo "Numeric prerelease identifier with leading zeroes was accepted." >&2
+            exit 1
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
