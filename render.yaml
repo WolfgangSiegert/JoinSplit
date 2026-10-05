@@ -71,3 +71,5 @@ services:
         value: Wolfgang Siegert
       - key: NUXT_PUBLIC_PRIVACY_CONTACT_URL
         value: mailto:WoSiegert@hotmail.com
+      - key: NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL
+        value: https://atm.tiny-bits.org/api/showcase-traffic

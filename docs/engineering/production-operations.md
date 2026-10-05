@@ -68,8 +68,11 @@ middleware. HTTP redirects to HTTPS. Alternate hostnames must not serve a
 second working copy of the application because that would create a separate
 IndexedDB identity and data silo.
 
-Nuxt calls the API through the same canonical origin. Cross-origin API access
-is not part of this release. Laravel must not publish a wildcard CORS policy.
+Nuxt calls the application API through the same canonical origin. The only
+cross-origin browser request is the credential-free, write-only showcase event
+to the explicitly configured ATM statistics endpoint. Cross-origin access to
+JoinSplit domain data is not part of this release. Laravel must not publish a
+wildcard CORS policy.
 API responses and authenticated requests must not be cached by an intermediary.
 The proxy must preserve `Authorization` and `X-Access-Identity-ID` and Laravel
 must trust only proxy information supplied by Render and local Apache.
@@ -108,6 +111,10 @@ minimum, Laravel requires:
 Nuxt receives only public runtime configuration. Its API base must resolve to
 the same canonical HTTPS origin. No credential, database value, `APP_KEY` or
 provider token may be exposed through Nuxt public runtime configuration.
+`NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL` is fixed to
+`https://atm.tiny-bits.org/api/showcase-traffic`; the receiving service owns
+the private operator report and must accept only the fixed JoinSplit event
+contract documented in [`observability.md`](observability.md).
 
 Production startup or deployment fails before receiving traffic when any of
 the following is true:
@@ -117,6 +124,8 @@ the following is true:
 - debug mode is enabled,
 - `APP_URL` or the public API base uses HTTP, localhost or `127.0.0.1`,
 - the frontend and backend origins differ,
+- the central showcase traffic URL is missing or differs from the approved
+  HTTPS endpoint,
 - a required secret is missing,
 - the database connection is public or cannot verify its TLS peer,
 - the database schema is not at the expected migration level.

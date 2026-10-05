@@ -42,6 +42,8 @@ test('registers, rehydrates on a new signed-in device, and deletes the Account',
 
   await page.goto('/settings')
   await page.getByRole('button', { name: 'Ausgleich nach oben verschieben' }).click()
+  await expect(page.getByRole('list', { name: 'Reihenfolge der Gruppenreiter' }).locator('li').nth(1))
+    .toContainText('Ausgleich')
 
   await page.goto('/account')
   await page.getByRole('button', { name: 'Registrieren', exact: true }).click()

@@ -20,6 +20,7 @@ export default defineNuxtConfig({
       nativeApp: nativeBuild,
       operatorName: 'Wolfgang Siegert',
       privacyContactUrl: 'mailto:WoSiegert@hotmail.com',
+      showcaseTrafficUrl: '',
     },
   },
   typescript: {

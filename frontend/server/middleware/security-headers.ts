@@ -1,3 +1,5 @@
+import { approvedShowcaseTrafficOrigin } from '../utils/production-config'
+
 function configuredOrigin(value: unknown): string | null {
   if (typeof value !== 'string') return null
 
@@ -11,7 +13,9 @@ function configuredOrigin(value: unknown): string | null {
 
 export default defineEventHandler((event) => {
   const apiOrigin = configuredOrigin(useRuntimeConfig(event).public.apiBase)
-  const connectSources = ["'self'", apiOrigin].filter((source): source is string => source !== null)
+  const trafficOrigin = approvedShowcaseTrafficOrigin(useRuntimeConfig(event).public.showcaseTrafficUrl)
+  const connectSources = [...new Set(["'self'", apiOrigin, trafficOrigin]
+    .filter((source): source is string => source !== null))]
 
   setResponseHeaders(event, {
     'Content-Security-Policy': `default-src 'self'; base-uri 'self'; connect-src ${connectSources.join(' ')}; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'`,

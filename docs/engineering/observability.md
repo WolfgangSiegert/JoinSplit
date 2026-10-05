@@ -14,8 +14,36 @@ The baseline helps answer three operational questions:
 3. Can an operator diagnose the failure without retaining request or domain
    data?
 
-It is not application analytics, user tracking, an SLA monitor or a complete
+It is not behavioral analytics, user tracking, an SLA monitor or a complete
 production observability platform.
+
+## Central showcase usage
+
+The production Web/PWA client reports at most one coarse app-load event per
+loaded document to the separately operated ATM showcase service. The endpoint
+is configured explicitly as `NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL`; local and test
+environments leave it empty. Native builds, automated browsers, prerendered
+documents that are never activated and browsers with Global Privacy Control
+enabled do not report an event.
+
+The request contains only the fixed fields `version=1`, `site=joinsplit` and
+`path=/app`. It uses no cookie, browser-storage marker, account ID, visitor ID,
+navigation path, query string or referrer. The browser necessarily establishes
+a network connection to the central service, but the JoinSplit contract permits
+that service to store only a daily aggregate for this site. In particular, the
+portfolio service's pseudonymous IP/browser HMAC must not be applied to
+JoinSplit events.
+
+JoinSplit exposes neither a local statistics table nor a public read endpoint.
+The figures belong exclusively in the authenticated ATM operator report.
+Reloads can count more than once, while blockers, Global Privacy Control,
+network failures and service cold starts can reduce the result. It is therefore
+an app-load estimate, not a unique-person or unique-browser count.
+
+The ATM endpoint and private report must be deployed before enabling the
+JoinSplit production configuration. The statistic must not be extended with
+routes, cohorts, account association or a persistent identifier without a new
+product and privacy decision.
 
 ## Traffic log
 
