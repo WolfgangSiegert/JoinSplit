@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest'
-import { backendProxyTarget, productionConfigurationErrors } from '../../server/utils/production-config'
+import {
+  approvedShowcaseTrafficOrigin,
+  backendProxyTarget,
+  productionConfigurationErrors,
+} from '../../server/utils/production-config'
 
 describe('production configuration boundary', () => {
   test('accepts only the canonical same-origin production configuration', () => {
@@ -10,6 +14,7 @@ describe('production configuration boundary', () => {
       JOIN_SPLIT_BACKEND_HOSTPORT: 'joinsplit-backend:10000',
       NUXT_PUBLIC_OPERATOR_NAME: 'Approved Operator',
       NUXT_PUBLIC_PRIVACY_CONTACT_URL: 'mailto:privacy@example.test',
+      NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL: 'https://atm.tiny-bits.org/api/showcase-traffic',
       NODE_ENV: 'production',
     })).toEqual([])
   })
@@ -26,6 +31,7 @@ describe('production configuration boundary', () => {
       JOIN_SPLIT_BACKEND_HOSTPORT: 'joinsplit-backend:10000',
       NUXT_PUBLIC_OPERATOR_NAME: 'Approved Operator',
       NUXT_PUBLIC_PRIVACY_CONTACT_URL: 'https://example.test/privacy',
+      NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL: 'https://atm.tiny-bits.org/api/showcase-traffic',
       NODE_ENV: 'production',
     })).toContain(expectedError)
   })
@@ -42,6 +48,7 @@ describe('production configuration boundary', () => {
       NUXT_PUBLIC_API_BASE: 'https://joinsplit.tiny-bits.org',
       NUXT_PUBLIC_OPERATOR_NAME: 'Approved Operator',
       NUXT_PUBLIC_PRIVACY_CONTACT_URL: 'mailto:privacy@example.test',
+      NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL: 'https://atm.tiny-bits.org/api/showcase-traffic',
       NODE_ENV: 'production',
     })).toEqual([])
   })
@@ -59,6 +66,7 @@ describe('production configuration boundary', () => {
       JOIN_SPLIT_CANONICAL_ORIGIN: 'https://joinsplit.tiny-bits.org',
       NUXT_PUBLIC_API_BASE: 'https://joinsplit.tiny-bits.org',
       JOIN_SPLIT_BACKEND_HOSTPORT: 'joinsplit-backend:10000',
+      NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL: 'https://atm.tiny-bits.org/api/showcase-traffic',
       NODE_ENV: 'production',
       ...overrides,
     })).toContain(expectedError)
@@ -72,8 +80,29 @@ describe('production configuration boundary', () => {
       JOIN_SPLIT_BACKEND_HOSTPORT: 'https://public.example.test/api',
       NUXT_PUBLIC_OPERATOR_NAME: 'Approved Operator',
       NUXT_PUBLIC_PRIVACY_CONTACT_URL: 'mailto:privacy@example.test',
+      NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL: 'https://atm.tiny-bits.org/api/showcase-traffic',
       NODE_ENV: 'production',
     })).toContain('JOIN_SPLIT_BACKEND_HOSTPORT')
+  })
+
+  test('requires the approved central showcase traffic endpoint in production', () => {
+    expect(productionConfigurationErrors({
+      JOIN_SPLIT_VALIDATE_PRODUCTION: 'true',
+      JOIN_SPLIT_COMBINED_SERVICE: 'true',
+      JOIN_SPLIT_CANONICAL_ORIGIN: 'https://joinsplit.tiny-bits.org',
+      NUXT_PUBLIC_API_BASE: 'https://joinsplit.tiny-bits.org',
+      NUXT_PUBLIC_OPERATOR_NAME: 'Approved Operator',
+      NUXT_PUBLIC_PRIVACY_CONTACT_URL: 'mailto:privacy@example.test',
+      NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL: 'https://untrusted.example/api/showcase-traffic',
+      NODE_ENV: 'production',
+    })).toContain('NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL')
+  })
+
+  test('allows only the approved ATM origin in the traffic CSP source', () => {
+    expect(approvedShowcaseTrafficOrigin('https://atm.tiny-bits.org/api/showcase-traffic'))
+      .toBe('https://atm.tiny-bits.org')
+    expect(approvedShowcaseTrafficOrigin('https://untrusted.example/api/showcase-traffic')).toBeNull()
+    expect(approvedShowcaseTrafficOrigin('https://atm.tiny-bits.org/other')).toBeNull()
   })
 
   test('builds backend proxy targets without accepting scheme-relative paths', () => {

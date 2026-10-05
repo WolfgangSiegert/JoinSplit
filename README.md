@@ -167,6 +167,8 @@ and the isolated PostgreSQL test setup described in the development guide.
   structure, state boundaries and native targets.
 - [API documentation](docs/api/README.md) explains both authentication models
   and links the OpenAPI description that can be imported into Postman.
+- [Observability](docs/engineering/observability.md) documents privacy-minimal
+  error, traffic and the central showcase-statistics boundary.
 - [Architecture](docs/architecture/domain-model.md) describes the domain and
   links its focused contracts.
 - [Production operations](docs/engineering/production-operations.md) records

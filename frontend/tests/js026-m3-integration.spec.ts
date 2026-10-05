@@ -88,7 +88,7 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await expect(page.getByRole('heading', { level: 1, name: 'Zahlung', exact: true })).toBeVisible()
 
   await page.goto(`/groups/${groupId}/balances/statement`)
-  await page.getByLabel('Person', { exact: true }).selectOption(bob.id)
+  await page.getByLabel('Teilnehmer', { exact: true }).selectOption(bob.id)
   await page.getByRole('button', { name: 'Vorschau erzeugen' }).click()
   await expect(page.getByText('Die Übersicht enthält Änderungen, die bisher nur auf diesem Gerät gespeichert sind.')).toBeVisible()
   await expect(page.getByLabel('Nachrichtenvorschau')).toHaveValue(/Dein aktueller Stand: −3,00 €/u)
@@ -136,7 +136,7 @@ test('M3 financial workflow survives offline reload and synchronizes through Lar
   await expect(page.getByRole('link', { name: /Alice/ })).toContainText('+3,00 €')
   await expect(page.getByRole('link', { name: /Bob/ })).toContainText('−3,00 €')
   await page.goto(`/groups/${groupId}/balances/statement`)
-  await page.getByLabel('Person', { exact: true }).selectOption(bob.id)
+  await page.getByLabel('Teilnehmer', { exact: true }).selectOption(bob.id)
   await page.getByRole('button', { name: 'Vorschau erzeugen' }).click()
   await expect(page.getByText('Die Übersicht enthält Änderungen, die bisher nur auf diesem Gerät gespeichert sind.')).toHaveCount(0)
   await expect(page.getByLabel('Nachrichtenvorschau')).toHaveValue(/Dein aktueller Stand: −3,00 €/u)

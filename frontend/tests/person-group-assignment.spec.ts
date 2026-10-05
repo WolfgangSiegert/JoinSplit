@@ -39,10 +39,10 @@ test('a reusable Person can be added to a Group once and survives reload', async
   await page.goto(`/groups/${groupId}/participants`)
   await page.getByRole('button', { name: 'Teilnehmeraufnahme öffnen' }).click()
   await page.getByLabel('Person', { exact: true }).selectOption(personId)
-  await page.getByRole('button', { name: 'Ausgewählte Person hinzufügen' }).click()
+  await page.getByRole('button', { name: 'Ausgewählte Person als Teilnehmer hinzufügen' }).click()
   await expect(page.getByText('Ada Lovelace', { exact: true })).toBeVisible()
   await expect(page.getByText('Aktiv · Aus Personenverzeichnis')).toBeVisible()
-  await expect(page.getByText('Alle aktiven Personen sind dieser Gruppe bereits zugeordnet.')).toBeVisible()
+  await expect(page.getByText('Alle aktiven Personen sind dieser Gruppe bereits als Teilnehmer zugeordnet.')).toBeVisible()
 
   await page.reload()
   await expect(page.getByText('Ada Lovelace', { exact: true })).toBeVisible()

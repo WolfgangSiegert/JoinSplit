@@ -3,6 +3,7 @@ const lifecycleStore = useApplicationLifecycleStore()
 const settingsStore = useSettingsStore()
 const nativeApp = useRuntimeConfig().public.nativeApp
 const { synchronizePending } = usePendingCreateGroupSync()
+const { recordVisit } = useShowcaseTraffic()
 const { t } = useAppI18n()
 usePendingPersonSync()
 useAccountSession()
@@ -32,6 +33,7 @@ onMounted(() => {
   systemPrefersDark.value = colorSchemeQuery.matches
   colorSchemeQuery.addEventListener('change', updateSystemColorScheme)
   void lifecycleStore.initialize()
+  void recordVisit()
 })
 
 onUnmounted(() => colorSchemeQuery?.removeEventListener('change', updateSystemColorScheme))

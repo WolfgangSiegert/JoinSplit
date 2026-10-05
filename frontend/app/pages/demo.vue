@@ -20,6 +20,21 @@ const contactIsConfigured = computed(() => operatorName.value !== '' && privacyC
 
       <PublicDemoNotice class="mt-7" />
 
+      <section class="card mt-5 p-5" aria-labelledby="usage-statistics-title">
+        <h2 id="usage-statistics-title" class="text-xl font-semibold">Anonyme Nutzungsstatistik</h2>
+        <p class="mt-3">
+          Die produktive Web- und PWA-Version meldet höchstens einen groben App-Aufruf pro geladenem
+          Dokument an die getrennt betriebene, private Showcase-Auswertung. Übertragen werden nur die
+          festen Angaben „JoinSplit“ und „App“ – keine aufgerufene Seite, Gruppe, Person oder Account-ID.
+        </p>
+        <p class="mt-3">
+          Es werden keine Cookies oder Besucherkennungen gesetzt. Global Privacy Control wird
+          respektiert. Wie bei jeder Internetverbindung erreicht die technische Verbindungsadresse
+          zunächst den empfangenden Server; für JoinSplit darf sie weder gespeichert noch zu einer
+          pseudonymen Kennung verarbeitet werden.
+        </p>
+      </section>
+
       <section class="card mt-5 p-5" aria-labelledby="usage-boundary-title">
         <h2 id="usage-boundary-title" class="text-xl font-semibold">Nutzung und Zugriff</h2>
         <p class="mt-3">

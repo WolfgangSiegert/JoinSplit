@@ -328,8 +328,8 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
       inlineParticipantPosts.push(request)
     }
   })
-  await page.getByText('Weitere Person hinzufügen', { exact: true }).click()
-  await page.getByLabel('Name der neuen Person').fill('Cara')
+  await page.getByText('Weiteren Teilnehmer hinzufügen', { exact: true }).click()
+  await page.getByLabel('Name des neuen Teilnehmers').fill('Cara')
   const addCara = page.waitForResponse(response =>
     response.url().endsWith('/participants') && response.status() === 201,
   )
@@ -340,7 +340,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await addCara
   await expect(page.getByLabel('Bezahlt von').locator('option', { hasText: 'Cara' })).toHaveCount(1)
   expect(inlineParticipantPosts).toHaveLength(1)
-  await expect(page.getByLabel('Name der neuen Person')).toBeFocused()
+  await expect(page.getByLabel('Name des neuen Teilnehmers')).toBeFocused()
 
   await page.getByLabel('Beschreibung').fill('Referenzierte Ausgabe')
   await page.getByLabel('Betrag in Euro').fill('10,00')
@@ -359,7 +359,7 @@ test('Participant hardening prevents duplicate clicks, confirms duplicate names,
   await expect(page.getByRole('button', { name: 'Bob löschen' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Cara löschen' })).toHaveCount(0)
   await expect(page.getByText(
-    'Kann wegen vorhandener Finanzdaten nicht gelöscht werden. Deaktiviere die Person, damit sie für neue Ausgaben nicht mehr auswählbar ist.',
+    'Kann wegen vorhandener Finanzdaten nicht gelöscht werden. Deaktiviere den Teilnehmer, damit er für neue Ausgaben nicht mehr auswählbar ist.',
   )).toHaveCount(3)
   await expect(page.getByRole('button', { name: 'Alice deaktivieren' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Bob deaktivieren' })).toBeVisible()

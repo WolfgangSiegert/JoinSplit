@@ -1,4 +1,9 @@
 const EXPECTED_ORIGIN = 'https://joinsplit.tiny-bits.org'
+const EXPECTED_SHOWCASE_TRAFFIC_URL = 'https://atm.tiny-bits.org/api/showcase-traffic'
+
+export function approvedShowcaseTrafficOrigin(value: unknown): string | null {
+  return value === EXPECTED_SHOWCASE_TRAFFIC_URL ? new URL(EXPECTED_SHOWCASE_TRAFFIC_URL).origin : null
+}
 
 function origin(value: string | undefined): string | null {
   if (!value) return null
@@ -25,6 +30,9 @@ export function productionConfigurationErrors(environment: Record<string, string
   if (environment.NODE_ENV !== 'production') errors.push('NODE_ENV')
   if (!configuredText(environment.NUXT_PUBLIC_OPERATOR_NAME)) errors.push('NUXT_PUBLIC_OPERATOR_NAME')
   if (!contactUrl(environment.NUXT_PUBLIC_PRIVACY_CONTACT_URL)) errors.push('NUXT_PUBLIC_PRIVACY_CONTACT_URL')
+  if (environment.NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL !== EXPECTED_SHOWCASE_TRAFFIC_URL) {
+    errors.push('NUXT_PUBLIC_SHOWCASE_TRAFFIC_URL')
+  }
 
   return errors
 }
