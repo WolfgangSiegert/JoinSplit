@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "component": "JoinSplit",
+      "changelog-path": "CHANGELOG.md",
+      "version-file": "version.txt",
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "include-v-in-release-name": true,
+      "prerelease": true,
+      "prerelease-type": "beta",
+      "versioning": "prerelease",
+      "pull-request-title-pattern": "chore: release ${version}",
+      "pull-request-header": "This pull request is maintained automatically from Conventional Commits. Merge it only when the described version is approved for publication.",
+      "pull-request-footer": "Merging this pull request updates the changelog, creates the version tag and publishes the GitHub prerelease. Production deployment remains a separate manual action.",
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Fixes" },
+        { "type": "perf", "section": "Performance" },
+        { "type": "refactor", "section": "Refactoring" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "test", "section": "Tests" },
+        { "type": "build", "section": "Build system" },
+        { "type": "ci", "section": "Continuous integration" },
+        { "type": "chore", "section": "Maintenance" },
+        { "type": "revert", "section": "Reverts" }
+      ]
+    }
+  }
+}

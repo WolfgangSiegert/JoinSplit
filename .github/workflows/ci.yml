@@ -10,6 +10,25 @@ permissions:
   contents: read
 
 jobs:
+  conventional-pull-request-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - name: Validate Conventional Commit title
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='^(feat|fix|perf|refactor|docs|test|build|ci|chore|revert)(\([[:alnum:]_.:/-]+\))?!?: .+'
+
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "Pull request title must be a Conventional Commit because it becomes the squash commit subject." >&2
+            echo "Example: feat(sync): import local groups" >&2
+            exit 1
+          fi
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -43,32 +62,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Validate release-note tooling
+      - name: Validate release automation configuration
         shell: bash
         run: |
           set -euo pipefail
-
-          bash -n .github/scripts/generate-release-notes.sh
-          bash .github/scripts/generate-release-notes.sh \
-            0.2.0-beta.1 \
-            HEAD > "$RUNNER_TEMP/release-notes.md"
-
-          grep -Fq '# JoinSplit v0.2.0-beta.1' "$RUNNER_TEMP/release-notes.md"
-          grep -Fq '_Generated from `' "$RUNNER_TEMP/release-notes.md"
-
-          if bash .github/scripts/generate-release-notes.sh \
-            01.2.3 \
-            HEAD >/dev/null 2>&1; then
-            echo "Invalid SemVer was accepted." >&2
-            exit 1
-          fi
-
-          if bash .github/scripts/generate-release-notes.sh \
-            1.2.3-01 \
-            HEAD >/dev/null 2>&1; then
-            echo "Numeric prerelease identifier with leading zeroes was accepted." >&2
-            exit 1
-          fi
+          python3 -m json.tool release-please-config.json >/dev/null
+          python3 -m json.tool .release-please-manifest.json >/dev/null
+          manifest_version="$(python3 -c 'import json; print(json.load(open(".release-please-manifest.json"))["."])')"
+          test "$manifest_version" = "$(tr -d '\n' < version.txt)"
 
       - name: Set up Node.js
         uses: actions/setup-node@v7

@@ -14,8 +14,9 @@ Account adds recovery and multi-device synchronization.
 > label marks the intentionally reduced showcase acceptance and must not be
 > interpreted as a Production-Readiness claim.
 
-Versions follow Semantic Versioning, and GitHub Releases provide the generated
-changelog. See the [changelog](CHANGELOG.md) and the
+Versions follow Semantic Versioning. Release Please derives the changelog and
+GitHub prereleases from Conventional Commits; merging its release pull request
+is the explicit human publication gate. See the [changelog](CHANGELOG.md) and the
 [release procedure](docs/engineering/releases.md).
 
 The public release is a portfolio demo for fictional, non-sensitive test data,
