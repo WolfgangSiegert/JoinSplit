@@ -40,7 +40,6 @@ A section is a released version only when a matching Git tag exists.
 * refine group settings and management ([26241e0](https://github.com/WolfgangSiegert/JoinSplit/commit/26241e011ce2ee89ba26da67288e91069e49c16f))
 * refine mobile workflows and list discovery ([3d0bbd4](https://github.com/WolfgangSiegert/JoinSplit/commit/3d0bbd4c0305340808d9be3550015c3a94f80123))
 * refine showcase and participant terminology ([2ce621f](https://github.com/WolfgangSiegert/JoinSplit/commit/2ce621ff10b581d67649ef26978e1ffc96a3a2d7))
-* report anonymous showcase traffic centrally ([186835c](https://github.com/WolfgangSiegert/JoinSplit/commit/186835c5f574851be9a0c6bfd77ac2c4a68fc3b0))
 * report anonymous showcase traffic centrally ([3dd8ba1](https://github.com/WolfgangSiegert/JoinSplit/commit/3dd8ba1230c14ca1e4210aec5b3026b0f08c4da4))
 * simplify desktop header navigation ([f0dc364](https://github.com/WolfgangSiegert/JoinSplit/commit/f0dc36487ec14562bc436f29405169e9ff4beeb6))
 
