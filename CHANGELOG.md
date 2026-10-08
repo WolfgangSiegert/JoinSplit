@@ -9,6 +9,13 @@ A section is a released version only when a matching Git tag exists.
 - [Detailed version and milestone history](docs/releases/version-history.md)
 - [Current development history](https://github.com/WolfgangSiegert/JoinSplit/commits/main)
 
+## [0.1.0-beta.3](https://github.com/WolfgangSiegert/JoinSplit/compare/v0.1.0-beta.2...v0.1.0-beta.3) (2026-10-08)
+
+
+### Fixes
+
+* **native:** harden platform development builds ([729019b](https://github.com/WolfgangSiegert/JoinSplit/commit/729019b06c8e0bcdb7a13d0270fe3c9d8906d98d))
+
 ## [0.1.0-beta.2](https://github.com/WolfgangSiegert/JoinSplit/compare/v0.1.0-beta.1...v0.1.0-beta.2) (2026-10-06)
 
 
