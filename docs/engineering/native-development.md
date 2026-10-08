@@ -81,6 +81,7 @@ From `frontend/`, after selecting the repository's Node 24 runtime:
 pnpm install --frozen-lockfile
 pnpm native:assets
 pnpm native:sync
+pnpm native:build:ios
 pnpm native:open:ios
 pnpm native:open:android
 ```
@@ -88,6 +89,24 @@ pnpm native:open:android
 `native:sync` rebuilds and verifies the native Nuxt artifact, regenerates the
 versioned icons and splash images, and synchronizes both platform projects.
 `native:copy` is available when only the bundled web artifact changed.
+`native:build:ios` produces an unsigned Debug application for the generic iOS
+Simulator at
+`frontend/ios/.build/Build/Products/Debug-iphonesimulator/App.app`. It resolves
+the public Capacitor binary artifacts with Xcode's `netrc` authorization
+provider. Without that option, SwiftPM can wait indefinitely for a Keychain
+authorization dialog even though the artifacts themselves are public.
+
+Before the first simulator run after installing or updating Xcode, complete
+Xcode's local component setup once:
+
+```sh
+xcodebuild -runFirstLaunch
+```
+
+This is a machine-level prerequisite and can require an administrator approval.
+`xcodebuild -checkFirstLaunchStatus` exits with status 0 when the setup is
+complete. The repository does not automate or store that authorization.
+
 `native:verify:android` exercises the Account/session boundary in a running
 Android WebView through its local DevTools endpoint. The three-phase
 `native:verify:android-lifecycle` command uses
@@ -138,7 +157,21 @@ The emulator evidence covers:
 - survival of all records and four pending mutations across a forced process
   stop and relaunch,
 - foreground reconnect draining the queue exactly once without local
-  duplication.
+  duplication,
+- Android hardware back returning from an internal People route to the
+  Landing route and leaving the application only when invoked again at the
+  Landing root,
+- the create-Group name field retaining focus and remaining inside the reduced
+  visual viewport while the Android software keyboard is shown,
+- an external HTTPS probe opening in Chrome while the JoinSplit WebView remains
+  on the trusted `https://localhost/` origin.
+
+The hardware-back check initially exposed a real native boundary defect:
+Capacitor's WebView navigation stack does not represent Nuxt's client-side
+history. `MainActivity` now delegates back presses on non-root routes to the
+page History API and falls through to Android only on `/`. The rebuilt APK was
+installed and the failing `/people` scenario was rerun successfully before the
+root-exit behavior was checked separately.
 
 The lifecycle run exposed and now regresses an Account hydration defect:
 workspace ExpenseShares must be serialized in Participant position order, not
@@ -161,10 +194,15 @@ evidence, but registration/login, authenticated reads and mutations, logout,
 deletion and expired-session behavior still require checks on both native
 platforms before JS-051 can close.
 
-The Android evidence above narrows, but does not remove, that limit. Hardware
-back, keyboard/focus and external-link escape are not yet recorded. Physical
-device coverage remains outstanding when a device is available. On iOS, Xcode
-26.2 currently stalls while resolving the already pinned Swift package graph,
-including with automatic package resolution disabled. Until an iOS build and
-runtime session complete, JS-051, JS-053 and JS-054 must not be reported as
-fully done.
+The Android emulator evidence now covers the accepted navigation, keyboard and
+external-link boundary. Physical-device coverage remains outstanding when a
+device is available.
+
+On iOS, Xcode 26.2 first-launch setup is complete and resolves the pinned
+Capacitor 8.5.2 package graph when the public artifacts use the `netrc`
+authorization provider. An unsigned Debug build for an iPhone 17 Pro Simulator
+succeeds, installs and launches from bundled assets on iOS 26.3.1. By explicit
+human decision on 6 October 2026, the remaining iOS offline-core, Account,
+lifecycle and reconnect runtime scenarios are deferred. This scheduling
+decision is not passed QA evidence. Until those checks resume, JS-051, JS-053
+and JS-055 must not be reported as fully done, and M7 remains open.

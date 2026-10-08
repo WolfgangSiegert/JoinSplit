@@ -15,6 +15,8 @@
     "native:sync": "pnpm build:native && pnpm native:assets && cap sync",
     "native:verify:android": "node scripts/verify-android-runtime.mjs",
     "native:verify:android-lifecycle": "node scripts/verify-android-lifecycle.mjs",
+    "native:resolve:ios": "xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App -clonedSourcePackagesDirPath ios/.swiftpm-cache -packageAuthorizationProvider netrc",
+    "native:build:ios": "pnpm native:copy && pnpm native:resolve:ios && xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/.build -clonedSourcePackagesDirPath ios/.swiftpm-cache -packageAuthorizationProvider netrc CODE_SIGNING_ALLOWED=NO build",
     "native:open:android": "cap open android",
     "native:open:ios": "cap open ios",
     "preview": "nuxt preview --host 127.0.0.1",
