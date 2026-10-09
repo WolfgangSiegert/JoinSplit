@@ -8,10 +8,10 @@ Capacitor. The accepted architecture and security constraints are defined in
 
 JS-052 adds only these exactly pinned packages:
 
-- `@capacitor/core` 8.5.2,
-- `@capacitor/cli` 8.5.2,
-- `@capacitor/ios` 8.5.2,
-- `@capacitor/android` 8.5.2.
+- `@capacitor/core` 8.5.3,
+- `@capacitor/cli` 8.5.3,
+- `@capacitor/ios` 8.5.3,
+- `@capacitor/android` 8.5.3.
 
 Capacitor is necessary to generate and maintain the native containers. No
 additional plugin, platform permission or remote `server.url` is part of this
@@ -199,10 +199,12 @@ external-link boundary. Physical-device coverage remains outstanding when a
 device is available.
 
 On iOS, Xcode 26.2 first-launch setup is complete and resolves the pinned
-Capacitor 8.5.2 package graph when the public artifacts use the `netrc`
-authorization provider. An unsigned Debug build for an iPhone 17 Pro Simulator
-succeeds, installs and launches from bundled assets on iOS 26.3.1. By explicit
-human decision on 6 October 2026, the remaining iOS offline-core, Account,
-lifecycle and reconnect runtime scenarios are deferred. This scheduling
-decision is not passed QA evidence. Until those checks resume, JS-051, JS-053
-and JS-055 must not be reported as fully done, and M7 remains open.
+Capacitor 8.5.3 package graph when the public artifacts use the `netrc`
+authorization provider. An unsigned Debug build succeeds with 8.5.3. The
+install and bundled-asset launch evidence on an iPhone 17 Pro Simulator with
+iOS 26.3.1 was recorded against Capacitor 8.5.2 and has not yet been repeated
+for 8.5.3. By explicit human decision on 6 October 2026, the remaining iOS
+offline-core, Account, lifecycle and reconnect runtime scenarios are deferred.
+This scheduling decision is not passed QA evidence. Until those checks resume,
+JS-051, JS-053 and JS-055 must not be reported as fully done, and M7 remains
+open.
