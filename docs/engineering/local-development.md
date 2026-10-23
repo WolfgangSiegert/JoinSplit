@@ -29,9 +29,9 @@ The repository currently targets:
 
 | Runtime | Version source |
 | --- | --- |
-| Node 24 | `frontend/.nvmrc` and `frontend/package.json` |
+| Node 24.22.1 or later in 24.x | `frontend/.nvmrc` and `frontend/package.json` |
 | pnpm 8.10.5 | `frontend/package.json` |
-| PHP 8.5 | `backend/composer.json` and CI |
+| PHP 8.5.12 or later in 8.5.x | `backend/composer.json` and CI |
 | Composer 2 | CI setup |
 | PostgreSQL 18 | local setup and CI service |
 

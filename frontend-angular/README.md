@@ -20,7 +20,7 @@ Der Stand ist absichtlich **nicht vollständig feature-paritätisch**. Die genau
 
 ## Voraussetzungen und Start
 
-- Node `24.20.0` (mindestens `24.15.0`, kleiner als `25`)
+- Node `24.22.1` (mindestens `24.22.1`, kleiner als `25`)
 - pnpm `8.10.5`
 - optional Laravel unter `http://127.0.0.1:8000` für Synchronisierung
 
