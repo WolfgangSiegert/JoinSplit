@@ -90,6 +90,39 @@ From the approved repository revision:
 Do not proceed if the working tree differs from the approved commit or CI is
 not green.
 
+## October 2026 runtime security rebuild
+
+The [Render eMudhra advisory](https://render.com/docs/advisory-emudhra) and
+[PHP2Shell advisory](https://render.com/docs/advisory-php2shell) require Node
+24.22.1 or later in 24.x, PHP 8.5.12 or later in 8.5.x, and an updated CA store.
+Both runtimes are in `backend/Dockerfile`; setting Render's `NODE_VERSION`
+variable does not update this Docker service. CI and local runtime requirements
+use the same security baseline. Application package versions remain unchanged.
+
+After approval of publication and deployment:
+
+1. Build with fresh base images and without cached package-install layers:
+   `docker build --pull --no-cache -f backend/Dockerfile -t joinsplit:security .`.
+   On Render, use **Clear build cache & deploy** for the approved revision.
+2. Confirm the running service reports Node >=24.22.1 (<25) with
+   `node --version` and PHP >=8.5.12 (<8.6) with `php --version`. The service
+   uses Apache mod_php, not PHP-FPM; also confirm the loaded Apache PHP module
+   comes from the rebuilt image and all old workers have been replaced.
+3. Confirm `/up`, `/ready` and a bounded application smoke test succeed.
+4. From the deployed service, use Node `fetch` and Laravel's HTTP client to
+   request both `https://dv-g3b-emudhra.we-have-a-problem.com/` and
+   `https://dv-g3b-aaa-emudhra.we-have-a-problem.com/`. Each request must fail
+   specifically with a certificate verification error. A timeout or DNS error
+   is inconclusive. First verify each client can reach a known valid HTTPS
+   endpoint. Do not disable TLS verification or send credentials to test hosts.
+5. Record the deployed revision, runtime versions, CA package version
+   (`dpkg-query -W ca-certificates`), and verification results in release evidence.
+
+Updating source alone does not remediate an already running service. A fresh
+CA package installation also requires checking the deployed clients: package
+availability and certificate distrust cannot be established from this file.
+Do not roll back to an image below this security baseline.
+
 ## Create the Render services
 
 1. In Render, create a Blueprint from the JoinSplit GitHub repository.

@@ -1,4 +1,9 @@
-FROM node:24-bookworm-slim AS frontend-build
+FROM node:24.22.1-bookworm-slim AS frontend-build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -11,10 +16,11 @@ COPY frontend/ ./
 COPY docs/architecture/fixtures/ /docs/architecture/fixtures/
 RUN pnpm exec nuxt prepare && pnpm build
 
-FROM php:8.5-apache-bookworm
+FROM php:8.5.12-apache-bookworm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libonig-dev libpq-dev supervisor unzip \
+    && apt-get install -y --no-install-recommends ca-certificates libonig-dev libpq-dev supervisor unzip \
+    && update-ca-certificates \
     && docker-php-ext-install mbstring pdo_pgsql \
     && a2enmod headers proxy proxy_http rewrite \
     && rm -rf /var/lib/apt/lists/*
