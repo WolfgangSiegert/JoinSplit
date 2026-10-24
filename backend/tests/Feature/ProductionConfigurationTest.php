@@ -107,3 +107,13 @@ it('returns generic readiness failure when production configuration is unsafe', 
         ->assertServiceUnavailable()
         ->assertExactJson(['status' => 'unavailable']);
 });
+
+
+it('checks the effective CA file when database URL options override configuration', function () {
+    $certificate = tempnam(sys_get_temp_dir(), 'joinsplit-ca-');
+    configureValidProduction($certificate);
+    config(['database.connections.pgsql.url' => config('database.connections.pgsql.url').'&sslrootcert=/missing/url-ca.pem']);
+
+    expect(app(ProductionConfiguration::class)->errors())->toContain('DB_SSLROOTCERT');
+    unlink($certificate);
+});

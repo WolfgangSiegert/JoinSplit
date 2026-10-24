@@ -7,4 +7,5 @@ php artisan app:prune-expired-identities
 # One bounded check per container start; never block application startup.
 (php bin/check-runtime.php || echo 'security-check PHP FAILED: inspect results above') &
 (node bin/check-runtime.mjs || echo 'security-check Node FAILED: inspect results above') &
+(php bin/check-database-tls.php || echo 'database-tls diagnostic failed') &
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf

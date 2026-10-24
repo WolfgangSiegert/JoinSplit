@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use RuntimeException;
+use Illuminate\Support\ConfigurationUrlParser;
 
 class ProductionConfiguration
 {
@@ -17,7 +18,8 @@ class ProductionConfiguration
         $databasePooled = (bool) config('database.connections.pgsql.pooled');
         $databaseDirectHost = config('database.connections.pgsql.direct.host');
         $databaseSslMode = $this->databaseSslMode($databaseUrl);
-        $rootCertificate = config('database.connections.pgsql.sslrootcert');
+        $resolved = (new ConfigurationUrlParser)->parseConfiguration(config('database.connections.pgsql'));
+        $rootCertificate = $resolved['sslrootcert'] ?? null;
 
         if (config('app.env') !== 'production') {
             $errors[] = 'APP_ENV';
