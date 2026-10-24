@@ -25,7 +25,9 @@ try {
     $package = trim((string) shell_exec("dpkg-query -W -f='\${Version}' ca-certificates 2>/dev/null"));
     reportDatabaseTls('ca-package', $package);
     reportDatabaseTls('ca-sha256', hash_file('sha256', $ca));
-    if (! preg_match('/^(\d{8})/', $package, $matches) || $matches[1] < '20261019') {
+    // Debian Bookworm security backport, documented in DLA-4845-1.
+    exec('dpkg --compare-versions '.escapeshellarg($package).' ge 20250419~deb12u2', $versionOutput, $versionStatus);
+    if ($package === '' || $versionStatus !== 0) {
         throw new RuntimeException('old-ca-package');
     }
     $connection->select('SELECT 1');
