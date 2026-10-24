@@ -9,6 +9,15 @@ A section is a released version only when a matching Git tag exists.
 - [Detailed version and milestone history](docs/releases/version-history.md)
 - [Current development history](https://github.com/WolfgangSiegert/JoinSplit/commits/main)
 
+## [0.1.0-beta.3](https://github.com/WolfgangSiegert/JoinSplit/compare/v0.1.0-beta.2...v0.1.0-beta.3) (2026-10-24)
+
+
+### Fixes
+
+* **native:** harden platform development builds ([729019b](https://github.com/WolfgangSiegert/JoinSplit/commit/729019b06c8e0bcdb7a13d0270fe3c9d8906d98d))
+* recognize Debian Bookworm CA security backport ([0ff6e05](https://github.com/WolfgangSiegert/JoinSplit/commit/0ff6e0517c8950e99ce5431d8b42bd5f3b22b682))
+* **security:** patch Node, PHP and container CA trust ([fb96fb0](https://github.com/WolfgangSiegert/JoinSplit/commit/fb96fb04adba72aa0c7c53993e2f825e3b594461))
+
 ## [0.1.0-beta.2](https://github.com/WolfgangSiegert/JoinSplit/compare/v0.1.0-beta.1...v0.1.0-beta.2) (2026-10-06)
 
 
