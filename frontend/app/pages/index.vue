@@ -18,8 +18,10 @@ function scrollToOverview(event: MouseEvent): void {
   if (!overview) return
 
   event.preventDefault()
-  overview.scrollIntoView({
-    block: 'center',
+  const overviewTop = overview.getBoundingClientRect().top + window.scrollY
+  const viewportPlacement = window.matchMedia('(min-width: 40rem)').matches ? 0.58 : 0.65
+  window.scrollTo({
+    top: Math.max(0, overviewTop - window.innerHeight * viewportPlacement),
     behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
   })
 }
@@ -41,10 +43,13 @@ function scrollToOverview(event: MouseEvent): void {
             <NuxtLink to="/people#person-form" class="secondary-button"><AppIcon name="user" />{{ t('home.addPerson') }}</NuxtLink>
           </div>
         </div>
-        <JoinSplitOverviewGraphic id="so-funktionierts" />
+        <JoinSplitOverviewGraphic
+          id="so-funktionierts"
+          :class="{ 'landing-graphic--direct': route.hash === '#so-funktionierts' }"
+        />
       </header>
 
-      <nav class="landing-workspaces" :aria-label="t('home.workspaces')">
+      <nav class="landing-workspaces landing-workspaces--reveal" :aria-label="t('home.workspaces')">
         <NuxtLink to="/groups" class="landing-workspace-card">
           <span class="landing-workspace-card__icon"><AppIcon name="users" /></span>
           <span><strong>{{ t('home.groups') }}</strong><small>{{ activeGroups.length }} {{ t('common.active') }}</small></span>
@@ -61,9 +66,11 @@ function scrollToOverview(event: MouseEvent): void {
       <p v-if="route.query.reset === '1'" class="mb-5 rounded-lg bg-brand-50 p-3 text-brand-900" role="status">Lokale Daten wurden zurückgesetzt. Eine neue Browser-Identität wurde erstellt.</p>
 
       <section id="gruppen" class="landing-groups" aria-labelledby="group-selector-title">
-        <p class="eyebrow">{{ t('home.area') }}</p>
-        <h2 id="group-selector-title" class="mt-2 text-3xl font-bold">{{ t('home.groups') }}</h2>
-        <p class="mt-2 text-ink-700">{{ t('home.groupsCopy') }}</p>
+        <div class="landing-section-heading">
+          <p class="eyebrow">{{ t('home.area') }}</p>
+          <h2 id="group-selector-title" class="mt-2 text-3xl font-bold">{{ t('home.groups') }}</h2>
+          <p class="mt-2 text-ink-700">{{ t('home.groupsCopy') }}</p>
+        </div>
 
         <section v-if="activeGroups.length" class="mt-6" aria-labelledby="active-groups">
           <h3 id="active-groups" class="text-lg font-semibold">{{ t('home.activeGroups') }}</h3>
@@ -117,13 +124,20 @@ function scrollToOverview(event: MouseEvent): void {
         <NuxtLink to="/groups/new" class="primary-button mt-7 w-full"><AppIcon name="plus" />{{ isFreshStart ? t('home.firstGroup') : t('home.newGroup') }}</NuxtLink>
       </section>
 
-      <section id="in-drei-schritten" class="landing-guide mt-8" aria-labelledby="landing-guide-title">
-        <p class="eyebrow">{{ t('home.guide.eyebrow') }}</p>
-        <h2 id="landing-guide-title" class="mt-2 text-2xl font-bold">{{ t('home.guide.title') }}</h2>
+      <section
+        id="in-drei-schritten"
+        class="landing-guide mt-8"
+        :class="{ 'landing-guide--direct': route.hash === '#in-drei-schritten' }"
+        aria-labelledby="landing-guide-title"
+      >
+        <div class="landing-section-heading">
+          <p class="eyebrow">{{ t('home.guide.eyebrow') }}</p>
+          <h2 id="landing-guide-title" class="mt-2 text-2xl font-bold">{{ t('home.guide.title') }}</h2>
+        </div>
         <ol class="landing-guide__list">
-          <li><strong>{{ t('home.guide.group') }}</strong><span>{{ t('home.guide.groupCopy') }}</span></li>
-          <li><strong>{{ t('home.guide.expense') }}</strong><span>{{ t('home.guide.expenseCopy') }}</span></li>
-          <li><strong>{{ t('home.guide.balance') }}</strong><span>{{ t('home.guide.balanceCopy') }}</span></li>
+          <li class="landing-guide__step landing-guide__step--group"><strong>{{ t('home.guide.group') }}</strong><span>{{ t('home.guide.groupCopy') }}</span></li>
+          <li class="landing-guide__step landing-guide__step--expense"><strong>{{ t('home.guide.expense') }}</strong><span>{{ t('home.guide.expenseCopy') }}</span></li>
+          <li class="landing-guide__step landing-guide__step--balance"><strong>{{ t('home.guide.balance') }}</strong><span>{{ t('home.guide.balanceCopy') }}</span></li>
         </ol>
         <p class="landing-guide__note">Ohne Registrierung. Die Daten bleiben in diesem Browser verfügbar und werden bei Verbindung mit der Demo synchronisiert.</p>
       </section>

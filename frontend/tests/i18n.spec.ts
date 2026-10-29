@@ -52,3 +52,34 @@ test('offers and persists the Material and iOS visual skins', async ({ page }) =
   await page.reload()
   await expect(page.getByRole('radio', { name: /iOS/ })).toBeChecked()
 })
+
+test('keeps the Material header readable around the desktop breakpoint', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/settings')
+  await page.getByRole('radio', { name: /Material/ }).check()
+
+  await page.setViewportSize({ width: 720, height: 800 })
+  await expect(page.locator('.mobile-app-header')).toHaveCSS('display', 'grid')
+  await expect(page.locator('.app-header__content--desktop')).toHaveCSS('display', 'none')
+
+  await page.setViewportSize({ width: 768, height: 800 })
+  const desktopHeader = page.locator('.app-header__content--desktop')
+  await expect(desktopHeader).toHaveCSS('display', 'grid')
+
+  const wordmarkText = desktopHeader.locator('.app-wordmark span')
+  const betaBadge = desktopHeader.locator('.app-beta-badge')
+  const wordmarkBox = await wordmarkText.boundingBox()
+  const betaBadgeBox = await betaBadge.boundingBox()
+  expect(wordmarkBox).not.toBeNull()
+  expect(betaBadgeBox).not.toBeNull()
+  expect(wordmarkBox!.x + wordmarkBox!.width).toBeLessThanOrEqual(betaBadgeBox!.x)
+
+  const accountControl = desktopHeader.locator('.icon-button').first()
+  await expect(accountControl).toHaveCSS('color', 'rgb(255, 255, 255)')
+  await expect(accountControl).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.12)')
+  await expect(accountControl.locator('.app-icon')).toHaveCSS('color', 'rgb(255, 255, 255)')
+
+  const activeThemeIcon = desktopHeader.locator('.theme-toggle__icon').first()
+  await expect(activeThemeIcon).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+  await expect(activeThemeIcon).toHaveCSS('color', 'rgb(25, 118, 210)')
+})

@@ -169,7 +169,7 @@ test('the ready Group List is accessible', async ({ page }) => {
   await page.getByRole('link', { name: 'So funktioniert’s' }).click()
   await expect.poll(() => page.locator('#so-funktionierts').evaluate((element) => {
     const box = element.getBoundingClientRect()
-    return Math.abs(box.top + box.height / 2 - window.innerHeight / 2)
+    return Math.abs(box.top - window.innerHeight * 0.58)
   })).toBeLessThanOrEqual(2)
 
   await page.getByRole('link', { name: 'Weiter zu „In drei Schritten“' }).click()

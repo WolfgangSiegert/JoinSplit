@@ -1,5 +1,10 @@
 <template>
-  <figure class="landing-graphic" aria-labelledby="landing-graphic-title landing-graphic-description">
+  <figure
+    ref="graphic"
+    class="landing-graphic"
+    :class="{ 'landing-graphic--desktop-play': desktopAnimationStarted }"
+    aria-labelledby="landing-graphic-title landing-graphic-description"
+  >
     <figcaption class="sr-only">
       <span id="landing-graphic-title">So funktioniert JoinSplit</span>
       <span id="landing-graphic-description">Eine Gruppe anlegen, Ausgaben gleichmäßig aufteilen und offene Salden ausgleichen.</span>
@@ -53,4 +58,53 @@
 
 <script setup lang="ts">
 const { t } = useAppI18n()
+const graphic = ref<HTMLElement | null>(null)
+const desktopAnimationStarted = ref(false)
+
+let visibilityObserver: IntersectionObserver | undefined
+let desktopViewport: MediaQueryList | undefined
+let desktopAnimationArmed = true
+
+function observeDesktopVisibility(): void {
+  visibilityObserver?.disconnect()
+  visibilityObserver = undefined
+
+  if (
+    !graphic.value
+    || !window.matchMedia('(min-width: 40rem)').matches
+    || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    desktopAnimationStarted.value = false
+    desktopAnimationArmed = true
+    return
+  }
+
+  visibilityObserver = new IntersectionObserver(([entry]) => {
+    if (!entry) return
+
+    if (!entry.isIntersecting || entry.intersectionRatio <= 0.15) {
+      desktopAnimationStarted.value = false
+      desktopAnimationArmed = true
+      return
+    }
+
+    if (!desktopAnimationArmed || entry.intersectionRatio < 0.6) return
+
+    desktopAnimationStarted.value = true
+    desktopAnimationArmed = false
+  }, { threshold: [0, 0.15, 0.6] })
+
+  visibilityObserver.observe(graphic.value)
+}
+
+onMounted(() => {
+  desktopViewport = window.matchMedia('(min-width: 40rem)')
+  desktopViewport.addEventListener('change', observeDesktopVisibility)
+  observeDesktopVisibility()
+})
+
+onBeforeUnmount(() => {
+  visibilityObserver?.disconnect()
+  desktopViewport?.removeEventListener('change', observeDesktopVisibility)
+})
 </script>

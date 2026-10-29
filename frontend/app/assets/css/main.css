@@ -618,19 +618,60 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 }
 
 .landing-graphic__steps {
+  position: relative;
   display: grid;
   gap: 0.85rem;
   list-style: none;
 }
+.landing-graphic__steps::before,
+.landing-graphic__steps::after {
+  position: absolute;
+  top: 2.55rem;
+  right: 1.86rem;
+  bottom: 2.55rem;
+  z-index: 0;
+  width: 3px;
+  border-radius: 999px;
+  content: "";
+}
+.landing-graphic__steps::before { background: color-mix(in srgb, var(--line) 82%, transparent); }
+.landing-graphic__steps::after {
+  background: linear-gradient(to bottom, var(--blue), var(--coral) 52%, var(--positive));
+  transform-origin: top;
+}
 
 .landing-graphic__card {
+  --overview-accent: var(--blue);
+  --overview-border-progress: 0%;
   position: relative;
+  z-index: 1;
   min-width: 0;
   border: 1px solid rgb(16 42 86 / 0.11);
   border-radius: 1.15rem;
   background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
   padding: 1rem;
   box-shadow: 0 8px 22px rgb(16 42 86 / 0.06);
+}
+.landing-graphic__card--expense { --overview-accent: var(--coral); }
+.landing-graphic__card--balance { --overview-accent: var(--positive); }
+
+.landing-graphic__card::after {
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  border-radius: inherit;
+  background: conic-gradient(
+    from -90deg,
+    color-mix(in srgb, var(--overview-accent) 62%, transparent) var(--overview-border-progress),
+    transparent 0
+  );
+  content: "";
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  padding: 1px;
+  pointer-events: none;
 }
 
 .landing-graphic__number {
@@ -642,7 +683,8 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   height: 1.75rem;
   place-items: center;
   border-radius: 999px;
-  background: var(--ink);
+  background: var(--overview-accent);
+  box-shadow: 0 0 0 3px var(--surface-strong), 0 0 0 4px color-mix(in srgb, var(--overview-accent) 42%, transparent);
   color: white;
   font-size: 0.78rem;
   font-weight: 800;
@@ -717,7 +759,11 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .landing-graphic__transfer strong { font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 
 .landing-groups,
-.landing-guide { scroll-margin-top: 8rem; padding-top: 1rem; }
+.landing-guide {
+  overflow-x: clip;
+  scroll-margin-top: 8rem;
+  padding-top: 1rem;
+}
 .landing-workspaces {
   display: grid;
   gap: 0.75rem;
@@ -749,22 +795,291 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .landing-workspace-card > span:nth-child(2) { display: grid; gap: 0.15rem; }
 .landing-workspace-card strong { font-size: 1rem; }
 .landing-workspace-card small { color: var(--ink-muted); font-size: 0.8rem; font-weight: 600; }
-.landing-guide__list { display: grid; gap: 0.85rem; margin-top: 1.25rem; counter-reset: guide; list-style: none; }
-.landing-guide__list li { display: grid; grid-template-columns: 2.5rem 1fr; column-gap: 0.75rem; border-top: 1px solid var(--line); padding-top: 0.9rem; }
-.landing-guide__list li::before { display: grid; width: 2.2rem; height: 2.2rem; grid-row: 1 / 3; place-items: center; border-radius: 999px; background: var(--color-brand-100); color: var(--coral-dark); content: counter(guide); counter-increment: guide; font-weight: 850; }
-.landing-guide__list strong { align-self: end; }
-.landing-guide__list span { margin-top: 0.15rem; color: var(--ink-muted); line-height: 1.5; }
+.landing-guide__list {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  counter-reset: guide;
+  list-style: none;
+}
+.landing-guide__list::before,
+.landing-guide__list::after {
+  position: absolute;
+  top: 2.6rem;
+  bottom: 2.6rem;
+  left: 1.62rem;
+  z-index: 0;
+  width: 3px;
+  border-radius: 999px;
+  content: "";
+}
+.landing-guide__list::before { background: color-mix(in srgb, var(--line) 82%, transparent); }
+.landing-guide__list::after {
+  background: linear-gradient(to bottom, var(--blue), var(--coral) 52%, var(--positive));
+  transform-origin: top;
+}
+.landing-guide__step {
+  --guide-accent: var(--blue);
+  --guide-enter-x: -2.25rem;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 6.4rem;
+  grid-template-columns: 2.8rem 1fr;
+  align-content: center;
+  column-gap: 0.85rem;
+  overflow: clip;
+  border: 1px solid color-mix(in srgb, var(--guide-accent) 28%, var(--line));
+  border-left: 4px solid var(--guide-accent);
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--guide-accent) 10%, transparent), transparent 48%),
+    var(--surface-strong);
+  padding: 1rem;
+  box-shadow: 0 10px 28px rgb(16 42 86 / 0.06);
+}
+.landing-guide__step:nth-child(even) { --guide-enter-x: 2.25rem; }
+.landing-guide__step--expense { --guide-accent: var(--coral); }
+.landing-guide__step--balance { --guide-accent: var(--positive); }
+.landing-guide__step::before {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  grid-row: 1 / 3;
+  place-items: center;
+  border: 3px solid var(--surface-strong);
+  border-radius: 999px;
+  background: var(--guide-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--guide-accent) 34%, transparent), 0 8px 18px rgb(16 42 86 / 0.12);
+  color: white;
+  content: counter(guide);
+  counter-increment: guide;
+  font-weight: 850;
+}
+.landing-guide__list strong { align-self: end; font-size: 1.05rem; }
+.landing-guide__list span { margin-top: 0.2rem; color: var(--ink-muted); line-height: 1.5; }
 .landing-guide__note { margin-top: 1.2rem; border-radius: 1rem; background: color-mix(in srgb, var(--blue) 12%, var(--surface)); padding: 0.9rem 1rem; color: var(--ink); font-size: 0.9rem; line-height: 1.5; }
+
+@property --overview-border-progress {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@keyframes landing-overview-border-draw {
+  from { --overview-border-progress: 0%; }
+  to { --overview-border-progress: 100%; }
+}
+
+@keyframes landing-overview-number-bounce {
+  0%, 100% { scale: 1; translate: 0 0; }
+  35% { scale: 1.09; translate: 0 -0.13rem; }
+  62% { scale: 0.99; translate: 0 0.025rem; }
+  82% { scale: 1.02; translate: 0 -0.015rem; }
+}
+
+@keyframes landing-overview-progress {
+  from { scale: 1 0; }
+  to { scale: 1 1; }
+}
+
+@keyframes landing-overview-connector-reveal {
+  from {
+    opacity: 0.15;
+    scale: 0.65;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes landing-copy-reveal {
+  from {
+    opacity: 0;
+    translate: 0 3.5rem;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes landing-card-reveal {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 2.5rem;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes landing-guide-step-reveal {
+  from {
+    opacity: 0.08;
+    filter: blur(4px) saturate(0.72);
+    scale: 0.94;
+    translate: var(--guide-enter-x) 3rem;
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0) saturate(1);
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes landing-guide-progress {
+  from { scale: 1 0; }
+  to { scale: 1 1; }
+}
+
+@keyframes landing-guide-badge-reveal {
+  from {
+    opacity: 0.25;
+    scale: 0.72;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* Progressive enhancement: content remains fully visible without scroll timelines. */
+@supports (animation-timeline: view()) {
+  .landing-graphic {
+    view-timeline: --landing-overview block;
+  }
+
+  .landing-graphic__steps::after {
+    animation: landing-overview-progress linear both;
+    animation-range: entry 0% cover 43%;
+    animation-timeline: --landing-overview;
+  }
+
+  .landing-graphic__card::after {
+    animation: landing-overview-border-draw linear both;
+    animation-timeline: --landing-overview;
+  }
+
+  .landing-graphic__number {
+    animation: landing-overview-number-bounce linear both;
+    animation-timeline: --landing-overview;
+  }
+
+  .landing-graphic__card:nth-child(1)::after { animation-range: cover 14% cover 22%; }
+  .landing-graphic__card:nth-child(1) .landing-graphic__number { animation-range: cover 22% cover 26%; }
+  .landing-graphic__card:nth-child(2)::after { animation-range: cover 26% cover 34%; }
+  .landing-graphic__card:nth-child(2) .landing-graphic__number { animation-range: cover 34% cover 38%; }
+  .landing-graphic__card:nth-child(3)::after { animation-range: cover 38% cover 46%; }
+  .landing-graphic__card:nth-child(3) .landing-graphic__number { animation-range: cover 46% cover 50%; }
+
+  .landing-workspaces--reveal {
+    view-timeline: --landing-workspaces block;
+  }
+
+  .landing-workspaces--reveal .landing-workspace-card {
+    animation: landing-card-reveal linear both;
+    animation-timeline: --landing-workspaces;
+  }
+
+  .landing-workspaces--reveal .landing-workspace-card:nth-child(1) { animation-range: entry 0% cover 24%; }
+  .landing-workspaces--reveal .landing-workspace-card:nth-child(2) { animation-range: entry 10% cover 34%; }
+
+  .landing-section-heading {
+    animation: landing-copy-reveal linear both;
+    animation-range: entry 0% cover 24%;
+    animation-timeline: view(block 8% 10%);
+  }
+
+  .landing-guide__list {
+    view-timeline: --landing-guide block;
+  }
+
+  .landing-guide__list::after {
+    animation: landing-guide-progress linear both;
+    animation-timeline: --landing-guide;
+    animation-range: entry 0% cover 46%;
+  }
+
+  .landing-guide__step {
+    animation: landing-guide-step-reveal linear both;
+    animation-timeline: --landing-guide;
+  }
+
+  .landing-guide__step::before {
+    animation: landing-guide-badge-reveal linear both;
+    animation-timeline: --landing-guide;
+  }
+
+  .landing-guide__step:nth-child(1),
+  .landing-guide__step:nth-child(1)::before { animation-range: entry 0% cover 22%; }
+  .landing-guide__step:nth-child(2),
+  .landing-guide__step:nth-child(2)::before { animation-range: entry 10% cover 32%; }
+  .landing-guide__step:nth-child(3),
+  .landing-guide__step:nth-child(3)::before { animation-range: entry 20% cover 42%; }
+
+  .landing-graphic:target,
+  .landing-graphic--direct,
+  .landing-graphic:target .landing-graphic__steps::after,
+  .landing-graphic--direct .landing-graphic__steps::after,
+  .landing-graphic:target .landing-graphic__card,
+  .landing-graphic--direct .landing-graphic__card,
+  .landing-graphic:target .landing-graphic__card::after,
+  .landing-graphic--direct .landing-graphic__card::after,
+  .landing-graphic:target .landing-graphic__number,
+  .landing-graphic--direct .landing-graphic__number,
+  .landing-groups:target .landing-section-heading,
+  .landing-guide:target .landing-section-heading,
+  .landing-guide--direct .landing-section-heading,
+  .landing-guide:target .landing-guide__list::after,
+  .landing-guide--direct .landing-guide__list::after,
+  .landing-guide:target .landing-guide__step,
+  .landing-guide--direct .landing-guide__step,
+  .landing-guide:target .landing-guide__step::before,
+  .landing-guide--direct .landing-guide__step::before,
+  .landing-graphic:focus-within,
+  .landing-graphic:focus-within .landing-graphic__steps::after,
+  .landing-graphic:focus-within .landing-graphic__card,
+  .landing-graphic:focus-within .landing-graphic__card::after,
+  .landing-graphic:focus-within .landing-graphic__number,
+  .landing-workspace-card:focus-visible {
+    animation: none;
+    opacity: 1;
+    filter: none;
+    scale: 1;
+    translate: 0 0;
+  }
+
+  .landing-graphic:target .landing-graphic__card::after,
+  .landing-graphic--direct .landing-graphic__card::after,
+  .landing-graphic:focus-within .landing-graphic__card::after { --overview-border-progress: 100%; }
+
+  .landing-guide:target .landing-guide__list::after,
+  .landing-guide--direct .landing-guide__list::after { scale: 1 1; }
+}
 
 @media (min-width: 40rem) {
   .landing-graphic { padding: 1.25rem; }
   .landing-graphic__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .landing-graphic__steps::before,
+  .landing-graphic__steps::after { display: none; }
   .landing-graphic__card { min-height: 12.3rem; }
   .landing-graphic__card + .landing-graphic__card::before {
     position: absolute;
     top: 50%;
     left: -0.72rem;
-    z-index: 2;
+    z-index: 5;
     width: 1.35rem;
     height: 1.35rem;
     border: 1px solid rgb(16 42 86 / 0.12);
@@ -778,6 +1093,59 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
     text-align: center;
     transform: translateY(-50%);
   }
+
+  @supports (animation-timeline: view()) {
+    .landing-graphic__card::after,
+    .landing-graphic__number,
+    .landing-graphic__card + .landing-graphic__card::before {
+      animation: none;
+      animation-timeline: auto;
+    }
+  }
+
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(1)::after {
+    animation: landing-overview-border-draw 1.3s cubic-bezier(0.45, 0, 0.55, 1) both;
+  }
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(1) .landing-graphic__number {
+    animation: landing-overview-number-bounce 0.8s ease-in-out 1.3s both;
+  }
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(2)::after {
+    animation: landing-overview-border-draw 1.3s cubic-bezier(0.45, 0, 0.55, 1) 2.1s both;
+  }
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(2) .landing-graphic__number {
+    animation: landing-overview-number-bounce 0.8s ease-in-out 3.4s both;
+  }
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(3)::after {
+    animation: landing-overview-border-draw 1.3s cubic-bezier(0.45, 0, 0.55, 1) 4.2s both;
+  }
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(3) .landing-graphic__number {
+    animation: landing-overview-number-bounce 0.8s ease-in-out 5.5s both;
+  }
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(2)::before {
+    animation: landing-overview-connector-reveal 0.6s ease-in-out 1.8s both;
+  }
+  .landing-graphic--desktop-play .landing-graphic__card:nth-child(3)::before {
+    animation: landing-overview-connector-reveal 0.6s ease-in-out 3.9s both;
+  }
+
+  .landing-graphic:target .landing-graphic__card::after,
+  .landing-graphic--direct .landing-graphic__card::after,
+  .landing-graphic:focus-within .landing-graphic__card::after,
+  .landing-graphic:target .landing-graphic__number,
+  .landing-graphic--direct .landing-graphic__number,
+  .landing-graphic:focus-within .landing-graphic__number,
+  .landing-graphic:target .landing-graphic__card + .landing-graphic__card::before,
+  .landing-graphic--direct .landing-graphic__card + .landing-graphic__card::before,
+  .landing-graphic:focus-within .landing-graphic__card + .landing-graphic__card::before {
+    animation: none;
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+
+  .landing-graphic:target .landing-graphic__card::after,
+  .landing-graphic--direct .landing-graphic__card::after,
+  .landing-graphic:focus-within .landing-graphic__card::after { --overview-border-progress: 100%; }
 }
 
 .field-input {
@@ -1805,6 +2173,13 @@ html[data-design="4"] .app-header__action,
 html[data-design="4"] .mobile-app-header__action,
 html[data-design="4"] .app-beta-badge { border-color: rgb(255 255 255 / 0.58); color: #fff; }
 html[data-design="4"] .app-beta-badge { background: rgb(0 0 0 / 0.16); }
+html[data-design="4"] .app-header .icon-button,
+html[data-design="4"] .app-header .theme-toggle { background: rgb(255 255 255 / 0.12); }
+html[data-design="4"] .theme-toggle:not(.theme-toggle--dark) .theme-toggle__icon:first-child,
+html[data-design="4"] .theme-toggle--dark .theme-toggle__icon:last-child {
+  background: #fff;
+  color: var(--coral-dark);
+}
 html[data-design="4"] .app-header__action:hover,
 html[data-design="4"] .app-header__action.router-link-active { background: rgb(255 255 255 / 0.16); color: #fff; }
 
@@ -2208,7 +2583,7 @@ html[data-theme="dark"] .status-panel[data-state="syncing"] { border-color: #846
   }
 }
 
-@media (min-width: 720px) {
+@media (min-width: 768px) {
   .mobile-app-header,
   .mobile-bottom-navigation,
   .mobile-create-dialog { display: none; }
@@ -2261,7 +2636,7 @@ html[data-theme="dark"] .status-panel[data-state="syncing"] { border-color: #846
   .form-action-menu--mobile { display: none; }
 }
 
-@media (max-width: 719px) {
+@media (max-width: 767px) {
   .page-shell { padding-bottom: max(6.5rem, calc(5.25rem + env(safe-area-inset-bottom))); }
   .group-area-navigation {
     position: sticky;
@@ -2324,4 +2699,44 @@ html[data-theme="dark"] .status-panel[data-state="syncing"] { border-color: #846
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+
+  .landing-graphic,
+  .landing-graphic__steps::after,
+  .landing-graphic__card,
+  .landing-graphic__card::after,
+  .landing-graphic__number,
+  .landing-workspace-card,
+  .landing-section-heading,
+  .landing-guide__list::after,
+  .landing-guide__step,
+  .landing-guide__step::before {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    scale: 1 !important;
+    translate: 0 0 !important;
+  }
+
+  .landing-graphic__card::after { --overview-border-progress: 100%; }
+}
+
+@media print {
+  .landing-graphic,
+  .landing-graphic__steps::after,
+  .landing-graphic__card,
+  .landing-graphic__card::after,
+  .landing-graphic__number,
+  .landing-workspace-card,
+  .landing-section-heading,
+  .landing-guide__list::after,
+  .landing-guide__step,
+  .landing-guide__step::before {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    scale: 1 !important;
+    translate: 0 0 !important;
+  }
+
+  .landing-graphic__card::after { --overview-border-progress: 100%; }
 }
