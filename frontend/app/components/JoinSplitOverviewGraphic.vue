@@ -2,7 +2,10 @@
   <figure
     ref="graphic"
     class="landing-graphic"
-    :class="{ 'landing-graphic--desktop-play': desktopAnimationStarted }"
+    :class="{
+      'landing-graphic--desktop-play': desktopAnimationStarted,
+      'landing-graphic--mobile-motion': mobileMotionEnabled,
+    }"
     aria-labelledby="landing-graphic-title landing-graphic-description"
   >
     <figcaption class="sr-only">
@@ -60,10 +63,144 @@
 const { t } = useAppI18n()
 const graphic = ref<HTMLElement | null>(null)
 const desktopAnimationStarted = ref(false)
+const mobileMotionEnabled = ref(false)
 
 let visibilityObserver: IntersectionObserver | undefined
 let desktopViewport: MediaQueryList | undefined
+let mobileViewport: MediaQueryList | undefined
+let reducedMotion: MediaQueryList | undefined
 let desktopAnimationArmed = true
+let mobileMotionFrame: number | undefined
+let mobileMotionHasRendered = false
+let previousMobileScrollTop = 0
+const mobileCardCompleted = [false, false, false]
+const mobileNumberAnimations: Array<Animation | undefined> = []
+
+function clampProgress(value: number): number {
+  return Math.min(1, Math.max(0, value))
+}
+
+function animateMobileNumber(card: HTMLElement, index: number): void {
+  const number = card.querySelector<HTMLElement>('.landing-graphic__number')
+  if (!number) return
+
+  mobileNumberAnimations[index]?.cancel()
+  mobileNumberAnimations[index] = number.animate([
+    { offset: 0, scale: '1' },
+    { offset: 0.38, scale: '1.22' },
+    { offset: 0.68, scale: '1.08' },
+    { offset: 1, scale: '1' },
+  ], {
+    duration: 1000,
+    easing: 'cubic-bezier(0.22, 0.75, 0.25, 1)',
+  })
+}
+
+function updateMobileMotion(): void {
+  mobileMotionFrame = undefined
+
+  if (!mobileMotionEnabled.value || !graphic.value) return
+
+  const cards = Array.from(graphic.value.querySelectorAll<HTMLElement>('.landing-graphic__card'))
+  if (cards.length !== 3) return
+
+  const viewportHeight = window.innerHeight
+  const startLine = viewportHeight * 0.92
+  const quarterLine = viewportHeight * 0.25
+  const rects = cards.map(card => card.getBoundingClientRect())
+  const scrollTop = window.scrollY
+  const mobileNavigation = document.querySelector<HTMLElement>('.mobile-bottom-navigation')
+  const mobileNavigationRect = mobileNavigation?.getBoundingClientRect()
+  const mobileNavigationStyle = mobileNavigation ? getComputedStyle(mobileNavigation) : undefined
+  const visibleBottom = mobileNavigationRect
+    && mobileNavigationStyle?.display !== 'none'
+    && mobileNavigationStyle?.visibility !== 'hidden'
+    && Number(mobileNavigationStyle?.opacity ?? 1) > 0.1
+    && mobileNavigationRect.height > 0
+    && mobileNavigationRect.top > 0
+    && mobileNavigationRect.top < viewportHeight
+    ? mobileNavigationRect.top
+    : viewportHeight
+  const cardDocumentTops = rects.map(rect => rect.top + scrollTop)
+  const cardDocumentBottoms = rects.map(rect => rect.bottom + scrollTop)
+  const animationStarts: number[] = []
+  const animationEnds: number[] = []
+
+  cards.forEach((_, index) => {
+    const previousEnd = animationEnds[index - 1]
+    const start = previousEnd ?? cardDocumentTops[index]! - startLine
+    const isLastCard = index === cards.length - 1
+    const finalCardLine = Math.min(visibleBottom, viewportHeight * 0.75)
+    const nextBottom = cardDocumentBottoms[index + 1]
+    const naturalEnd = isLastCard
+      ? cardDocumentBottoms[index]! - finalCardLine
+      : Math.min(
+          cardDocumentTops[index]! - quarterLine,
+          nextBottom! - visibleBottom,
+        )
+
+    animationStarts.push(start)
+    animationEnds.push(Math.max(start + 1, naturalEnd))
+  })
+
+  cards.forEach((card, index) => {
+    const start = animationStarts[index]!
+    const end = animationEnds[index]!
+    const borderProgress = clampProgress((scrollTop - start) / (end - start))
+    const completed = borderProgress >= 1
+
+    card.style.setProperty('--overview-border-value', `${borderProgress * 100}%`)
+
+    if (
+      completed
+      && !mobileCardCompleted[index]
+      && mobileMotionHasRendered
+      && scrollTop >= previousMobileScrollTop
+    ) {
+      animateMobileNumber(card, index)
+    }
+    mobileCardCompleted[index] = completed
+  })
+
+  const flowProgress = clampProgress(
+    (scrollTop - animationStarts[0]!) / (animationEnds[2]! - animationStarts[0]!),
+  )
+  graphic.value.style.setProperty('--overview-flow-progress', `${flowProgress}`)
+  mobileMotionHasRendered = true
+  previousMobileScrollTop = scrollTop
+}
+
+function scheduleMobileMotion(): void {
+  if (!mobileMotionEnabled.value || mobileMotionFrame !== undefined) return
+  mobileMotionFrame = window.requestAnimationFrame(updateMobileMotion)
+}
+
+function clearMobileMotion(): void {
+  if (!graphic.value) return
+
+  graphic.value.style.removeProperty('--overview-flow-progress')
+  graphic.value.querySelectorAll<HTMLElement>('.landing-graphic__card').forEach((card) => {
+    card.style.removeProperty('--overview-border-value')
+  })
+  mobileNumberAnimations.forEach(animation => animation?.cancel())
+  mobileCardCompleted.fill(false)
+  mobileMotionHasRendered = false
+}
+
+function syncMobileMotion(): void {
+  mobileMotionEnabled.value = Boolean(
+    graphic.value
+    && mobileViewport?.matches
+    && !reducedMotion?.matches,
+  )
+
+  if (!mobileMotionEnabled.value) {
+    clearMobileMotion()
+    return
+  }
+
+  nextTick(scheduleMobileMotion)
+}
 
 function observeDesktopVisibility(): void {
   visibilityObserver?.disconnect()
@@ -99,12 +236,27 @@ function observeDesktopVisibility(): void {
 
 onMounted(() => {
   desktopViewport = window.matchMedia('(min-width: 40rem)')
+  mobileViewport = window.matchMedia('(max-width: 39.999rem)')
+  reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   desktopViewport.addEventListener('change', observeDesktopVisibility)
+  mobileViewport.addEventListener('change', syncMobileMotion)
+  reducedMotion.addEventListener('change', observeDesktopVisibility)
+  reducedMotion.addEventListener('change', syncMobileMotion)
+  window.addEventListener('scroll', scheduleMobileMotion, { passive: true })
+  window.addEventListener('resize', scheduleMobileMotion)
   observeDesktopVisibility()
+  syncMobileMotion()
 })
 
 onBeforeUnmount(() => {
   visibilityObserver?.disconnect()
   desktopViewport?.removeEventListener('change', observeDesktopVisibility)
+  mobileViewport?.removeEventListener('change', syncMobileMotion)
+  reducedMotion?.removeEventListener('change', observeDesktopVisibility)
+  reducedMotion?.removeEventListener('change', syncMobileMotion)
+  window.removeEventListener('scroll', scheduleMobileMotion)
+  window.removeEventListener('resize', scheduleMobileMotion)
+  if (mobileMotionFrame !== undefined) window.cancelAnimationFrame(mobileMotionFrame)
+  mobileNumberAnimations.forEach(animation => animation?.cancel())
 })
 </script>

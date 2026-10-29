@@ -50,6 +50,15 @@ async function overviewCardState(locator: Locator): Promise<OverviewCardState> {
   })
 }
 
+async function overviewFlowProgress(locator: Locator): Promise<number> {
+  return locator.evaluate((element) => {
+    const scale = getComputedStyle(element.querySelector('.landing-graphic__steps')!, '::after').scale
+    if (scale === 'none') return 1
+
+    return Number(scale.split(' ').at(-1))
+  })
+}
+
 async function scrollTo(page: Page, top: number): Promise<void> {
   await page.evaluate(async (scrollTop) => {
     window.scrollTo(0, scrollTop)
@@ -71,6 +80,7 @@ test('landing overview highlights its three steps in sequence and reverses when 
 
   const graphic = page.locator('.landing-graphic')
   const cards = page.locator('.landing-graphic__card')
+  await expect(graphic).toHaveClass(/landing-graphic--mobile-motion/)
   const initialGraphic = await revealState(graphic)
   const initialCards = await Promise.all([0, 1, 2].map(index => overviewCardState(cards.nth(index))))
   expect(initialGraphic.opacity).toBe(1)
@@ -80,8 +90,8 @@ test('landing overview highlights its three steps in sequence and reverses when 
     state.opacity === 1
     && state.filter === 'none'
     && state.borderLeftWidth === '1px'
-    && state.animationName === 'landing-overview-border-draw'
-    && state.numberAnimationName === 'landing-overview-number-bounce'
+    && state.animationName === 'none'
+    && state.numberAnimationName === 'none'
   ))).toBe(true)
 
   await page.locator('.landing-hero__guide-link').click()
@@ -92,26 +102,108 @@ test('landing overview highlights its three steps in sequence and reverses when 
   expect(linkedCardStates[2]!.borderProgress).toBe(0)
   await scrollTo(page, 0)
 
-  const graphicTop = await graphic.evaluate(element => element.getBoundingClientRect().top + window.scrollY)
-  const samples: Array<{ top: number, states: OverviewCardState[] }> = []
-  for (let top = 0; top <= graphicTop + 160; top += 20) {
+  const finalScrollTop = await cards.nth(2).evaluate(element => (
+    element.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.25
+  ))
+  const samples: Array<{ flowProgress: number, top: number, states: OverviewCardState[] }> = []
+  for (let top = 0; top <= finalScrollTop + 20; top += 20) {
     await scrollTo(page, top)
     const states = await Promise.all([0, 1, 2].map(index => overviewCardState(cards.nth(index))))
-    samples.push({ top, states })
-    expect(states[1]!.borderProgress > 0 ? states[0]!.borderProgress : 100).toBeGreaterThanOrEqual(99)
-    expect(states[2]!.borderProgress > 0 ? states[1]!.borderProgress : 100).toBeGreaterThanOrEqual(99)
+    samples.push({ flowProgress: await overviewFlowProgress(graphic), top, states })
+  }
+
+
+  for (let index = 1; index < samples.length; index += 1) {
+    expect(samples[index]!.flowProgress).toBeGreaterThanOrEqual(samples[index - 1]!.flowProgress - 0.001)
+    for (let cardIndex = 0; cardIndex < 3; cardIndex += 1) {
+      expect(samples[index]!.states[cardIndex]!.borderProgress)
+        .toBeGreaterThanOrEqual(samples[index - 1]!.states[cardIndex]!.borderProgress - 0.1)
+    }
+    if (samples[index]!.states[0]!.borderProgress < 99) {
+      expect(samples[index]!.states[1]!.borderProgress).toBeLessThanOrEqual(0.1)
+    }
+    if (samples[index]!.states[1]!.borderProgress < 99) {
+      expect(samples[index]!.states[2]!.borderProgress).toBeLessThanOrEqual(0.1)
+    }
+  }
+
+  const milestones = await cards.evaluateAll((elements) => {
+    const scrollTop = window.scrollY
+    const rects = elements.map(element => element.getBoundingClientRect())
+    const navigation = document.querySelector<HTMLElement>('.mobile-bottom-navigation')
+    const navigationRect = navigation?.getBoundingClientRect()
+    const visibleBottom = navigationRect && navigationRect.top > 0 && navigationRect.top < window.innerHeight
+      ? navigationRect.top
+      : window.innerHeight
+    const documentTops = rects.map(rect => rect.top + scrollTop)
+    const documentBottoms = rects.map(rect => rect.bottom + scrollTop)
+    const starts: number[] = []
+    const ends: number[] = []
+
+    elements.forEach((_, index) => {
+      const start = ends[index - 1] ?? documentTops[index]! - window.innerHeight * 0.92
+      const isLastCard = index === elements.length - 1
+      const nextBottom = documentBottoms[index + 1]
+      const naturalEnd = isLastCard
+        ? documentBottoms[index]! - Math.min(visibleBottom, window.innerHeight * 0.75)
+        : Math.min(
+            documentTops[index]! - window.innerHeight * 0.25,
+            nextBottom! - visibleBottom,
+          )
+      starts.push(start)
+      ends.push(Math.max(start + 1, naturalEnd))
+    })
+
+    return { ends, visibleBottom }
+  })
+
+  await scrollTo(page, 0)
+  await scrollTo(page, milestones.ends[0]! - 1)
+  expect((await overviewCardState(cards.nth(0))).numberScale).toBeCloseTo(1, 2)
+  await scrollTo(page, milestones.ends[0]! + 1)
+  await expect.poll(async () => (await overviewCardState(cards.nth(0))).numberScale).toBeGreaterThan(1.1)
+  expect(await cards.nth(0).locator('.landing-graphic__number').evaluate(element => (
+    element.getAnimations()[0]?.effect?.getTiming().duration
+  ))).toBe(1000)
+  await page.waitForTimeout(1050)
+  expect((await overviewCardState(cards.nth(0))).numberScale).toBeCloseTo(1, 2)
+  expect((await overviewCardState(cards.nth(0))).borderProgress).toBeGreaterThanOrEqual(99)
+
+  for (const index of [0, 1, 2]) {
+    await scrollTo(page, milestones.ends[index]! + 1)
+
+    await expect.poll(async () => (await overviewCardState(cards.nth(index))).borderProgress).toBeGreaterThanOrEqual(99)
+    const endGeometry = await cards.nth(index).evaluate((element, values) => {
+      const cards = Array.from(element.parentElement!.children) as HTMLElement[]
+      const nextRect = cards[values.cardIndex + 1]?.getBoundingClientRect()
+      const rect = element.getBoundingClientRect()
+      const finalCardLine = Math.min(values.visibleBottom, window.innerHeight * 0.75)
+      return {
+        cardReachedQuarter: rect.top <= window.innerHeight * 0.25 + 1,
+        lastCardReachedFinalLine: values.cardIndex === cards.length - 1
+          && rect.bottom <= finalCardLine + 1
+          && rect.top >= -1,
+        nextCardFullyVisible: nextRect ? nextRect.bottom <= values.visibleBottom + 1 : false,
+      }
+    }, { cardIndex: index, visibleBottom: milestones.visibleBottom })
+    if (index === 2) {
+      expect(endGeometry.lastCardReachedFinalLine).toBe(true)
+    } else {
+      expect(endGeometry.cardReachedQuarter || endGeometry.nextCardFullyVisible).toBe(true)
+    }
   }
 
   const thirdCardMidpoint = samples.find(sample => (
     sample.states[2]!.borderProgress > 10 && sample.states[2]!.borderProgress < 90
   ))
   expect(thirdCardMidpoint).toBeDefined()
-  expect(samples.some(sample => sample.states.some(state => Math.abs(state.numberScale - 1) > 0.01))).toBe(true)
+  expect(samples.some(sample => sample.flowProgress > 0.1 && sample.flowProgress < 0.9)).toBe(true)
 
-  await graphic.evaluate(element => element.scrollIntoView({ block: 'center' }))
-  await expect.poll(async () => (await overviewCardState(cards.nth(2))).borderProgress).toBe(100)
+  await scrollTo(page, milestones.ends[2]! + 1)
+  await expect.poll(async () => (await overviewCardState(cards.nth(2))).borderProgress).toBeGreaterThanOrEqual(99)
   expect((await Promise.all([0, 1, 2].map(index => overviewCardState(cards.nth(index)))))
-    .every(state => state.borderProgress === 100 && state.opacity === 1 && state.filter === 'none')).toBe(true)
+    .every(state => state.borderProgress >= 99 && state.opacity === 1 && state.filter === 'none')).toBe(true)
+  expect(await overviewFlowProgress(graphic)).toBeCloseTo(1, 2)
 
   await scrollTo(page, thirdCardMidpoint!.top)
   const reverseProgress = (await overviewCardState(cards.nth(2))).borderProgress
