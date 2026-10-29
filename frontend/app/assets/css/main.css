@@ -1069,6 +1069,23 @@ a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   .landing-guide--direct .landing-guide__list::after { scale: 1 1; }
 }
 
+@media (max-width: 39.999rem) {
+  .landing-graphic--mobile-motion:not(:target):not(.landing-graphic--direct):not(:focus-within) .landing-graphic__steps::after {
+    animation: none;
+    scale: 1 var(--overview-flow-progress, 0);
+  }
+
+  .landing-graphic--mobile-motion:not(:target):not(.landing-graphic--direct):not(:focus-within) .landing-graphic__card::after {
+    --overview-border-progress: var(--overview-border-value, 0%);
+    animation: none;
+  }
+
+  .landing-graphic--mobile-motion:not(:target):not(.landing-graphic--direct):not(:focus-within) .landing-graphic__number {
+    animation: none;
+    animation-timeline: auto;
+  }
+}
+
 @media (min-width: 40rem) {
   .landing-graphic { padding: 1.25rem; }
   .landing-graphic__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -2717,7 +2734,7 @@ html[data-theme="dark"] .status-panel[data-state="syncing"] { border-color: #846
     translate: 0 0 !important;
   }
 
-  .landing-graphic__card::after { --overview-border-progress: 100%; }
+  .landing-graphic__card::after { --overview-border-progress: 100% !important; }
 }
 
 @media print {
@@ -2738,5 +2755,5 @@ html[data-theme="dark"] .status-panel[data-state="syncing"] { border-color: #846
     translate: 0 0 !important;
   }
 
-  .landing-graphic__card::after { --overview-border-progress: 100%; }
+  .landing-graphic__card::after { --overview-border-progress: 100% !important; }
 }

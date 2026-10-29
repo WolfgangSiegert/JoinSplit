@@ -51,9 +51,20 @@ und Mobile getrennt:
   weiteren Scrollbewegung vollständig durch alle drei Karten.
 - Nach dem weitgehenden Verlassen des Viewports wird die Sequenz erneut
   freigegeben. Damit startet sie auch beim Scrollen von unten nach oben.
-- Auf Mobile bleiben Rahmenzeichnung und Nummern-Bounce an die gemeinsame
-  Scroll-Timeline gekoppelt. Die drei Karten besitzen getrennte, aufeinander
-  folgende Bereiche und laufen beim Zurückscrollen nachvollziehbar rückwärts.
+- Auf Mobile folgen Rahmenzeichnung und der senkrechte Verbindungsstreifen
+  demselben geometrisch berechneten Scrollfortschritt. Der sichtbare Viewport
+  endet oberhalb der festen mobilen Navigation. Eine Karte wird vom Eintritt
+  in den unteren Viewportbereich bis zu dem früheren dieser beiden Zeitpunkte
+  umrandet: Ihre Oberkante erreicht das obere Viertel oder die folgende Karte
+  ist vollständig sichtbar.
+- Für die letzte Karte gilt ein früherer, eigener Abschluss: Ihre Unterkante
+  erreicht die Linie bei drei Vierteln der Bildschirmhöhe, während die Karte
+  vollständig sichtbar bleibt.
+- Die nächste Karte beginnt erst, wenn der vorherige Rahmen vollständig ist.
+  Gleichzeitig startet ein einmaliger, vom weiteren Scrollen unabhängiger
+  1000-Millisekunden-Impuls, der die Kartennummer kurz deutlich vergrößert.
+  Unterschiedliche Kartenhöhen und Viewports bleiben berücksichtigt; die
+  Rahmenzeichnung läuft beim Zurückscrollen nachvollziehbar rückwärts.
 - Direkte Abschnittslinks, Tastaturfokus, Druck und reduzierte Bewegung zeigen
   die vollständige Grafik ohne Animation. Inhalt und Bedienbarkeit hängen damit
   nicht von der Browserunterstützung für Scroll-Timelines ab.
