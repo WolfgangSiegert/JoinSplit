@@ -9,6 +9,13 @@ A section is a released version only when a matching Git tag exists.
 - [Detailed version and milestone history](docs/releases/version-history.md)
 - [Current development history](https://github.com/WolfgangSiegert/JoinSplit/commits/main)
 
+## [0.1.0-beta.4](https://github.com/WolfgangSiegert/JoinSplit/compare/v0.1.0-beta.3...v0.1.0-beta.4) (2026-10-29)
+
+
+### Fixes
+
+* **landing:** refine mobile card animation timing ([cfba688](https://github.com/WolfgangSiegert/JoinSplit/commit/cfba688d69e23cf3b46af754a5f4d3c2fea64169))
+
 ## [0.1.0-beta.3](https://github.com/WolfgangSiegert/JoinSplit/compare/v0.1.0-beta.2...v0.1.0-beta.3) (2026-10-29)
 
 
